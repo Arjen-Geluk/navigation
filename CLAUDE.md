@@ -18,7 +18,7 @@ portfoliosite).
 
 ## Live
 
-- https://arjen-geluk.github.io/navigation/
+- https://arjen-geluk.github.io/Navigation/
 - GitHub Pages: Deploy from a branch, main, / (root)
 
 ## Licentie

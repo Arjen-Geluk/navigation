@@ -4,7 +4,7 @@ Kaart van de Waddenzee met bodemhoogte en een tijdschuif over de waterstand: waa
 voor de opgegeven diepgang (en kielspeling), welke routedelen zijn open, en wanneer een route tussen twee punten open is.
 Momentopname als GPX-route voor OpenCPN en als PNG.
 
-Online: https://arjen-geluk.github.io/navigation/getijkaart/
+Online: https://arjen-geluk.github.io/Navigation/getijkaart/
 
 - Waterstanden: bij openen opgehaald bij RWS (RWsOS): gemeten tot nu, daarna RWS-eindverwachting h_6, daarna astronomisch.
 - Waterstand per plek: getijmodel per cel (kromme van het hoofdstation per getij verschoven en geschaald).

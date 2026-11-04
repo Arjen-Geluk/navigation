@@ -2,7 +2,7 @@
 
 Vaargebieden en wedstrijdberekeningen van Arjen Geluk.
 
-Online overzicht: https://arjen-geluk.github.io/navigation/
+Online overzicht: https://arjen-geluk.github.io/Navigation/
 
 ## Inhoud
 
