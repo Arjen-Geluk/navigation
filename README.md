@@ -1,6 +1,6 @@
 # Navigatie
 
-Vaargebieden en wedstrijdberekeningen, en overige techniek-projecten van Arjen Geluk.
+Vaargebieden en wedstrijdberekeningen van Arjen Geluk.
 
 Online overzicht: https://arjen-geluk.github.io/navigation/
 
