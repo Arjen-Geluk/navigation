@@ -32,19 +32,125 @@ h2{font-size:16px;margin:0 0 8px}
 .aanname{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px}
 footer{color:var(--muted);font-size:12px;padding-bottom:30px}
 footer a{color:var(--accent)}
+/* schipregel en tabbladen */
+.schipregel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:10px;font-size:13px}
+.chip{background:var(--chip);border-radius:999px;padding:2px 10px}
+.chip.let{background:var(--warn-bg);color:var(--warn)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:12px;border-bottom:1px solid var(--line)}
+nav.tabs button{border:0;background:none;color:var(--muted);font:inherit;padding:8px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+nav.tabs button:disabled{opacity:.45;cursor:default}
+[hidden]{display:none!important}
+/* formulieren en knoppen */
+button.knop,label.knop{display:inline-block;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
+button.knop.tweede,label.knop.tweede{background:var(--chip);color:var(--ink)}
+button.knop:disabled{opacity:.5;cursor:default}
+.kaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.kaarten>div{border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.velden{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 18px}
+.veld label{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.veld input,.veld select{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.veld input:read-only{color:var(--muted)}
+.veld .hint{font-size:12px;color:var(--muted);margin-top:2px}
+.veld.fout input{border-color:var(--bad);background:var(--bad-bg)}
+.melding{border-radius:6px;padding:8px 10px;font-size:13px;margin:10px 0}
+.melding.fout{background:var(--bad-bg);color:var(--bad)}
+.melding.let{background:var(--warn-bg);color:var(--warn)}
+.melding.ok{background:var(--chip)}
+/* polartabellen */
+.tabelvak{overflow-x:auto}
+table.polar{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.polar th,table.polar td{border:1px solid var(--line);padding:0;text-align:center;min-width:46px}
+table.polar th{background:var(--chip);padding:4px 6px;font-weight:600}
+table.polar td{padding:3px 4px}
+table.polar td.inv{padding:0}
+table.polar td.inv input{width:52px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:center;padding:4px 2px}
+table.polar td.inv input::placeholder{color:var(--muted);opacity:.6}
+table.polar td.inv.gevuld{background:rgba(230,126,34,.22)}
+table.polar td.inv.fout{background:var(--bad-bg)}
+td.h-data{background:rgba(31,111,190,.28)} td.h-glad{background:rgba(31,111,190,.12)}
+td.h-handmatig{background:rgba(230,126,34,.28)} td.h-bestaand{background:rgba(46,125,79,.22)}
+td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:8px 0}
+.legenda span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1px solid var(--line)}
+.legenda .l-data::before{background:rgba(31,111,190,.28)} .legenda .l-glad::before{background:rgba(31,111,190,.12)}
+.legenda .l-handmatig::before{background:rgba(230,126,34,.28)} .legenda .l-bestaand::before{background:rgba(46,125,79,.22)}
+.legenda .l-geïnterpoleerd::before{background:transparent}
+.knoppenrij{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
 </style>
 </head>
 <body>
 <header>
   <h1>Polartool</h1>
   <div class="sub">Polair diagram voor een platbodem opbouwen uit handmatige waarden en VDR-logs. Alles gebeurt in je browser; de tool slaat niets op en uploadt niets.</div>
+  <div class="schipregel" id="schipregel" hidden></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="start" aria-selected="true">Start</button>
+    <button role="tab" data-tab="profiel" disabled>Profiel</button>
+    <button role="tab" data-tab="handmatig" disabled>Handmatig</button>
+    <button role="tab" data-tab="vdr" disabled title="Volgt">VDR inladen</button>
+    <button role="tab" data-tab="controle" disabled>Controle en opslaan</button>
+  </nav>
 </header>
 <main>
-  <section>
-    <h2>In aanbouw</h2>
-    <p>Deze pagina wordt stap voor stap opgebouwd.</p>
-    <p class="aanname">Aanname: stilstaand water. De tool rekent met snelheid over de grond (SOG) en houdt geen rekening met stroom.</p>
-  </section>
+  <div id="tab-start">
+    <section>
+      <h2>Beginnen</h2>
+      <div class="kaarten">
+        <div>
+          <h3>Nieuwe polar</h3>
+          <p>Voor een schip zonder polarbestand. Je vult eerst het scheepsprofiel in, daarna handmatige waarden en/of een VDR-log.</p>
+          <button class="knop" id="nieuw">Nieuwe polar maken</button>
+        </div>
+        <div>
+          <h3>Bestand openen</h3>
+          <p>Een polarbestand van deze tool om bij te werken, of eenmalig een ouder scheepsbestand (raster met mediaan) als startpunt.</p>
+          <label class="knop tweede">Bestand kiezen…<input type="file" id="openen" accept=".json,application/json" hidden></label>
+        </div>
+      </div>
+      <div id="startmelding"></div>
+      <p class="aanname">Aanname: stilstaand water. De tool rekent met snelheid over de grond (SOG) en houdt geen rekening met stroom. Kies dus tijdvakken zonder merkbare stroom.</p>
+    </section>
+  </div>
+
+  <div id="tab-profiel" hidden>
+    <section>
+      <h2>Scheepsprofiel</h2>
+      <p class="sub">Alleen gegevens; wat ermee gebeurt (zoals de controle op kielspeling) regelt het routemodel. Velden met * zijn verplicht.</p>
+      <div class="velden" id="profielvelden"></div>
+    </section>
+  </div>
+
+  <div id="tab-handmatig" hidden>
+    <section>
+      <h2>Handmatig invullen</h2>
+      <p class="sub">Bootsnelheid in knopen per ware windsnelheid (rij, op 10 m hoogte) en ware windhoek (kolom). Een handmatige waarde is een startpunt: zodra een vakje genoeg metingen heeft, gaat de meting voor. Leeg laten mag; grijze getallen zijn de huidige polar.</p>
+      <div class="tabelvak" id="handtabel"></div>
+      <div class="knoppenrij"><button class="knop tweede" id="handwissen">Alle handmatige waarden wissen</button></div>
+    </section>
+  </div>
+
+  <div id="tab-vdr" hidden>
+    <section><h2>VDR inladen</h2><p>Volgt in de volgende stap.</p></section>
+  </div>
+
+  <div id="tab-controle" hidden>
+    <section>
+      <h2>Controle</h2>
+      <p class="sub">Voorlopige weergave; het volledige controlescherm (plot, detail per vakje, bronnen, zwaardband) volgt.</p>
+      <div class="legenda">
+        <span class="l-data">gemeten</span><span class="l-glad">gladgemaakt uit buurvakjes</span><span class="l-handmatig">handmatig</span>
+        <span class="l-bestaand">bestaande polar</span><span class="l-geïnterpoleerd">geïnterpoleerd</span>
+      </div>
+      <div class="tabelvak" id="controletabel"></div>
+    </section>
+    <section>
+      <h2>Opslaan</h2>
+      <p>Opslaan downloadt het polarbestand als <strong>nieuwe versie</strong>. Het vorige bestand blijft ongewijzigd en is je terugvalpunt.</p>
+      <div id="opslaanmelding"></div>
+      <div class="knoppenrij"><button class="knop" id="opslaan">Opslaan</button><span class="sub" id="bestandsnaam"></span></div>
+    </section>
+  </div>
 </main>
 <footer>
   &copy; Arjen Geluk. Gelicenseerd onder <a href="../LICENSE">CC BY-NC-ND 4.0</a>.
@@ -429,6 +535,182 @@ footer a{color:var(--accent)}
 
     return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit,
       nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, nieuwId, kwantiel };
+  })();
+</script>
+<script id="app">
+  /* Polartool — schermen. De staat S leeft alleen in dit tabblad; opslaan = downloaden. */
+  (() => {
+    const $ = s => document.querySelector(s);
+    const el = (tag, attr = {}, ...kind) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attr)) { if (k === 'class') e.className = v; else if (k in e && typeof v !== 'string') e[k] = v; else e.setAttribute(k, v); } e.append(...kind.filter(x => x !== null && x !== undefined)); return e; };
+    const fmt = (v, d = 2) => v === null || v === undefined || Number.isNaN(v) ? '' : Number(v).toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: d });
+    const getal = s => { s = String(s).trim().replace(',', '.'); if (s === '') return null; const v = Number(s); return Number.isFinite(v) ? v : NaN; };
+    const melding = (doel, soort, tekst) => { doel.replaceChildren(tekst ? el('div', { class: 'melding ' + soort }, tekst) : ''); };
+
+    let S = null;            // staat van het geopende schip
+    let polair = null;       // laatst berekende polar
+    let gewijzigd = false;   // niet-opgeslagen wijzigingen
+
+    /* ---------- tabbladen ---------- */
+    const tabs = [...document.querySelectorAll('nav.tabs button')];
+    function toon(naam) {
+      for (const b of tabs) b.setAttribute('aria-selected', b.dataset.tab === naam ? 'true' : 'false');
+      for (const b of tabs) $('#tab-' + b.dataset.tab).hidden = b.dataset.tab !== naam;
+      if (naam === 'handmatig') tekenHandmatig();
+      if (naam === 'controle') tekenControle();
+    }
+    tabs.forEach(b => b.addEventListener('click', () => toon(b.dataset.tab)));
+
+    function wijzig() { gewijzigd = true; polair = null; tekenSchipregel(); }
+    window.addEventListener('beforeunload', e => { if (gewijzigd) { e.preventDefault(); e.returnValue = ''; } });
+
+    function tekenSchipregel() {
+      const r = $('#schipregel');
+      if (!S) { r.hidden = true; return; }
+      r.hidden = false;
+      r.replaceChildren(
+        el('strong', {}, S.schip.naam || '(naamloos schip)'),
+        el('span', { class: 'chip', title: 'Vaste scheeps-ID: verandert nooit' }, 'ID ' + S.schip.id.slice(0, 8)),
+        el('span', { class: 'chip' }, S.versie ? 'gebaseerd op versie ' + S.versie : 'nog niet opgeslagen'),
+        ...(gewijzigd ? [el('span', { class: 'chip let' }, 'niet-opgeslagen wijzigingen')] : []));
+    }
+
+    function open(nieuweS, bericht) {
+      S = nieuweS; polair = null; gewijzigd = false;
+      tabs.forEach(b => { if (b.dataset.tab !== 'vdr') b.disabled = false; });
+      tekenProfiel(); tekenSchipregel();
+      melding($('#startmelding'), 'ok', bericht);
+      toon('profiel');
+    }
+
+    /* ---------- start ---------- */
+    $('#nieuw').addEventListener('click', () => {
+      if (gewijzigd && !confirm('Er zijn niet-opgeslagen wijzigingen. Toch een nieuwe polar beginnen?')) return;
+      open(PT.nieuweStaat(), 'Nieuwe polar aangemaakt met een eigen scheeps-ID. Vul het profiel in.');
+      gewijzigd = true; tekenSchipregel();
+    });
+    $('#openen').addEventListener('change', async e => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      if (gewijzigd && !confirm('Er zijn niet-opgeslagen wijzigingen. Toch een ander bestand openen?')) return;
+      try {
+        const { S: nieuw, soort } = PT.vanBestand(JSON.parse(await f.text()));
+        if (soort === 'scheepsbestand') {
+          open(nieuw, `Ouder scheepsbestand ingelezen als startpunt (“${f.name}”). Het schip krijgt een nieuwe scheeps-ID; de bestaande polar staat er als eigen bron in. Controleer het profiel en vul de windhoogtefactor in.`);
+          gewijzigd = true; tekenSchipregel();
+        } else open(nieuw, `Polarbestand “${f.name}” geopend (versie ${nieuw.versie}).`);
+      } catch (err) {
+        melding($('#startmelding'), 'fout', 'Dit bestand kan niet worden gelezen: ' + (err instanceof SyntaxError ? 'het is geen geldig JSON-bestand.' : err.message));
+      }
+    });
+
+    /* ---------- profiel ---------- */
+    const PROFIEL = [
+      { pad: 'naam', label: 'Scheepsnaam *', type: 'text', verplicht: true },
+      { pad: 'id', label: 'Scheeps-ID', type: 'text', alleenLezen: true, hint: 'Automatisch aangemaakt; verandert nooit.' },
+      { pad: 'tuigage', label: 'Tuigage *', type: 'select', opties: [['eenmaster', 'één-mast'], ['tweemaster', 'twee-mast']], hint: 'Nu alleen informatief.' },
+      { pad: 'diepgang_m.neer', label: 'Diepgang zwaard neer (m) *', verplicht: true, min: 0, max: 6 },
+      { pad: 'diepgang_m.half', label: 'Diepgang zwaard half (m)', min: 0, max: 6, hint: 'Alleen als je die stand gebruikt.' },
+      { pad: 'diepgang_m.op', label: 'Diepgang zwaard op (m) *', verplicht: true, min: 0, max: 6 },
+      { pad: 'kielspeling_m', label: 'Minimale kielspeling (m) *', verplicht: true, min: 0, max: 3, hint: 'Standaardwaarde; het routemodel kan per berekening afwijken.' },
+      { pad: 'overstagverlies_s', label: 'Tijdverlies per overstag (s)', min: 0, max: 300, hint: 'Inclusief wisselen van zwaard.' },
+      { pad: 'gijpverlies_s', label: 'Tijdverlies per gijp (s)', min: 0, max: 300 },
+      { pad: 'windhoogtefactor', label: 'Windhoogtefactor *', verplicht: true, min: 0.8, max: 2, hint: 'Mastwind gedeeld door deze factor geeft wind op 10 m. 1 = windmeter op 10 m.' },
+      { pad: 'windmeter_hoogte_m', label: 'Hoogte windmeter (m)', min: 0, max: 40, hint: 'Toelichting bij de windhoogtefactor.' },
+    ];
+    const lees = pad => pad.split('.').reduce((o, k) => o?.[k], S.schip);
+    const schrijf = (pad, v) => { const d = pad.split('.'); const o = d.slice(0, -1).reduce((o, k) => o[k], S.schip); o[d[d.length - 1]] = v; };
+    function veldFout(v) {
+      const w = lees(v.pad);
+      if (v.type === 'text' || v.type === 'select') return v.verplicht && !String(w || '').trim() ? 'verplicht' : null;
+      if (w === null || w === undefined) return v.verplicht ? 'verplicht' : null;
+      if (Number.isNaN(w)) return 'geen getal';
+      if (w < v.min || w > v.max) return `tussen ${fmt(v.min)} en ${fmt(v.max)}`;
+      return null;
+    }
+    function tekenProfiel() {
+      const doel = $('#profielvelden');
+      doel.replaceChildren(...PROFIEL.map(v => {
+        const id = 'p-' + v.pad.replace('.', '-');
+        let inp;
+        if (v.type === 'select') inp = el('select', { id }, ...v.opties.map(([w, t]) => el('option', { value: w }, t)));
+        else inp = el('input', { id, type: 'text', inputmode: v.type === 'text' ? 'text' : 'decimal', autocomplete: 'off' });
+        const w = lees(v.pad);
+        inp.value = v.type === 'text' || v.type === 'select' ? (w ?? '') : fmt(w, 3);
+        if (v.alleenLezen) inp.readOnly = true;
+        const blok = el('div', { class: 'veld' }, el('label', { for: id }, v.label), inp, v.hint ? el('div', { class: 'hint' }, v.hint) : null);
+        const controleer = () => { const f = veldFout(v); blok.classList.toggle('fout', !!f); inp.title = f || ''; };
+        inp.addEventListener(v.type === 'select' ? 'change' : 'input', () => {
+          schrijf(v.pad, v.type === 'text' || v.type === 'select' ? inp.value.trim() : getal(inp.value));
+          controleer(); wijzig();
+        });
+        controleer();
+        return blok;
+      }));
+    }
+
+    /* ---------- handmatig ---------- */
+    function huidigePolair() { if (!polair) polair = PT.bouwPolair(S); return polair; }
+    function tekenHandmatig() {
+      const P = huidigePolair();
+      const kop = el('tr', {}, el('th', {}, 'TWS \\ TWA'), ...PT.TWA.map(a => el('th', {}, a + '°')));
+      const rijen = PT.TWS.map((t, i) => el('tr', {}, el('th', {}, t + ' kn'), ...PT.TWA.map((a, j) => {
+        const k = PT.sleutel(i, j), w = S.handmatig[k];
+        const inp = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t} kn wind, ${a}°`, value: w !== undefined ? fmt(w) : '' });
+        if (P.snelheid[i][j] !== null && P.herkomst[i][j] !== 'handmatig') inp.placeholder = fmt(P.snelheid[i][j], 1);
+        const td = el('td', { class: 'inv' + (w !== undefined ? ' gevuld' : '') }, inp);
+        inp.addEventListener('change', () => {
+          const v = getal(inp.value);
+          const fout = Number.isNaN(v) || (v !== null && (v < 0 || v > 20));
+          td.classList.toggle('fout', fout); inp.title = fout ? 'Vul een snelheid tussen 0 en 20 kn in' : '';
+          if (fout) return;
+          if (v === null) delete S.handmatig[k]; else S.handmatig[k] = v;
+          td.classList.toggle('gevuld', v !== null);
+          wijzig();
+        });
+        return td;
+      })));
+      $('#handtabel').replaceChildren(el('table', { class: 'polar' }, el('thead', {}, kop), el('tbody', {}, ...rijen)));
+    }
+    $('#handwissen').addEventListener('click', () => {
+      if (!Object.keys(S.handmatig).length || !confirm('Alle handmatige waarden wissen?')) return;
+      S.handmatig = {}; wijzig(); tekenHandmatig();
+    });
+
+    /* ---------- controle (voorlopig) en opslaan ---------- */
+    function tekenControle() {
+      const P = huidigePolair();
+      const kop = el('tr', {}, el('th', {}, 'TWS \\ TWA'), ...PT.TWA.map(a => el('th', {}, a + '°')));
+      const rijen = PT.TWS.map((t, i) => el('tr', {}, el('th', {}, t + ' kn'), ...PT.TWA.map((a, j) => {
+        const h = P.herkomst[i][j];
+        return el('td', { class: 'h-' + h, title: `${h}${P.n[i][j] ? ', ' + P.n[i][j] + ' metingen' : ''}` }, P.snelheid[i][j] === null ? '–' : fmt(P.snelheid[i][j], 1));
+      })));
+      const zw = el('tr', {}, el('th', {}, 'zwaard'), ...S.zwaard.map(z => el('td', {}, z)));
+      $('#controletabel').replaceChildren(el('table', { class: 'polar' }, el('thead', {}, kop), el('tbody', {}, ...rijen, zw)));
+      const fouten = PROFIEL.filter(v => veldFout(v)).map(v => v.label.replace(' *', ''));
+      const leeg = P.herkomst.flat().every(h => h === 'leeg');
+      if (fouten.length) melding($('#opslaanmelding'), 'fout', 'Vul eerst het profiel aan: ' + fouten.join(', ') + '.');
+      else if (leeg) melding($('#opslaanmelding'), 'let', 'De polar is nog leeg. Je kunt opslaan, maar vul liever eerst waarden in.');
+      else melding($('#opslaanmelding'), '', '');
+      $('#opslaan').disabled = fouten.length > 0;
+      $('#bestandsnaam').textContent = 'wordt: ' + bestandsnaam(S.versie + 1);
+    }
+    function bestandsnaam(versie) {
+      const naam = (S.schip.naam || 'schip').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'schip';
+      const d = new Date(), datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return `${naam}_polar_v${versie}_${datum}.json`;
+    }
+    $('#opslaan').addEventListener('click', () => {
+      const P = huidigePolair();
+      S.versie += 1; S.gewijzigd = new Date().toISOString();
+      const naam = bestandsnaam(S.versie);
+      const blob = new Blob([JSON.stringify(PT.naarBestand(S, P), null, 1)], { type: 'application/json' });
+      const a = el('a', { href: URL.createObjectURL(blob), download: naam });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      gewijzigd = false; tekenSchipregel(); tekenControle();
+      melding($('#opslaanmelding'), 'ok', `Opgeslagen als ${naam}. Bewaar dit bestand; het is je nieuwe versie en het startpunt voor de volgende verfijning.`);
+    });
+
+    window.PolartoolApp = { staat: () => S };   // voor testen in de console
   })();
 </script>
 </body>
