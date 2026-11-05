@@ -157,6 +157,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
 table.lijst input[type=time],table.lijst select{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
 button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;color:var(--ink);cursor:pointer}
 #bevestig h2{font-size:20px}
+#wedstrijdkeuze{font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 #bevestig.actief{border:2px solid var(--accent)}
 /* uitleg */
 .uitleg{max-width:860px}
@@ -290,10 +291,16 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       <div class="tabelvak" id="bronnenlijst"></div>
     </section>
     <section>
-      <h2>Opslaan</h2>
-      <p>Opslaan downloadt het polarbestand als <strong>nieuwe versie</strong>. Het vorige bestand blijft ongewijzigd en is je terugvalpunt.</p>
+      <h2>Afronden</h2>
+      <p><strong>Opslaan</strong> downloadt het polarbestand als nieuwe versie; het vorige bestand blijft ongewijzigd en is je terugvalpunt. <strong>Openen in wedstrijd</strong> geeft dezelfde polar in één keer door aan een wedstrijdpagina in een nieuw tabblad, zodat de wedstrijd altijd rekent met een versie die ook als bestand bestaat.</p>
       <div id="opslaanmelding"></div>
-      <div class="knoppenrij"><button class="knop" id="opslaan">Opslaan</button><span class="sub" id="bestandsnaam"></span></div>
+      <div class="knoppenrij">
+        <button class="knop" id="opslaan">Opslaan</button>
+        <select id="wedstrijdkeuze" aria-label="Wedstrijd"></select>
+        <button class="knop tweede" id="openwedstrijd">Openen in wedstrijd</button>
+      </div>
+      <div class="sub" id="bestandsnaam"></div>
+      <div id="wedstrijdmelding"></div>
     </section>
   </div>
 
@@ -318,7 +325,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         <li><strong>Profiel</strong> invullen: naam, kruishoek, diepgang, windhoogtefactor. Een nieuw schip krijgt een vaste scheeps-ID.</li>
         <li>Optioneel <strong>handmatig</strong> een startpolar invullen, of een bestaande polar importeren.</li>
         <li>Een <strong>VDR-opname</strong> inladen, de <strong>tijdvakken</strong> kiezen waarin goed gezeild is en toevoegen.</li>
-        <li>Op <strong>Controle</strong> het resultaat bekijken en <strong>opslaan</strong>: dat geeft altijd een nieuwe versie van het bestand.</li>
+        <li>Op <strong>Controle</strong> het resultaat bekijken en <strong>opslaan</strong>: dat geeft altijd een nieuwe versie van het bestand. Met <strong>Openen in wedstrijd</strong> geef je dezelfde polar direct door aan een wedstrijdpagina; die kan het bestand ook zelf inladen.</li>
         <li>Na een volgende zeildag: het bestand openen, de nieuwe opname toevoegen, opnieuw opslaan. Zo wordt de polar steeds beter.</li>
       </ol>
 
@@ -450,7 +457,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { TWS, TWA, invoer, kruishoek: k };
     }
     const R = Math.PI / 180;
-    const TOOL = { naam: 'Polartool', versie: '0.8', datum: '2026-11-05' };   // ophogen bij elke wijziging die gebruikers merken
+    const TOOL = { naam: 'Polartool', versie: '0.9', datum: '2026-11-05' };   // ophogen bij elke wijziging die gebruikers merken
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
@@ -1215,7 +1222,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       if (fouten.length) melding($('#opslaanmelding'), 'fout', 'Vul eerst het profiel aan: ' + fouten.join(', ') + '.');
       else if (leeg) melding($('#opslaanmelding'), 'let', 'De polar is nog leeg. Je kunt opslaan, maar vul liever eerst waarden in.');
       else melding($('#opslaanmelding'), '', '');
-      $('#opslaan').disabled = fouten.length > 0;
+      $('#opslaan').disabled = fouten.length > 0; $('#openwedstrijd').disabled = fouten.length > 0;
       $('#bestandsnaam').textContent = 'wordt: ' + bestandsnaam(S.versie + 1);
     }
     $('#polarwaarde').addEventListener('change', e => { S.instellingen.polarwaarde = e.target.value; wijzig(); tekenControle(); });
@@ -1304,15 +1311,60 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       const d = new Date(), datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       return `${naam}_polar_v${versie}_${datum}.json`;
     }
-    $('#opslaan').addEventListener('click', () => {
+    let laatstOpgeslagen = null;   // precies het bestand dat het laatst is gedownload
+    function opslaan() {
       const P = huidigePolair();
       S.versie += 1; S.gewijzigd = new Date().toISOString();
       const naam = bestandsnaam(S.versie);
-      const blob = new Blob([JSON.stringify(PT.naarBestand(S, P), null, 1)], { type: 'application/json' });
+      laatstOpgeslagen = PT.naarBestand(S, P);
+      const blob = new Blob([JSON.stringify(laatstOpgeslagen, null, 1)], { type: 'application/json' });
       const a = el('a', { href: URL.createObjectURL(blob), download: naam });
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       gewijzigd = false; tekenSchipregel(); tekenControle();
       melding($('#opslaanmelding'), 'ok', `Opgeslagen als ${naam}. Bewaar dit bestand; het is je nieuwe versie en het startpunt voor de volgende verfijning.`);
+    }
+    $('#opslaan').addEventListener('click', opslaan);
+
+    /* ---------- openen in wedstrijd ----------
+       Protocol (zie FORMAAT.md): de wedstrijdpagina meldt { type: 'polartool:klaar' } aan window.opener,
+       de polartool stuurt { type: 'polartool:polar', protocol: 1, bestand }, de wedstrijdpagina antwoordt
+       { type: 'polartool:ontvangen', schip_id, versie } of { type: 'polartool:geweigerd', reden }. */
+    const WEDSTRIJDEN = [
+      { naam: '3-stedenrace', url: '../3-stedenrace/' },
+      // Slag in de Rondte: toevoegen zodra die pagina online staat en de polar kan ontvangen
+    ];
+    const vulWedstrijden = () => $('#wedstrijdkeuze').replaceChildren(...WEDSTRIJDEN.map((w, k) => el('option', { value: String(k) }, w.naam)));
+    vulWedstrijden();
+    let overdracht = null;
+    $('#openwedstrijd').addEventListener('click', () => {
+      if (gewijzigd || !S.versie) {
+        if (!confirm('De wedstrijd rekent alleen met een opgeslagen versie. Nu opslaan en daarna openen?')) return;
+        opslaan();
+        if (gewijzigd) return;
+      }
+      const bestand = laatstOpgeslagen || PT.naarBestand(S, huidigePolair());
+      const w = WEDSTRIJDEN[Number($('#wedstrijdkeuze').value)];
+      const venster = window.open(w.url, '_blank');
+      if (!venster) { melding($('#wedstrijdmelding'), 'fout', 'De browser blokkeerde het nieuwe tabblad. Sta pop-ups toe voor deze pagina en probeer het opnieuw.'); return; }
+      if (overdracht) clearTimeout(overdracht.wachten);
+      overdracht = { venster, bestand, wedstrijd: w.naam, verstuurd: false,
+        wachten: setTimeout(() => { if (overdracht && !overdracht.verstuurd) melding($('#wedstrijdmelding'), 'let', `${w.naam} reageert niet. Die pagina kan de polar waarschijnlijk nog niet ontvangen; laad daar het opgeslagen bestand ${bestandsnaam(S.versie)} handmatig.`); }, 15000) };
+      melding($('#wedstrijdmelding'), 'ok', `${w.naam} wordt geopend; wachten tot de pagina klaar is…`);
+    });
+    window.addEventListener('message', e => {
+      if (!overdracht || e.source !== overdracht.venster || !e.data || typeof e.data.type !== 'string') return;
+      const doelOrigin = e.origin === 'null' ? '*' : e.origin;             // file:// heeft origin 'null'
+      if (e.origin !== 'null' && e.origin !== location.origin) return;     // alleen pagina's van deze site
+      if (e.data.type === 'polartool:klaar' && !overdracht.verstuurd) {
+        overdracht.venster.postMessage({ type: 'polartool:polar', protocol: 1, bestand: overdracht.bestand }, doelOrigin);
+        overdracht.verstuurd = true;
+      } else if (e.data.type === 'polartool:ontvangen') {
+        clearTimeout(overdracht.wachten);
+        melding($('#wedstrijdmelding'), 'ok', `${overdracht.wedstrijd} bevestigt: polar ontvangen (${overdracht.bestand.schip.naam}, versie ${overdracht.bestand.versie}).`);
+      } else if (e.data.type === 'polartool:geweigerd') {
+        clearTimeout(overdracht.wachten);
+        melding($('#wedstrijdmelding'), 'fout', `${overdracht.wedstrijd} weigert de polar: ${e.data.reden || 'geen reden opgegeven'}.`);
+      }
     });
 
     /* ---------- VDR inladen en data-inventaris ---------- */
@@ -1640,7 +1692,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       toon('controle');
     }
 
-    window.PolartoolApp = { staat: () => S, vdr: () => vdr, vensters: () => vensters, voegVensterToe: (a, b) => voegVensterToe(a, b) };   // voor testen in de console
+    window.PolartoolApp = { wedstrijden: WEDSTRIJDEN, vulWedstrijden, staat: () => S, vdr: () => vdr, vensters: () => vensters, voegVensterToe: (a, b) => voegVensterToe(a, b) };   // voor testen in de console
   })();
 </script>
 </body>
