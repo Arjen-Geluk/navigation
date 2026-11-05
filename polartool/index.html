@@ -79,11 +79,12 @@ button.knop:disabled{opacity:.5;cursor:default}
 /* polartabellen */
 .tabelvak{overflow-x:auto}
 table.polar{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-table.polar th,table.polar td{border:1px solid var(--line);padding:0;text-align:center;min-width:38px}
+table.polar th,table.polar td{border:1px solid var(--line);padding:0;text-align:center;min-width:34px}
 table.polar th{background:var(--chip);padding:3px 5px;font-weight:600}
 table.polar tr.standen th{background:var(--navy);color:var(--navy-ink);font-weight:500;font-size:12px;border-color:var(--navy)}
 table.polar th.tussen{font-weight:400}
-table.polar td{padding:3px 4px}
+table.polar tbody th:first-child{position:sticky;left:0;z-index:1}
+table.polar td{padding:3px 3px}
 table.polar td.eenh{color:var(--muted);background:var(--chip);font-size:11.5px}
 table.polar td.inv{padding:0}
 table.polar td.inv input{width:44px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:center;padding:4px 2px}
@@ -108,11 +109,24 @@ td.z-neer{background:var(--z-neer)} td.z-half{background:var(--z-half)} td.z-op{
 .knoppenrij{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
 /* polardiagram */
 .diagramvak{margin-top:16px;max-width:440px}
+.controlekop{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;margin-bottom:8px}
+.controlekop .veld{min-width:300px}
+.controlegrid{display:grid;gap:16px 24px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1180px){.controlegrid{grid-template-columns:minmax(0,1fr) 340px}.controlegrid .diagramvak{margin-top:0}}
+table.polar td.klik{cursor:pointer} table.polar td.klik:hover{outline:2px solid var(--accent);outline-offset:-2px}
+table.polar td.gekozen{outline:2px solid var(--ink);outline-offset:-2px}
+table.polar td.uit{text-decoration:line-through}
+tr.zwaardrij td{cursor:pointer}
+#vakdetail{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+#vakdetail h3{text-transform:none;letter-spacing:0;color:var(--ink);font-size:15px}
+.detailregel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.detailregel input{width:80px;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 svg.diagram{display:block;width:100%;height:auto;font-size:11px}
 svg.diagram .sector.s0{fill:var(--chip);opacity:.55} svg.diagram .sector.s1{fill:var(--chip);opacity:.25}
 svg.diagram .sectortekst{fill:var(--muted);font-size:10.5px}
 svg.diagram .ring{fill:none;stroke:var(--line)} svg.diagram .as{fill:var(--muted)}
 svg.diagram .kruis{stroke:var(--bad);stroke-dasharray:4 3;opacity:.7}
+svg.diagram .zband{fill:none;stroke-width:8}
 svg.diagram .curve{fill:none;stroke-width:2} svg.diagram .curve.dik{stroke-width:3.5}
 svg.diagram circle.punt-data{fill:var(--panel);stroke-width:2} svg.diagram circle.punt-handmatig{fill:var(--panel);stroke-width:1.5;stroke-dasharray:2 1.5}
 .diagramkeuze{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px}
@@ -246,13 +260,34 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
   <div id="tab-controle" hidden>
     <section>
       <h2>Controle</h2>
-      <p class="sub">Voorlopige weergave; het volledige controlescherm (detail per vakje, bronnen aan/uit, zwaardband verschuiven) volgt.</p>
-      <div class="legenda">
-        <span class="l-data">gemeten</span><span class="l-glad">gladgemaakt uit buurvakjes</span><span class="l-handmatig">handmatig</span>
-        <span class="l-bestaand">bestaande polar</span><span class="l-geïnterpoleerd">geïnterpoleerd</span><span class="l-doorgetrokken">doorgetrokken (schatting)</span>
+      <p class="sub">Klik op een vakje voor details en om het te bewerken. Klik in de zwaardrij om de stand bij die windhoek te wisselen.</p>
+      <div class="controlekop">
+        <div class="veld"><label for="polarwaarde">Polarwaarde per vakje</label>
+          <select id="polarwaarde">
+            <option value="mediaan">mediaan: wat je meestal haalt (standaard)</option>
+            <option value="p75">75e percentiel: wat het schip goed gevaren haalt</option>
+            <option value="gemiddelde">gemiddelde</option>
+          </select></div>
+        <div class="legenda">
+          <span class="l-data">gemeten (donkerder = meer metingen)</span><span class="l-glad">gladgemaakt uit buurvakjes</span><span class="l-handmatig">handmatig</span>
+          <span class="l-bestaand">bestaande polar</span><span class="l-geïnterpoleerd">geïnterpoleerd</span><span class="l-doorgetrokken">doorgetrokken (schatting)</span>
+        </div>
       </div>
-      <div class="tabelvak" id="controletabel"></div>
-      <div class="diagramvak" id="controlediagram"></div>
+      <div class="controlegrid">
+        <div>
+          <div class="tabelvak" id="controletabel"></div>
+          <div id="dekking"></div>
+        </div>
+        <div>
+          <div class="diagramvak" id="controlediagram"></div>
+          <div id="vakdetail"></div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Bronnen</h2>
+      <p class="sub">Alle bronnen in deze polar. Zet een bron uit als die achteraf fout blijkt: de polar wordt dan berekend alsof hij er nooit in zat. Uitzetten is altijd terug te draaien.</p>
+      <div class="tabelvak" id="bronnenlijst"></div>
     </section>
     <section>
       <h2>Opslaan</h2>
@@ -415,7 +450,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { TWS, TWA, invoer, kruishoek: k };
     }
     const R = Math.PI / 180;
-    const TOOL = { naam: 'Polartool', versie: '0.7', datum: '2026-11-05' };   // ophogen bij elke wijziging die gebruikers merken
+    const TOOL = { naam: 'Polartool', versie: '0.8', datum: '2026-11-05' };   // ophogen bij elke wijziging die gebruikers merken
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
@@ -965,7 +1000,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     }
 
     function open(nieuweS, bericht) {
-      S = nieuweS; polair = null; gewijzigd = false;
+      S = nieuweS; polair = null; gewijzigd = false; gekozen = null;
       tabs.forEach(b => { b.disabled = false; });
       vdr = null; $('#inventaris').hidden = true; $('#tijdvakken').hidden = true; $('#bevestig').hidden = true; melding($('#vdrmelding'), '', '');
       tekenProfiel(); tekenSchipregel();
@@ -1076,9 +1111,17 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         const a0 = k ? PT.ZEILSTANDEN[k - 1].tot : P.kruishoek, a1 = Math.min(z.tot, 180);
         const [x0, y0] = pt(a0, max), [x1, y1] = pt(a1, max);
         svg.append(s('path', { d: `M${cx} ${cy}L${x0} ${y0}A${r0} ${r0} 0 0 1 ${x1} ${y1}Z`, class: 'sector s' + (k % 2) }));
-        const [tx, ty] = pt((a0 + a1) / 2, max * 1.05);          // naam van de zeilstand buiten de cirkel
+        const [tx, ty] = pt((a0 + a1) / 2, max * 1.075);         // naam van de zeilstand buiten de cirkel
         svg.append(s('text', { x: tx, y: ty + 4, class: 'sectortekst', 'text-anchor': 'start' }, z.naam));
       });
+      // zwaardband langs de rand: per windhoek neer (donker), half (midden) of op (licht)
+      for (let a = P.kruishoek; a <= 180; a += 5) {
+        const a0 = Math.max(P.kruishoek, a - 2.5), a1 = Math.min(180, a + 2.5), rb = r0 * 1.025;
+        const p0 = [cx + Math.sin(a0 * Math.PI / 180) * rb, cy - Math.cos(a0 * Math.PI / 180) * rb], p1 = [cx + Math.sin(a1 * Math.PI / 180) * rb, cy - Math.cos(a1 * Math.PI / 180) * rb];
+        const z = PT.zwaardVoor(S, a);
+        svg.append(s('path', { d: `M${p0[0].toFixed(1)} ${p0[1].toFixed(1)}A${rb} ${rb} 0 0 1 ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}`, class: 'zband', style: `stroke:var(--z-${z})` }, undefined));
+        svg.lastChild.append(s('title', {}, `${a}°: zwaard ${z}`));
+      }
       for (let v = 2; v <= max; v += 2) svg.append(s('path', { d: `M${cx} ${cy - v / max * r0}A${v / max * r0} ${v / max * r0} 0 0 1 ${cx} ${cy + v / max * r0}`, class: 'ring' }), s('text', { x: cx - 4, y: cy - v / max * r0 + 4, 'text-anchor': 'end', class: 'as' }, v + ' kn'));
       for (let a = 30; a < 180; a += 30) { const [x, y] = pt(a, max), [lx, ly] = pt(a, max * 0.93); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'ring' }), s('text', { x: lx, y: ly + 4, class: 'as', 'text-anchor': 'middle' }, a + '°')); }
       { const [x, y] = pt(P.kruishoek, max); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'kruis' })); }
@@ -1127,15 +1170,46 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       S.handmatig = {}; wijzig(); tekenHandmatig();
     });
 
-    /* ---------- controle (voorlopig) en opslaan ---------- */
+    /* ---------- controle en opslaan ---------- */
+    let gekozen = null;      // gekozen vakje op het controlescherm: { t, a }
+    const STANDEN = ['neer', 'half', 'op'];
+    const datum = s => new Date(s * 1000).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // metingen van één bron in één vakje (2 kn × 10°), met statistiek
+    function vakMetingen(b, t, a) {
+      const v = b.punten.filter(([tws, twa]) => Math.round(tws / 2) * 2 === t && Math.round(twa / 10) * 10 === a).map(p => [p[2], p[3] ?? 1]);
+      if (!v.length) return null;
+      const W = v.reduce((s, x) => s + x[1], 0), gem = v.reduce((s, x) => s + x[0] * x[1], 0) / W;
+      const sd = v.length > 1 ? Math.sqrt(v.reduce((s, x) => s + x[1] * (x[0] - gem) ** 2, 0) / W) : 0;
+      return { n: v.length, mediaan: PT.kwantiel(v.slice(), 0.5), p75: PT.kwantiel(v.slice(), 0.75), gem, sd };
+    }
+
     function tekenControle() {
       const P = huidigePolair();
-      const zw = el('tr', { class: 'zwaardrij' }, el('th', { colspan: 3 }, 'zwaard'), ...P.twa.map(a => el('td', { class: 'z-' + PT.zwaardVoor(S, a) }, PT.zwaardVoor(S, a))));
-      $('#controletabel').replaceChildren(polarTabel(P, (i, j) => {
-        const h = P.herkomst[i][j];
-        return el('td', { class: 'h-' + h + (h === 'data' && P.n[i][j] >= 20 ? ' veel' : ''), title: `${HERKOMST[h]}${P.n[i][j] ? ', ' + P.n[i][j] + ' blokken' : ''}` }, P.snelheid[i][j] === null ? '–' : fmt(P.snelheid[i][j], 1));
+      $('#polarwaarde').value = S.instellingen.polarwaarde;
+      const uitg = new Set(S.uitgesloten);
+      const zw = el('tr', { class: 'zwaardrij' }, el('th', { colspan: 3, title: 'Klik op een vakje om de zwaardstand bij die windhoek te wisselen' }, 'zwaard'), ...P.twa.map(a => {
+        const z = PT.zwaardVoor(S, a), td = el('td', { class: 'z-' + z, title: `${a}°: zwaard ${z}. Klik om te wisselen.` }, z);
+        td.addEventListener('click', () => {
+          const volgende = STANDEN[(STANDEN.indexOf(z) + 1) % 3];
+          const zonder = { ...S, zwaard: { ...S.zwaard, [a]: undefined } };      // wat het zou zijn zonder afwijking
+          if (PT.zwaardVoor(zonder, a) === volgende) delete S.zwaard[a]; else S.zwaard[a] = volgende;
+          wijzig(); tekenControle();
+        });
+        return td;
+      }));
+      $('#controletabel').replaceChildren(polarTabel(P, (i, j, a) => {
+        const h = P.herkomst[i][j], t = P.tws[i];
+        const kl = ['klik', 'h-' + h];
+        if (h === 'data' && P.n[i][j] >= 20) kl.push('veel');
+        if (uitg.has(PT.sleutel(t, a))) kl.push('uit');
+        if (gekozen && gekozen.t === t && gekozen.a === a) kl.push('gekozen');
+        const td = el('td', { class: kl.join(' '), title: `${t} kn, ${a}°: ${HERKOMST[h]}${P.n[i][j] ? ', ' + P.n[i][j] + ' blokken' : ''}` }, P.snelheid[i][j] === null ? '–' : fmt(P.snelheid[i][j], 1));
+        td.addEventListener('click', () => { gekozen = { t, a }; tekenControle(); });
+        return td;
       }, [zw]));
-      polarDiagram(P, $('#controlediagram'));
+      polarDiagram(P, $('#controlediagram'), gekozen ? gekozen.t : null);
+      tekenVakdetail(P); tekenDekking(P); tekenBronnen();
       const fouten = PROFIEL.filter(v => veldFout(v)).map(v => v.label.replace(' *', ''));
       const leeg = P.herkomst.flat().every(h => h === 'leeg');
       if (fouten.length) melding($('#opslaanmelding'), 'fout', 'Vul eerst het profiel aan: ' + fouten.join(', ') + '.');
@@ -1144,6 +1218,87 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       $('#opslaan').disabled = fouten.length > 0;
       $('#bestandsnaam').textContent = 'wordt: ' + bestandsnaam(S.versie + 1);
     }
+    $('#polarwaarde').addEventListener('change', e => { S.instellingen.polarwaarde = e.target.value; wijzig(); tekenControle(); });
+
+    function tekenVakdetail(P) {
+      const doel = $('#vakdetail');
+      if (!gekozen) { doel.replaceChildren(el('p', { class: 'sub' }, 'Klik op een vakje in de tabel voor details.')); return; }
+      const { t, a } = gekozen, i = P.tws.indexOf(t), j = P.twa.indexOf(a);
+      if (i < 0 || j < 0) { gekozen = null; doel.replaceChildren(); return; }
+      const h = P.herkomst[i][j], w = P.snelheid[i][j], k = PT.sleutel(t, a);
+      const delen = [el('h3', {}, `${t} kn wind (${fmt(t * 0.514444, 1)} m/s, Bft ${bft(t)}), ${a}° · ${PT.zeilstand(a).naam}`),
+        el('p', {}, el('strong', {}, w === null ? 'geen waarde' : fmt(w, 2) + ' kn'), ` · ${HERKOMST[h]}`)];
+      if (!P.invoer[j]) {
+        const l = P.twa[j - 1], r = P.twa[j + 1];
+        delen.push(el('p', { class: 'sub' }, `Tussenwaarde: lineair tussen ${l}° en ${r}°. Bewerk die vakjes om deze waarde te veranderen.`));
+        doel.replaceChildren(...delen); return;
+      }
+      // metingen per bron
+      const rijen = [], meldingen = [];
+      for (const b of S.bronnen) {
+        const m = vakMetingen(b, t, a); if (!m) continue;
+        rijen.push(el('tr', {}, el('td', {}, b.naam + (b.actief ? '' : ' (uit)')), el('td', { class: 'num' }, String(m.n)), el('td', { class: 'num' }, fmt(m.mediaan, 2)), el('td', { class: 'num' }, fmt(m.p75, 2)), el('td', { class: 'num' }, fmt(m.gem, 2)), el('td', { class: 'num' }, '± ' + fmt(m.sd, 2))));
+        if (b.actief && w > 0 && m.n >= S.instellingen.filters.minPunten && Math.abs(m.mediaan - w) / w > 0.15)
+          meldingen.push(`Bron “${b.naam}” wijkt ${Math.round((m.mediaan / w - 1) * 100)}% af van de polarwaarde (mediaan ${fmt(m.mediaan, 1)} kn).`);
+      }
+      const bw = S.basis && S.basis.actief !== false ? (() => { const ti = (S.basis.tws_kn || []).indexOf(t), ta = (S.basis.twa_graden || []).indexOf(a); return ti < 0 || ta < 0 ? null : S.basis.snelheid[ti][ta]; })() : null;
+      if (bw !== null && bw !== undefined && h === 'data' && Math.abs(w - bw) / bw > 0.15) meldingen.push(`De metingen wijken ${Math.round((w / bw - 1) * 100)}% af van de bestaande polar (${fmt(bw, 1)} kn).`);
+      if (S.handmatig[k] !== undefined && h === 'data' && Math.abs(w - S.handmatig[k]) / S.handmatig[k] > 0.15) meldingen.push(`De metingen wijken ${Math.round((w / S.handmatig[k] - 1) * 100)}% af van je handmatige waarde (${fmt(S.handmatig[k], 1)} kn).`);
+      if (rijen.length) delen.push(el('table', { class: 'lijst' },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Bron'), el('th', { class: 'num' }, 'blokken'), el('th', { class: 'num' }, 'mediaan'), el('th', { class: 'num' }, 'p75'), el('th', { class: 'num' }, 'gem.'), el('th', { class: 'num' }, 'spreiding'))),
+        el('tbody', {}, ...rijen)));
+      else delen.push(el('p', { class: 'sub' }, 'Geen metingen in dit vakje.'));
+      if (h !== 'data' && P.n[i][j] > 0 && P.n[i][j] < S.instellingen.filters.minPunten) delen.push(el('p', { class: 'sub' }, `${P.n[i][j]} blokken: te weinig om mee te tellen (minimaal ${S.instellingen.filters.minPunten}).`));
+      for (const m of meldingen) delen.push(el('div', { class: 'melding let' }, m + ' Mogelijk een ander schip, andere zeilvoering of een meetfout.'));
+      // bewerken: handmatige waarde en uitsluiten
+      const inp = el('input', { type: 'text', inputmode: 'decimal', value: S.handmatig[k] !== undefined ? fmt(S.handmatig[k]) : '', 'aria-label': 'Handmatige waarde' });
+      const zet = el('button', { class: 'klein', type: 'button' }, 'opslaan in polar');
+      zet.addEventListener('click', () => {
+        const v = getal(inp.value);
+        if (Number.isNaN(v) || (v !== null && (v < 0 || v > 20))) { inp.style.borderColor = 'var(--bad)'; return; }
+        if (v === null) delete S.handmatig[k]; else S.handmatig[k] = v;
+        wijzig(); tekenControle();
+      });
+      delen.push(el('div', { class: 'detailregel' }, el('label', {}, 'Handmatige waarde (kn):'), inp, zet,
+        el('span', { class: 'sub' }, h === 'data' ? 'Telt alleen als de metingen wegvallen.' : 'Leeg = geen handmatige waarde.')));
+      if (P.n[i][j] > 0 || S.uitgesloten.includes(k)) {
+        const uit = S.uitgesloten.includes(k);
+        const knop = el('button', { class: 'klein', type: 'button' }, uit ? 'Metingen weer laten meetellen' : 'Metingen in dit vakje uitsluiten');
+        knop.addEventListener('click', () => { S.uitgesloten = uit ? S.uitgesloten.filter(x => x !== k) : [...S.uitgesloten, k]; wijzig(); tekenControle(); });
+        delen.push(el('div', { class: 'detailregel' }, knop, el('span', { class: 'sub' }, uit ? 'Uitgesloten: dit vakje gebruikt nu handmatig, bestaand of buurvakjes.' : 'Voor een uitschieter: het vakje valt dan terug op handmatig, bestaand of buurvakjes.')));
+      }
+      doel.replaceChildren(...delen);
+    }
+
+    // dekking: per zeilstand bij welke windsnelheden er gemeten is, zodat gaten opvallen
+    function tekenDekking(P) {
+      const tel = {}; P.herkomst.flat().forEach(h => { tel[h] = (tel[h] || 0) + 1; });
+      const regels = PT.ZEILSTANDEN.map(z => {
+        const tws = P.tws.filter((t, i) => P.twa.some((a, j) => PT.zeilstand(a).naam === z.naam && P.herkomst[i][j] === 'data'));
+        return el('li', {}, el('strong', {}, z.naam + ': '), tws.length ? `gemeten bij ${tws[0]}–${tws[tws.length - 1]} kn` : 'geen metingen');
+      });
+      const totaal = P.herkomst.flat().filter(h => h !== 'tussenwaarde').length;
+      $('#dekking').replaceChildren(el('div', { class: 'melding ok' }, el('strong', {}, 'Dekking'),
+        el('div', {}, `${tel.data || 0} van de ${totaal} vakjes gemeten, ${tel.handmatig || 0} handmatig, ${tel.bestaand || 0} uit de bestaande polar, ${(tel.glad || 0) + (tel['geïnterpoleerd'] || 0)} gladgemaakt of geïnterpoleerd, ${tel.doorgetrokken || 0} doorgetrokken.`),
+        el('ul', {}, ...regels)));
+    }
+
+    function tekenBronnen() {
+      const rijen = [];
+      const schakel = (aan, bij) => { const c = el('input', { type: 'checkbox' }); c.checked = aan; c.addEventListener('change', () => { bij(c.checked); wijzig(); tekenControle(); }); return c; };
+      if (S.basis) rijen.push(el('tr', {}, el('td', {}, schakel(S.basis.actief !== false, v => { S.basis.actief = v; })),
+        el('td', {}, 'Bestaande polar (import)'), el('td', {}, S.basis.bron || ''), el('td', {}, '–'), el('td', { class: 'num' }, '–')));
+      for (const b of S.bronnen) {
+        const vensters = (b.vensters || []).map(v => `${klok(v.van)}–${klok(v.tot)} ${v.soort === 'overtocht' ? '(overtocht)' : ''}`).join(', ');
+        rijen.push(el('tr', {}, el('td', {}, schakel(b.actief, v => { b.actief = v; })),
+          el('td', {}, b.naam), el('td', {}, `opname ${b.vingerafdruk ? datum(b.vingerafdruk.start) : '?'}; ${vensters}`),
+          el('td', {}, b.toegevoegd ? datum(Date.parse(b.toegevoegd) / 1000) : ''), el('td', { class: 'num' }, String(b.punten.length))));
+      }
+      $('#bronnenlijst').replaceChildren(rijen.length ? el('table', { class: 'lijst' },
+        el('thead', {}, el('tr', {}, el('th', {}, 'aan'), el('th', {}, 'Bron'), el('th', {}, 'Datum en tijdvakken (lokale tijd)'), el('th', {}, 'Toegevoegd'), el('th', { class: 'num' }, 'Blokken'))),
+        el('tbody', {}, ...rijen)) : el('p', { class: 'sub' }, 'Nog geen bronnen: vul handmatig in of laad een VDR-bestand.'));
+    }
+
     function bestandsnaam(versie) {
       const naam = (S.schip.naam || 'schip').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'schip';
       const d = new Date(), datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
