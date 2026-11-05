@@ -4,79 +4,120 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Polartool</title>
-<meta name="description" content="Polair diagram voor een platbodem opbouwen uit handmatige waarden en VDR-logs, volledig in de browser.">
+<meta name="description" content="Polar (polair diagram) voor een platbodem opbouwen uit handmatige waarden en VDR-logs, volledig in de browser.">
 <style>
 :root{
-  --bg:#f4f1ea; --panel:#fffdf8; --ink:#1d2a33; --muted:#5d6b74; --line:#d9d2c3;
-  --accent:#1f4e79; --accent-ink:#fff; --warn:#9a5b00; --warn-bg:#fdf0d8;
-  --bad:#a12a2a; --bad-bg:#f9e0e0; --chip:#ebe5d8;
+  --bg:#f3f6f9; --panel:#ffffff; --ink:#0f2235; --muted:#5b6b7b; --line:#dde4eb; --navy:#0b2545; --navy-ink:#ffffff; --navy-muted:#a9bed3;
+  --accent:#0b4f8a; --accent-ink:#ffffff; --chip:#eaf0f6;
+  --warn:#8a5a00; --warn-bg:#fff4dc; --bad:#b42318; --bad-bg:#fdecea; --good-bg:#e7f4ee;
+  --h-data:rgba(30,110,190,.30); --h-data-veel:rgba(30,110,190,.50); --h-glad:rgba(30,110,190,.13); --h-hand:rgba(232,131,30,.32); --h-best:rgba(32,140,110,.24);
+  --lijn0:#8fbfe3; --lijn1:#5a9fd4; --lijn2:#2f7fbf; --lijn3:#0b5fa3; --lijn4:#0b4176; --lijn5:#0b2545;
+  --z-neer:#0b4f8a; --z-half:#5a9fd4; --z-op:#c5d8ea;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#12181d; --panel:#1a232a; --ink:#e3e8eb; --muted:#93a1aa; --line:#2c3a44;
-  --accent:#6aa7dd; --accent-ink:#0d1418; --warn:#f2b45a; --warn-bg:#3a2c12;
-  --bad:#f08a8a; --bad-bg:#3b1c1c; --chip:#25313a;
+  --bg:#0b1724; --panel:#102233; --ink:#e6edf3; --muted:#93a4b5; --line:#1f3447; --navy:#071523; --navy-ink:#e6edf3; --navy-muted:#8aa1b8;
+  --accent:#5aa7e6; --accent-ink:#06121d; --chip:#16304a;
+  --warn:#f2b45a; --warn-bg:#3a2c12; --bad:#f08a8a; --bad-bg:#3b1c1c; --good-bg:#14301f;
+  --lijn0:#1f4f7a; --lijn1:#2d6ea6; --lijn2:#4a8fcc; --lijn3:#76aee0; --lijn4:#a6cbee; --lijn5:#dbeafa;
+  --z-neer:#5aa7e6; --z-half:#2d6ea6; --z-op:#1f3447;
 }}
 :root[data-theme="dark"]{
-  --bg:#12181d; --panel:#1a232a; --ink:#e3e8eb; --muted:#93a1aa; --line:#2c3a44;
-  --accent:#6aa7dd; --accent-ink:#0d1418; --warn:#f2b45a; --warn-bg:#3a2c12;
-  --bad:#f08a8a; --bad-bg:#3b1c1c; --chip:#25313a;
+  --bg:#0b1724; --panel:#102233; --ink:#e6edf3; --muted:#93a4b5; --line:#1f3447; --navy:#071523; --navy-ink:#e6edf3; --navy-muted:#8aa1b8;
+  --accent:#5aa7e6; --accent-ink:#06121d; --chip:#16304a;
+  --warn:#f2b45a; --warn-bg:#3a2c12; --bad:#f08a8a; --bad-bg:#3b1c1c; --good-bg:#14301f;
+  --lijn0:#1f4f7a; --lijn1:#2d6ea6; --lijn2:#4a8fcc; --lijn3:#76aee0; --lijn4:#a6cbee; --lijn5:#dbeafa;
+  --z-neer:#5aa7e6; --z-half:#2d6ea6; --z-op:#1f3447;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header,main,footer{max-width:1200px;margin:0 auto;padding:0 16px}
-header{padding-top:14px}
-h1{font-size:20px;margin:0 0 2px}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif}
+.binnen{max-width:1280px;margin:0 auto;padding:0 16px}
+main,footer{max-width:1280px;margin:0 auto;padding:0 16px}
+/* kopbalk */
+header{background:var(--navy);color:var(--navy-ink)}
+header .binnen{padding-top:16px}
+h1{font-size:21px;margin:0;letter-spacing:.2px;font-weight:650}
+h1 .anker{display:inline-block;width:10px;height:10px;border:2px solid var(--navy-muted);border-radius:50%;margin-right:8px;vertical-align:1px}
+header .sub{color:var(--navy-muted)}
 .sub{color:var(--muted);font-size:13px}
-section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:14px 0}
-h2{font-size:16px;margin:0 0 8px}
-.aanname{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px}
-footer{color:var(--muted);font-size:12px;padding-bottom:30px}
-footer a{color:var(--accent)}
-/* schipregel en tabbladen */
-.schipregel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:10px;font-size:13px}
+.schipregel{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:10px;font-size:13px}
+header .chip{background:rgba(255,255,255,.12);color:var(--navy-ink)}
 .chip{background:var(--chip);border-radius:999px;padding:2px 10px}
 .chip.let{background:var(--warn-bg);color:var(--warn)}
-nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:12px;border-bottom:1px solid var(--line)}
-nav.tabs button{border:0;background:none;color:var(--muted);font:inherit;padding:8px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
-nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
-nav.tabs button:disabled{opacity:.45;cursor:default}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:12px}
+nav.tabs button{border:0;background:none;color:var(--navy-muted);font:inherit;padding:9px 14px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button:hover:not(:disabled){color:var(--navy-ink)}
+nav.tabs button[aria-selected="true"]{color:var(--navy-ink);border-bottom-color:var(--navy-ink);font-weight:600}
+nav.tabs button:disabled{opacity:.4;cursor:default}
 [hidden]{display:none!important}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0;box-shadow:0 1px 2px rgba(11,37,69,.04)}
+h2{font-size:17px;margin:0 0 8px;font-weight:650}
+h3{font-size:14px;margin:0 0 8px;font-weight:650;color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
+.aanname{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px}
+footer{color:var(--muted);font-size:12px;padding-bottom:30px}
+footer a,section a{color:var(--accent)}
 /* formulieren en knoppen */
-button.knop,label.knop{display:inline-block;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
-button.knop.tweede,label.knop.tweede{background:var(--chip);color:var(--ink)}
+button.knop,label.knop{display:inline-block;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
+button.knop.tweede,label.knop.tweede{background:var(--chip);color:var(--ink);font-weight:500}
 button.knop:disabled{opacity:.5;cursor:default}
 .kaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 .kaarten>div{border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.kaarten h3{text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink)}
 .velden{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 18px}
+.groepen{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px 28px}
+.groep .veld{margin-bottom:12px}
 .veld label{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
 .veld input,.veld select{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
-.veld input:read-only{color:var(--muted)}
+.veld input:read-only{color:var(--muted);font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .veld .hint{font-size:12px;color:var(--muted);margin-top:2px}
 .veld.fout input{border-color:var(--bad);background:var(--bad-bg)}
 .melding{border-radius:6px;padding:8px 10px;font-size:13px;margin:10px 0}
 .melding.fout{background:var(--bad-bg);color:var(--bad)}
 .melding.let{background:var(--warn-bg);color:var(--warn)}
-.melding.ok{background:var(--chip)}
+.melding.ok{background:var(--good-bg)}
+.melding ul{margin:4px 0 0;padding-left:20px}
 /* polartabellen */
 .tabelvak{overflow-x:auto}
-table.polar{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-table.polar th,table.polar td{border:1px solid var(--line);padding:0;text-align:center;min-width:46px}
-table.polar th{background:var(--chip);padding:4px 6px;font-weight:600}
+table.polar{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.polar th,table.polar td{border:1px solid var(--line);padding:0;text-align:center;min-width:38px}
+table.polar th{background:var(--chip);padding:3px 5px;font-weight:600}
+table.polar tr.standen th{background:var(--navy);color:var(--navy-ink);font-weight:500;font-size:12px;border-color:var(--navy)}
+table.polar th.tussen{font-weight:400}
 table.polar td{padding:3px 4px}
+table.polar td.eenh{color:var(--muted);background:var(--chip);font-size:11.5px}
 table.polar td.inv{padding:0}
-table.polar td.inv input{width:52px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:center;padding:4px 2px}
-table.polar td.inv input::placeholder{color:var(--muted);opacity:.6}
-table.polar td.inv.gevuld{background:rgba(230,126,34,.22)}
+table.polar td.inv input{width:44px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:center;padding:4px 2px}
+table.polar td.inv input::placeholder{color:var(--muted);opacity:.65}
+table.polar td.inv.gevuld{background:var(--h-hand)}
 table.polar td.inv.fout{background:var(--bad-bg)}
-td.h-data{background:rgba(31,111,190,.28)} td.h-glad{background:rgba(31,111,190,.12)}
-td.h-handmatig{background:rgba(230,126,34,.28)} td.h-bestaand{background:rgba(46,125,79,.22)}
+table.polar td.inv{background:var(--panel)}
+table.polar td.tussen,table.polar th.tussen{min-width:30px;color:var(--muted);font-size:10.5px;background:var(--bg)}
+td.h-data{background:var(--h-data)} td.h-data.veel{background:var(--h-data-veel)} td.h-glad{background:var(--h-glad)}
+td.h-handmatig{background:var(--h-hand)} td.h-bestaand{background:var(--h-best)}
 td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
+td.h-doorgetrokken{color:var(--muted);font-style:italic;background:repeating-linear-gradient(135deg,transparent 0 4px,rgba(127,140,155,.12) 4px 6px)}
+td.h-tussenwaarde{color:var(--muted);font-size:11.5px}
+tr.zwaardrij td{font-size:11px;color:#fff}
+td.z-neer{background:var(--z-neer)} td.z-half{background:var(--z-half)} td.z-op{background:var(--z-op);color:var(--ink)!important}
 .legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:8px 0}
 .legenda span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1px solid var(--line)}
-.legenda .l-data::before{background:rgba(31,111,190,.28)} .legenda .l-glad::before{background:rgba(31,111,190,.12)}
-.legenda .l-handmatig::before{background:rgba(230,126,34,.28)} .legenda .l-bestaand::before{background:rgba(46,125,79,.22)}
+.legenda .l-data::before{background:var(--h-data)} .legenda .l-glad::before{background:var(--h-glad)}
+.legenda .l-handmatig::before{background:var(--h-hand)} .legenda .l-bestaand::before{background:var(--h-best)}
 .legenda .l-geïnterpoleerd::before{background:transparent}
+.legenda .l-doorgetrokken::before{background:repeating-linear-gradient(135deg,transparent 0 3px,rgba(127,140,155,.4) 3px 4px)}
 .knoppenrij{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+/* polardiagram */
+.diagramvak{margin-top:16px;max-width:440px}
+svg.diagram{display:block;width:100%;height:auto;font-size:11px}
+svg.diagram .sector.s0{fill:var(--chip);opacity:.55} svg.diagram .sector.s1{fill:var(--chip);opacity:.25}
+svg.diagram .sectortekst{fill:var(--muted);font-size:10.5px}
+svg.diagram .ring{fill:none;stroke:var(--line)} svg.diagram .as{fill:var(--muted)}
+svg.diagram .kruis{stroke:var(--bad);stroke-dasharray:4 3;opacity:.7}
+svg.diagram .curve{fill:none;stroke-width:2} svg.diagram .curve.dik{stroke-width:3.5}
+svg.diagram circle.punt-data{fill:var(--panel);stroke-width:2} svg.diagram circle.punt-handmatig{fill:var(--panel);stroke-width:1.5;stroke-dasharray:2 1.5}
+.diagramkeuze{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px}
+button.chipknop{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:1px 8px;cursor:pointer}
+button.chipknop.aan{border-color:var(--c);color:var(--ink);box-shadow:inset 0 -3px 0 var(--c)}
+/* VDR en tijdlijn */
 #vdrvoortgang{margin-top:12px} #vdrvoortgang progress{width:min(360px,100%);vertical-align:middle}
 table.lijst{border-collapse:collapse;font-size:13px;margin-top:10px;min-width:min(100%,640px)}
 table.lijst th,table.lijst td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
@@ -85,12 +126,11 @@ table.lijst td.num{text-align:right;font-variant-numeric:tabular-nums}
 table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
 .ja{color:inherit} .nee{color:var(--bad);font-weight:600}
 .kv{font-size:13px} .kv b{display:block;font-weight:600;color:var(--muted);font-size:12px}
-/* tijdlijn */
 #tijdlijn{margin-top:8px;user-select:none;touch-action:none}
 #tijdlijn svg{display:block;width:100%;font-size:11px}
 #tijdlijn .as{stroke:var(--line)} #tijdlijn text{fill:var(--muted)}
-#tijdlijn .lijn{fill:none;stroke:var(--ink);stroke-width:1}
-#tijdlijn .venster{fill:var(--accent);fill-opacity:.14;stroke:var(--accent);stroke-opacity:.6}
+#tijdlijn .lijn{fill:none;stroke:var(--accent);stroke-width:1}
+#tijdlijn .venster{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-opacity:.6}
 #tijdlijn .sleep{fill:var(--accent);fill-opacity:.25}
 #tijdlijn .geenwind{fill:var(--muted);fill-opacity:.12}
 :root{--s-ok:#1f6fbe;--s-onrustig:#d9a400;--s-manoeuvre:#8e5bb5;--s-traag:#8a949c;--s-hoek:#e67e22;--s-gat:#3b3b3b;--s-geen:#c9c2b3;--s-motor:#c0392b}
@@ -98,25 +138,34 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
 .s-hoek{fill:var(--s-hoek)} .s-gat{fill:var(--s-gat)} .s-motor{fill:var(--s-motor)}
 .legenda .l-s{display:inline-flex;align-items:center} .legenda .l-s::before{display:none}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px}
-table.lijst input[type=time]{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
-table.lijst select{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+table.lijst input[type=time],table.lijst select{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
 button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;color:var(--ink);cursor:pointer}
 #bevestig h2{font-size:20px}
 #bevestig.actief{border:2px solid var(--accent)}
+/* uitleg */
+.uitleg{max-width:860px}
+.uitleg h2{margin-top:6px}
+.uitleg p,.uitleg li{font-size:14.5px}
+.uitleg table.lijst td,.uitleg table.lijst th{font-size:13.5px}
+.uitleg code{background:var(--chip);border-radius:4px;padding:0 4px;font-size:13px}
+.inhoud{columns:2 240px;font-size:14px;margin:0;padding-left:18px}
 </style>
 </head>
 <body>
 <header>
-  <h1>Polartool</h1>
-  <div class="sub">Polair diagram voor een platbodem opbouwen uit handmatige waarden en VDR-logs. Alles gebeurt in je browser; de tool slaat niets op en uploadt niets.</div>
-  <div class="schipregel" id="schipregel" hidden></div>
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="start" aria-selected="true">Start</button>
-    <button role="tab" data-tab="profiel" disabled>Profiel</button>
-    <button role="tab" data-tab="handmatig" disabled>Handmatig</button>
-    <button role="tab" data-tab="vdr" disabled>VDR inladen</button>
-    <button role="tab" data-tab="controle" disabled>Controle en opslaan</button>
-  </nav>
+  <div class="binnen">
+    <h1><span class="anker"></span>Polartool</h1>
+    <div class="sub">Polar voor een platbodem opbouwen uit handmatige waarden en VDR-logs. Alles gebeurt in je browser; de tool slaat niets op en uploadt niets.</div>
+    <div class="schipregel" id="schipregel" hidden></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="start" aria-selected="true">Start</button>
+      <button role="tab" data-tab="profiel" disabled>Profiel</button>
+      <button role="tab" data-tab="handmatig" disabled>Handmatig</button>
+      <button role="tab" data-tab="vdr" disabled>VDR inladen</button>
+      <button role="tab" data-tab="controle" disabled>Controle en opslaan</button>
+      <button role="tab" data-tab="uitleg">Uitleg</button>
+    </nav>
+  </div>
 </header>
 <main>
   <div id="tab-start">
@@ -135,7 +184,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         </div>
       </div>
       <div id="startmelding"></div>
-      <p class="aanname">Aanname: stilstaand water. De tool rekent met snelheid over de grond (SOG) en houdt geen rekening met stroom. Kies dus tijdvakken zonder merkbare stroom.</p>
+      <p class="aanname">Aanname: stilstaand water. De tool rekent met snelheid over de grond (SOG) en houdt geen rekening met stroom. Kies dus tijdvakken zonder merkbare stroom. Meer hierover onder <a href="#" data-naar="uitleg">Uitleg</a>.</p>
     </section>
   </div>
 
@@ -143,23 +192,24 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     <section>
       <h2>Scheepsprofiel</h2>
       <p class="sub">Alleen gegevens; wat ermee gebeurt (zoals de controle op kielspeling) regelt het routemodel. Velden met * zijn verplicht.</p>
-      <div class="velden" id="profielvelden"></div>
+      <div class="groepen" id="profielvelden"></div>
     </section>
   </div>
 
   <div id="tab-handmatig" hidden>
     <section>
       <h2>Handmatig invullen</h2>
-      <p class="sub">Bootsnelheid in knopen per ware windsnelheid (rij, op 10 m hoogte) en ware windhoek (kolom). Een handmatige waarde is een startpunt: zodra een vakje genoeg metingen heeft, gaat de meting voor. Leeg laten mag; grijze getallen zijn de huidige polar.</p>
+      <p class="sub">Bootsnelheid in knopen per ware windsnelheid (rij, op 10 m hoogte) en ware windhoek (kolom). Vul per 10° in; de smalle 5°-kolommen tussen kruishoek en halve wind rekent de tool uit. Een handmatige waarde is een startpunt: zodra een vakje genoeg metingen heeft, gaat de meting voor. Leeg laten mag; grijze getallen zijn de huidige polar.</p>
       <div class="tabelvak" id="handtabel"></div>
       <div class="knoppenrij"><button class="knop tweede" id="handwissen">Alle handmatige waarden wissen</button></div>
+      <div class="diagramvak" id="handdiagram"></div>
     </section>
   </div>
 
   <div id="tab-vdr" hidden>
     <section>
       <h2>VDR-bestand inladen</h2>
-      <p>Kies een VDR-log uit OpenCPN (ruwe NMEA 0183-zinnen). Het bestand wordt alleen in deze browser gelezen en nergens naartoe gestuurd.</p>
+      <p>Kies een opname van de <strong>VDR-plugin van OpenCPN</strong> (ruwe NMEA 0183-zinnen, meestal <code>vdr_….txt</code>). Het bestand wordt alleen in deze browser gelezen en nergens naartoe gestuurd. Hoe je goed opneemt, staat onder <a href="#" data-naar="uitleg">Uitleg</a>.</p>
       <p class="aanname">Aanname: stilstaand water. Snelheid over de grond geldt als bootsnelheid; kies straks alleen tijdvakken zonder merkbare stroom en met de zeilvoering die bij die windsterkte hoort.</p>
       <div class="knoppenrij"><label class="knop" id="vdrknop">VDR-bestand kiezen…<input type="file" id="vdrbestand" accept=".txt,.log,.nmea,text/plain" hidden></label></div>
       <div id="vdrvoortgang" hidden><progress max="1" value="0"></progress> <span class="sub"></span></div>
@@ -193,18 +243,146 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
   <div id="tab-controle" hidden>
     <section>
       <h2>Controle</h2>
-      <p class="sub">Voorlopige weergave; het volledige controlescherm (plot, detail per vakje, bronnen, zwaardband) volgt.</p>
+      <p class="sub">Voorlopige weergave; het volledige controlescherm (detail per vakje, bronnen aan/uit, zwaardband verschuiven) volgt.</p>
       <div class="legenda">
         <span class="l-data">gemeten</span><span class="l-glad">gladgemaakt uit buurvakjes</span><span class="l-handmatig">handmatig</span>
-        <span class="l-bestaand">bestaande polar</span><span class="l-geïnterpoleerd">geïnterpoleerd</span>
+        <span class="l-bestaand">bestaande polar</span><span class="l-geïnterpoleerd">geïnterpoleerd</span><span class="l-doorgetrokken">doorgetrokken (schatting)</span>
       </div>
       <div class="tabelvak" id="controletabel"></div>
+      <div class="diagramvak" id="controlediagram"></div>
     </section>
     <section>
       <h2>Opslaan</h2>
       <p>Opslaan downloadt het polarbestand als <strong>nieuwe versie</strong>. Het vorige bestand blijft ongewijzigd en is je terugvalpunt.</p>
       <div id="opslaanmelding"></div>
       <div class="knoppenrij"><button class="knop" id="opslaan">Opslaan</button><span class="sub" id="bestandsnaam"></span></div>
+    </section>
+  </div>
+
+  <div id="tab-uitleg" hidden>
+    <section class="uitleg">
+      <h2>Uitleg</h2>
+      <p>De polartool maakt een <strong>polar</strong> (polair diagram): de bootsnelheid die een schip haalt bij elke combinatie van ware windsnelheid en ware windhoek. Routemodellen gebruiken die tabel om te berekenen hoe snel een route te varen is. Deze pagina legt uit hoe de tool rekent en waarom.</p>
+      <ol class="inhoud">
+        <li><a href="#u-werkwijze">Werkwijze in het kort</a></li>
+        <li><a href="#u-vdr">Opnemen met de VDR-plugin</a></li>
+        <li><a href="#u-wind">Ware wind berekenen</a></li>
+        <li><a href="#u-filters">Filters: alleen stabiel zeilen</a></li>
+        <li><a href="#u-kwaliteit">Kwaliteit van de opname</a></li>
+        <li><a href="#u-polar">Van metingen naar polar</a></li>
+        <li><a href="#u-raster">Raster, zeilstanden en zwaard</a></li>
+        <li><a href="#u-vangrails">Bestand en vangrails</a></li>
+        <li><a href="#u-aannames">Aannames en beperkingen</a></li>
+      </ol>
+
+      <h2 id="u-werkwijze">1. Werkwijze in het kort</h2>
+      <ol>
+        <li><strong>Profiel</strong> invullen: naam, kruishoek, diepgang, windhoogtefactor. Een nieuw schip krijgt een vaste scheeps-ID.</li>
+        <li>Optioneel <strong>handmatig</strong> een startpolar invullen, of een bestaande polar importeren.</li>
+        <li>Een <strong>VDR-opname</strong> inladen, de <strong>tijdvakken</strong> kiezen waarin goed gezeild is en toevoegen.</li>
+        <li>Op <strong>Controle</strong> het resultaat bekijken en <strong>opslaan</strong>: dat geeft altijd een nieuwe versie van het bestand.</li>
+        <li>Na een volgende zeildag: het bestand openen, de nieuwe opname toevoegen, opnieuw opslaan. Zo wordt de polar steeds beter.</li>
+      </ol>
+
+      <h2 id="u-vdr">2. Opnemen met de VDR-plugin van OpenCPN</h2>
+      <p>VDR (Voyage Data Recorder) is een plugin van OpenCPN die alle binnenkomende NMEA-zinnen ongewijzigd in een tekstbestand schrijft. Dat bestand is de invoer voor deze tool.</p>
+      <ul>
+        <li><strong>Inschakelen:</strong> in OpenCPN via Opties → Plugins → VDR → Inschakelen. Er komt een opnameknop in de werkbalk.</li>
+        <li><strong>Formaat:</strong> NMEA 0183 (ruwe zinnen). Kies de opnamemap zelf, zodat je de bestanden terugvindt.</li>
+        <li><strong>Automatisch starten aanzetten</strong> wordt aangeraden. Een vergeten opnameknop of een computer die in slaapstand gaat, is de meest voorkomende oorzaak van gaten in de opname.</li>
+        <li><strong>Snelheidsdrempel:</strong> uit, of laag (bijvoorbeeld 0,5 kn). Een hoge drempel gooit juist de lichte-windmetingen weg.</li>
+        <li><strong>Logrotatie:</strong> mag aan (bijvoorbeeld per 24 uur). Let op: de bestandsnaam is geen betrouwbare datum; de tool leest de datum uit de GPS-zinnen.</li>
+        <li><strong>Laat de computer niet slapen</strong> tijdens het varen: zet de energiebeheerinstellingen op "nooit" als hij op de netvoeding zit.</li>
+      </ul>
+      <table class="lijst">
+        <thead><tr><th>Gegeven</th><th>NMEA-zin</th><th>Nodig?</th></tr></thead>
+        <tbody>
+          <tr><td>Datum en tijd</td><td><code>ZDA</code>, anders <code>RMC</code></td><td>verplicht</td></tr>
+          <tr><td>Positie, snelheid en koers over de grond</td><td><code>RMC</code> (reserve <code>GGA</code>, <code>VTG</code>)</td><td>verplicht</td></tr>
+          <tr><td>Schijnbare wind (hoek en snelheid)</td><td><code>MWV</code> met R (relatief)</td><td>verplicht</td></tr>
+          <tr><td>Kompaskoers (waar)</td><td><code>HDT</code></td><td>verplicht</td></tr>
+          <tr><td>Draaisnelheid, luchtdruk, temperatuur, vochtigheid</td><td><code>ROT</code>, <code>MDA</code></td><td>optioneel, alleen informatie</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="u-wind">3. Ware wind berekenen</h2>
+      <p>De tool rekent de ware wind zelf uit, elke seconde, met vectoren:</p>
+      <ul>
+        <li>de schijnbare wind (hoek ten opzichte van de boeg, plus kompaskoers) geeft de richting waaruit de wind over het schip komt;</li>
+        <li>de bootbeweging is snelheid en koers over de grond (SOG, COG);</li>
+        <li>schijnbare wind plus bootbeweging is de ware wind boven het water.</li>
+      </ul>
+      <p>Per 10 seconden worden die vectoren gemiddeld. Dat dempt het slingeren van de mast en de korte windvlagen. De ware windhoek (TWA) is de hoek tussen de ware wind en de <strong>koers over de grond</strong>, zodat de polar en het routemodel dezelfde koers gebruiken. Drift zit daarmee in de polar.</p>
+      <p><strong>Zonder kompaskoers geen ware wind.</strong> Als de kompaskoers ontbreekt, vallen die seconden af. De ware wind die sommige windmodules zelf uitzenden (<code>MWD</code>) gebruikt de tool niet: in de testopname bleek die met de koers over de grond te rekenen en week hij gemiddeld 5° af.</p>
+      <p><strong>Windhoogtefactor.</strong> De windmeter in de mast meet meer wind dan op 10 m hoogte, de standaardhoogte van weermodellen. De gemeten windsnelheid wordt gedeeld door de windhoogtefactor uit het profiel, zodat de polar past bij de windverwachting die het routemodel gebruikt. Bepaal de factor door je metingen te vergelijken met een nabij KNMI-station.</p>
+
+      <h2 id="u-filters">4. Filters: alleen stabiel zeilen</h2>
+      <p>Binnen de tijdvakken die jij kiest, houdt de tool alleen blokken van 10 s waarin stabiel gevaren wordt. Elk afgevallen blok krijgt een reden, zichtbaar op de tijdlijn en in het overzicht.</p>
+      <table class="lijst">
+        <thead><tr><th>Reden</th><th>Regel (standaard)</th></tr></thead>
+        <tbody>
+          <tr><td>te langzaam</td><td>SOG onder 25% van de windsnelheid op 10 m, met een ondergrens van 0,5 kn en een bovengrens van 2 kn. Zo telt lichte wind mee, maar stilliggen niet.</td></tr>
+          <tr><td>te hoog aan de wind</td><td>ware windhoek onder 30°</td></tr>
+          <tr><td>onrustig</td><td>over 60 s spreiding van de koers 8° of meer, of van de snelheid 0,6 kn of meer</td></tr>
+          <tr><td>overstag of gijp</td><td>20 s vóór tot 60 s na het wisselen van windzijde</td></tr>
+          <tr><td>data ontbreekt</td><td>niet genoeg blokken rond het blok om stabiliteit te beoordelen</td></tr>
+          <tr><td>geen bruikbare wind</td><td>kompaskoers of andere verplichte gegevens ontbreken</td></tr>
+        </tbody>
+      </table>
+      <p>De waarden zijn aan te passen onder Filterinstellingen. Ze komen uit de polaranalyse die als voorbeeld voor deze tool diende.</p>
+      <p><strong>Motor vermoed.</strong> Een platbodem zeilt niet dichter dan ca. 35° bij de wind en niet sneller dan de wind bij weinig wind. Blokken die daaraan voldoen krijgen een rode markering. Dat is alleen een hint: jij beslist welke tijdvakken goed gezeild zijn.</p>
+
+      <h2 id="u-kwaliteit">5. Kwaliteit van de opname</h2>
+      <p>Direct na het inlezen beoordeelt de tool de opname zelf, los van hoe er gevaren is. Over de tijd dat het schip beweegt (meer dan 0,5 kn): welk deel heeft positie, kompaskoers en schijnbare wind? Bij 90% of meer is de opname <em>goed</em>, bij 50–90% <em>matig</em>, en daaronder <em>slecht</em>. Per oorzaak geeft de tool aan waar je aan boord kunt zoeken: kompas, windsensor, GPS, de verbinding (veel foute controlesommen) of een logger die stil heeft gestaan (onderbrekingen).</p>
+
+      <h2 id="u-polar">6. Van metingen naar polar</h2>
+      <ul>
+        <li><strong>Vakjes:</strong> elk bruikbaar blok valt in een vakje van 2 kn windsnelheid bij 10° windhoek.</li>
+        <li><strong>Polarwaarde per vakje:</strong> standaard de <strong>mediaan</strong> (de middelste meting: wat je meestal haalt). Alternatieven: het 75e percentiel (wat het schip goed gevaren haalt) of het gemiddelde.</li>
+        <li><strong>Minimum:</strong> een vakje telt pas als gemeten bij ten minste 6 blokken (1 minuut).</li>
+        <li><strong>Bronnen samenvoegen:</strong> de polar wordt altijd opnieuw berekend uit alle metingen van alle actieve bronnen, nooit uit eerdere gemiddelden. Een vakje met veel metingen telt dus zwaarder. Wedstrijddata weegt 1, overtocht of training 0,5.</li>
+        <li><strong>Bron uitzetten</strong> maakt het resultaat exact alsof die bron er nooit in zat.</li>
+      </ul>
+      <p>Per vakje bepaalt de tool de waarde in deze volgorde. De kleur in de tabel laat zien waar de waarde vandaan komt.</p>
+      <table class="lijst">
+        <thead><tr><th>Herkomst</th><th>Betekenis</th></tr></thead>
+        <tbody>
+          <tr><td>gemeten</td><td>genoeg metingen in het vakje; donkerder bij meer metingen</td></tr>
+          <tr><td>handmatig</td><td>door jou ingevuld; wordt vervangen zodra er genoeg metingen zijn</td></tr>
+          <tr><td>bestaande polar</td><td>uit een eerder ingelezen polar; idem</td></tr>
+          <tr><td>gladgemaakt</td><td>gewogen gemiddelde van gemeten buurvakjes (tot 2 stappen verder, dichterbij en meer metingen telt zwaarder)</td></tr>
+          <tr><td>geïnterpoleerd</td><td>lineair tussen bekende vakjes, eerst per windhoek (met 0 kn bij 0 kn wind), dan per windsnelheid</td></tr>
+          <tr><td>doorgetrokken</td><td>buiten het bekende gebied: de laatste bekende waarde, zonder meting. Behandel dit als schatting.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="u-raster">7. Raster, zeilstanden en zwaard</h2>
+      <ul>
+        <li><strong>Windsnelheid:</strong> 2 tot 40 kn per 2 kn, ware wind op 10 m. In de tabel ook in m/s en Beaufort (Bft = (v[m/s] / 0,836)^(2/3), afgerond).</li>
+        <li><strong>Windhoek:</strong> vanaf de max kruishoek uit het profiel tot 180°. Van kruishoek tot halve wind (100°) per 5°, daarna per 10°. Je vult per 10° in en metingen tellen per 10°; de 5°-waarden zijn lineaire tussenwaarden, zodat het routemodel aan de wind fijner kan rekenen.</li>
+        <li><strong>Hoger dan de kruishoek</strong> zeilt het schip niet; het routemodel kruist dan op de hoek met de beste snelheid naar de wind toe (VMG).</li>
+        <li><strong>Zeilstanden:</strong> aan de wind (kruishoek–60°), knik in de schoot (60–80°), halve wind (80–100°), ruime wind (100–150°), voor de wind (150–180°).</li>
+        <li><strong>Zwaard:</strong> per windhoek neer, half of op; standaard neer tot 80°, half tot 150°, daarna op. Het routemodel koppelt de stand aan de diepgang uit het profiel om de kielspeling te controleren.</li>
+      </ul>
+
+      <h2 id="u-vangrails">8. Bestand en vangrails</h2>
+      <ul>
+        <li><strong>Eén bestand per schip</strong> (JSON) met profiel, polar, zwaardstanden, handmatige waarden en alle bronnen met hun metingen. Het routemodel leest hetzelfde bestand.</li>
+        <li><strong>Nooit overschrijven:</strong> opslaan geeft altijd een nieuwe versie (<code>naam_polar_v3_2026-11-05.json</code>). Het vorige bestand is je terugvalpunt.</li>
+        <li><strong>Vaste scheeps-ID</strong> in elk bestand, en een bevestiging "Data toevoegen aan: …" voordat metingen meetellen.</li>
+        <li><strong>Hetzelfde VDR-bestand twee keer</strong> wordt geweigerd (vingerafdruk: begin, eind en SHA-256-controlesom). Overlappende tijdvakken geven een waarschuwing.</li>
+        <li><strong>Plausibiliteitscheck:</strong> wijkt nieuwe data in een vakje meer dan 15% af van de huidige polar, dan meldt de tool dat (ander schip, andere zeilvoering of meetfout?).</li>
+        <li><strong>Privacy:</strong> alles gebeurt in je browser. Er wordt niets geüpload of bewaard; je beheert je bestanden zelf.</li>
+      </ul>
+
+      <h2 id="u-aannames">9. Aannames en beperkingen</h2>
+      <ul>
+        <li><strong>Stilstaand water:</strong> snelheid over de grond geldt als snelheid door het water. Kies geen tijdvakken met merkbare stroom (op de Wadden dus voorzichtig).</li>
+        <li><strong>Zeilvoering is geen variabele:</strong> kies alleen tijdvakken met de beste zeilvoering voor die windsterkte.</li>
+        <li><strong>Mastsensor beweegt mee:</strong> stampen en slingeren geven ruis, die het middelen per 10 s en de filters grotendeels wegnemen.</li>
+        <li><strong>Windhoogtefactor</strong> kan per dag en per uur verschillen; één factor per schip is een vereenvoudiging.</li>
+        <li>Eerste versie voor <strong>platbodems met zijzwaarden</strong> (één-masters).</li>
+      </ul>
     </section>
   </div>
 </main>
@@ -214,17 +392,35 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
 <script id="rekenkern">
   /* Polartool — rekenkern (geen DOM). Ook bruikbaar in Node voor tests. */
   const PT = (() => {
-    const TWS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
-    const TWA = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
+    /* Raster: ware wind 2-40 kn per 2 kn (tot en met Bft 8). Windhoeken vanaf de max kruishoek van het schip:
+       tot en met halve wind (100°) per 5°, daarna per 10°. Invullen en metingen per 10°; de 5°-kolommen
+       daartussen rekent de tool uit. */
+    const TWS = Array.from({ length: 20 }, (_, i) => 2 + 2 * i);
+    const OUDE_TWS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];          // raster van eerdere bestanden
+    const OUDE_TWA = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
+    const KRUISHOEK = { standaard: 50, opties: [35, 40, 45, 50, 55, 60] };
+    const ZEILSTANDEN = [                                                              // tot = bovengrens (niet inbegrepen)
+      { naam: 'aan de wind', tot: 60, zwaard: 'neer' }, { naam: 'knik in de schoot', tot: 80, zwaard: 'neer' },
+      { naam: 'halve wind', tot: 100, zwaard: 'half' }, { naam: 'ruime wind', tot: 150, zwaard: 'half' },
+      { naam: 'voor de wind', tot: 181, zwaard: 'op' },
+    ];
+    const zeilstand = twa => ZEILSTANDEN.find(z => twa < z.tot) || ZEILSTANDEN[ZEILSTANDEN.length - 1];
+    function raster(kruishoek) {
+      const k = KRUISHOEK.opties.includes(kruishoek) ? kruishoek : KRUISHOEK.standaard;
+      const TWA = [], invoer = [];
+      for (let a = k; a <= 180; a += a < 100 ? 5 : 10) { TWA.push(a); invoer.push(a % 10 === 0 || a === k); }
+      return { TWS, TWA, invoer, kruishoek: k };
+    }
     const R = Math.PI / 180;
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
     const sogGrens = (tws10, f) => Math.min(f.sogMin, Math.max(f.sogMinLaag ?? f.sogMin, (f.sogMinFactor ?? 0) * tws10));
     const GEWICHT = { wedstrijd: 1, overtocht: 0.5 };
-    const REGELS = 'lineair interpoleren in TWS en TWA; TWS < 2 kn lineair naar 0; TWS > 30 kn: rij 30; TWA < 50°: kruisen op de beste VMG-hoek uit het raster; minimumsnelheid 0,3 kn';
+    const regels = k => `lineair interpoleren in TWS en TWA; TWS < 2 kn lineair naar 0; TWS > 40 kn: rij 40; TWA < ${k}° (max kruishoek): kruisen op de beste VMG-hoek uit het raster; minimumsnelheid 0,3 kn`;
 
-    function zwaardStandaard(twa) { return twa < 85 ? 'neer' : twa < 160 ? 'half' : 'op'; }
+    const zwaardStandaard = twa => zeilstand(twa).zwaard;
+    const zwaardVoor = (S, twa) => (S.zwaard && S.zwaard[twa]) || zwaardStandaard(twa);
 
     /* ---------- NMEA ---------- */
     function checksumOk(l) {
@@ -483,9 +679,10 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     }
 
     /* ---------- polar opbouwen ---------- */
-    const sleutel = (i, j) => TWS[i] + '_' + TWA[j];
-    function vakIndex(tws, twa) {
-      const i = TWS.indexOf(Math.round(tws / 2) * 2), j = TWA.indexOf(Math.round(twa / 10) * 10);
+    const sleutel = (tws, twa) => tws + '_' + twa;                    // op waarde, dus geldig bij elk raster
+    // metingen per vakje van 2 kn × 10° (gecentreerd op even knopen en hele tientallen graden)
+    function vakIndex(tws, twa, kolommen) {
+      const i = TWS.indexOf(Math.round(tws / 2) * 2), j = kolommen.indexOf(Math.round(twa / 10) * 10);
       return i < 0 || j < 0 ? null : [i, j];
     }
     /* Gewogen kwantiel met lineaire interpolatie. Bij gelijke gewichten precies gelijk aan
@@ -508,55 +705,87 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       }
       return vw[n - 1][0];
     }
-    function vakkenUitBronnen(bronnen, q) {
-      const vak = TWS.map(() => TWA.map(() => []));
-      const herk = TWS.map(() => TWA.map(() => new Set()));
+    // methode: 'mediaan', 'p75' of 'gemiddelde' (gewogen)
+    function vakkenUitBronnen(bronnen, methode, kolommen) {
+      const vak = TWS.map(() => kolommen.map(() => []));
+      const herk = TWS.map(() => kolommen.map(() => new Set()));
       for (const b of bronnen) {
         if (!b.actief) continue;
         for (const [tws, twa, sog, w] of b.punten) {
-          const ij = vakIndex(tws, twa); if (!ij) continue;
+          const ij = vakIndex(tws, twa, kolommen); if (!ij) continue;
           vak[ij[0]][ij[1]].push([sog, w]); herk[ij[0]][ij[1]].add(b.id);
         }
       }
-      return { waarde: vak.map(r => r.map(v => v.length ? kwantiel(v.slice(), q) : null)), n: vak.map(r => r.map(v => v.length)), bronnen: herk };
+      const waarde = v => !v.length ? null : methode === 'gemiddelde'
+        ? v.reduce((s, x) => s + x[0] * x[1], 0) / v.reduce((s, x) => s + x[1], 0)
+        : kwantiel(v.slice(), methode === 'p75' ? 0.75 : 0.5);
+      return { waarde: vak.map(r => r.map(waarde)), n: vak.map(r => r.map(v => v.length)), bronnen: herk };
     }
 
+    // waarde uit een eerder ingelezen polar (op waarde opgezocht, dus los van het raster)
+    function basisWaarde(basis, tws, twa) {
+      if (!basis || basis.actief === false) return null;
+      const ti = basis.tws_kn || OUDE_TWS, ta = basis.twa_graden || OUDE_TWA;
+      const i = ti.indexOf(tws), j = ta.indexOf(twa);
+      const v = i < 0 || j < 0 ? null : basis.snelheid[i]?.[j];
+      return v === undefined ? null : v;
+    }
+
+    /* Polar opbouwen, in deze volgorde per vakje:
+       1. gemeten (genoeg blokken, niet uitgesloten)  2. handmatig  3. bestaande polar
+       4. glad: gewogen uit gemeten buurvakjes  5. geïnterpoleerd tussen bekende vakjes  6. doorgetrokken buiten het bekende gebied
+       Dat gebeurt op de hoofdkolommen (kruishoek en elke 10°); de 5°-kolommen ertussen zijn tussenwaarden. */
     function bouwPolair(S) {
-      const q = S.instellingen.polarwaarde === 'p75' ? 0.75 : 0.5;
+      const R_ = raster(S.schip.kruishoek), HK = R_.TWA.filter((a, j) => R_.invoer[j]);
       const minN = S.instellingen.filters.minPunten;
-      const V = vakkenUitBronnen(S.bronnen, q);
-      const W = TWS.map(() => TWA.map(() => null)), H = TWS.map(() => TWA.map(() => 'leeg'));
+      const V = vakkenUitBronnen(S.bronnen, S.instellingen.polarwaarde, HK);
+      const W = TWS.map(() => HK.map(() => null)), H = TWS.map(() => HK.map(() => 'leeg'));
       const uitg = new Set(S.uitgesloten || []);
-      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
-        const k = sleutel(i, j);
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < HK.length; j++) {
+        const k = sleutel(TWS[i], HK[j]), b = basisWaarde(S.basis, TWS[i], HK[j]);
         if (!uitg.has(k) && V.n[i][j] >= minN) { W[i][j] = V.waarde[i][j]; H[i][j] = 'data'; }
         else if (S.handmatig && S.handmatig[k] !== undefined) { W[i][j] = S.handmatig[k]; H[i][j] = 'handmatig'; }
-        else if (S.basis && S.basis.snelheid[i] && S.basis.snelheid[i][j] !== null && S.basis.snelheid[i][j] !== undefined) { W[i][j] = S.basis.snelheid[i][j]; H[i][j] = 'bestaand'; }
+        else if (b !== null) { W[i][j] = b; H[i][j] = 'bestaand'; }
       }
-      // gladmaken vanuit buurvakken met data
+      // gladmaken vanuit gemeten buurvakjes
       const G = W.map(r => r.slice());
-      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < HK.length; j++) {
         if (H[i][j] !== 'leeg') continue;
         let a = 0, d = 0;
         for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) {
           const ii = i + di, jj = j + dj;
-          if (ii < 0 || jj < 0 || ii >= TWS.length || jj >= TWA.length || H[ii][jj] !== 'data') continue;
+          if (ii < 0 || jj < 0 || ii >= TWS.length || jj >= HK.length || H[ii][jj] !== 'data') continue;
           const w = Math.exp(-0.5 * (di * di + dj * dj)) * V.n[ii][jj]; a += w * W[ii][jj]; d += w;
         }
         if (d >= minN) { G[i][j] = a / d; H[i][j] = 'glad'; }
       }
-      // interpoleren: eerst per TWA-kolom (met 0 kn bij 0 kn wind), dan per TWS-rij
-      for (let j = 0; j < TWA.length; j++) {
+      // interpoleren per windhoek (met 0 kn bij 0 kn wind), dan per windsnelheid; daarbuiten doortrekken
+      for (let j = 0; j < HK.length; j++) {
         const bek = [[0, 0]]; for (let i = 0; i < TWS.length; i++) if (G[i][j] !== null) bek.push([TWS[i], G[i][j]]);
         if (bek.length < 2) continue;
-        for (let i = 0; i < TWS.length; i++) if (G[i][j] === null) { G[i][j] = interp(TWS[i], bek); H[i][j] = 'geïnterpoleerd'; }
+        const max = bek[bek.length - 1][0];
+        for (let i = 0; i < TWS.length; i++) if (G[i][j] === null) { G[i][j] = interp(TWS[i], bek); H[i][j] = TWS[i] > max ? 'doorgetrokken' : 'geïnterpoleerd'; }
       }
       for (let i = 0; i < TWS.length; i++) {
-        const bek = []; for (let j = 0; j < TWA.length; j++) if (H[i][j] !== 'leeg') bek.push([TWA[j], G[i][j]]);
-        for (let j = 0; j < TWA.length; j++) if (G[i][j] === null && bek.length) { G[i][j] = interp(TWA[j], bek); H[i][j] = 'geïnterpoleerd'; }
+        const bek = []; for (let j = 0; j < HK.length; j++) if (H[i][j] !== 'leeg') bek.push([HK[j], G[i][j]]);
+        if (!bek.length) continue;
+        const min = bek[0][0], max = bek[bek.length - 1][0];
+        for (let j = 0; j < HK.length; j++) if (G[i][j] === null) { G[i][j] = interp(HK[j], bek); H[i][j] = HK[j] < min || HK[j] > max ? 'doorgetrokken' : 'geïnterpoleerd'; }
       }
-      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) if (G[i][j] !== null) G[i][j] = Math.round(G[i][j] * 100) / 100;
-      return { snelheid: G, herkomst: H, n: V.n, bronnenPerVak: V.bronnen, ruw: V.waarde };
+      // naar het volledige raster: 5°-kolommen als tussenwaarde van de buren
+      const snelheid = [], herkomst = [], n = [], bronnenPerVak = [];
+      for (let i = 0; i < TWS.length; i++) {
+        snelheid.push([]); herkomst.push([]); n.push([]); bronnenPerVak.push([]);
+        for (const a of R_.TWA) {
+          const j = HK.indexOf(a);
+          if (j >= 0) { snelheid[i].push(G[i][j]); herkomst[i].push(H[i][j]); n[i].push(V.n[i][j]); bronnenPerVak[i].push(V.bronnen[i][j]); continue; }
+          const jl = HK.findIndex((x, k) => HK[k + 1] > a), l = HK[jl], r = HK[jl + 1];
+          const v = G[i][jl] === null || G[i][jl + 1] === null ? null : G[i][jl] + (G[i][jl + 1] - G[i][jl]) * (a - l) / (r - l);
+          snelheid[i].push(v); herkomst[i].push(v === null ? 'leeg' : 'tussenwaarde'); n[i].push(0); bronnenPerVak[i].push(new Set());
+        }
+      }
+      for (const rij of snelheid) for (let j = 0; j < rij.length; j++) if (rij[j] !== null) rij[j] = Math.round(rij[j] * 100) / 100;
+      return { tws: TWS, twa: R_.TWA, invoer: R_.invoer, kruishoek: R_.kruishoek, snelheid, herkomst, n, bronnenPerVak, ruw: V.waarde, hoofdkolommen: HK };
     }
     function interp(x, pts) {
       if (x <= pts[0][0]) return pts[0][1];
@@ -575,13 +804,17 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return (p.twa < MOTOR.twaMax && p.sog > MOTOR.sogBijHoek) || (tws10 < MOTOR.lichteWind && p.sog > tws10 + MOTOR.sogBovenWind);
     }
 
+    // vergelijkt alleen met vakjes die op iets echts rusten (gemeten, glad, handmatig of bestaand)
     function plausibiliteit(punten, polair, minN, grens = 0.15) {
-      const tmp = vakkenUitBronnen([{ id: 'nieuw', actief: true, punten }], 0.5);
+      if (!polair) return [];
+      const HK = polair.hoofdkolommen;
+      const tmp = vakkenUitBronnen([{ id: 'nieuw', actief: true, punten }], 'mediaan', HK);
       const m = [];
-      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
-        if (tmp.n[i][j] < minN || !polair || polair.herkomst[i][j] === 'leeg' || polair.herkomst[i][j] === 'geïnterpoleerd') continue;
-        const oud = polair.snelheid[i][j], nw = tmp.waarde[i][j];
-        if (oud > 0 && Math.abs(nw - oud) / oud > grens) m.push({ tws: TWS[i], twa: TWA[j], oud, nieuw: nw, n: tmp.n[i][j] });
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < HK.length; j++) {
+        const jj = polair.twa.indexOf(HK[j]), h = polair.herkomst[i][jj];
+        if (tmp.n[i][j] < minN || !['data', 'glad', 'handmatig', 'bestaand'].includes(h)) continue;
+        const oud = polair.snelheid[i][jj], nw = tmp.waarde[i][j];
+        if (oud > 0 && Math.abs(nw - oud) / oud > grens) m.push({ tws: TWS[i], twa: HK[j], oud, nieuw: nw, n: tmp.n[i][j] });
       }
       return m;
     }
@@ -594,10 +827,10 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     function nieuweStaat() {
       return {
         formaat: FORMAAT, versie: 0, aangemaakt: new Date().toISOString(), gewijzigd: null,
-        schip: { id: nieuwId(), naam: '', tuigage: 'eenmaster', diepgang_m: { neer: null, half: null, op: null }, kielspeling_m: null,
+        schip: { id: nieuwId(), naam: '', tuigage: 'eenmaster', kruishoek: KRUISHOEK.standaard, diepgang_m: { neer: null, half: null, op: null }, kielspeling_m: null,
           overstagverlies_s: null, gijpverlies_s: null, windhoogtefactor: 1.0, windmeter_hoogte_m: null },
         instellingen: { polarwaarde: 'mediaan', filters: { ...STANDAARD_FILTERS } },
-        zwaard: TWA.map(zwaardStandaard), handmatig: {}, uitgesloten: [], basis: null, bronnen: [],
+        zwaard: {}, handmatig: {}, uitgesloten: [], basis: null, bronnen: [],     // zwaard: afwijkingen van de standaard per windhoek
       };
     }
     function naarBestand(S, polair) {
@@ -606,10 +839,12 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         aanname: 'stilstaand water: snelheid over de grond (SOG) = snelheid door het water',
         schip: S.schip,
         polair: { wind: 'ware wind (TWS) op 10 m hoogte, kn', twa: 'ware windhoek in graden t.o.v. de koers over de grond',
-          waarde: S.instellingen.polarwaarde, regels: REGELS, tws_kn: TWS, twa_graden: TWA,
+          waarde: S.instellingen.polarwaarde, regels: regels(polair.kruishoek), kruishoek: polair.kruishoek,
+          tws_kn: polair.tws, twa_graden: polair.twa,
           snelheid_kn: polair.snelheid, herkomst: polair.herkomst, aantal_punten: polair.n,
-          zwaardstand: S.zwaard },
-        instellingen: S.instellingen, handmatig: S.handmatig, uitgesloten: S.uitgesloten, basis: S.basis,
+          zwaardstand: polair.twa.map(a => zwaardVoor(S, a)),
+          zeilstanden: ZEILSTANDEN.map(z => ({ naam: z.naam, tot_graden: Math.min(z.tot, 180) })) },
+        instellingen: S.instellingen, zwaard: S.zwaard, handmatig: S.handmatig, uitgesloten: S.uitgesloten, basis: S.basis,
         bronnen: S.bronnen,
       };
     }
@@ -617,9 +852,13 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     function vanBestand(o) {
       if (o.formaat === FORMAAT) {
         const S = nieuweStaat();
+        // zwaard: nieuw = object per windhoek; eerste versie = lijst bij het oude raster
+        let zwaard = o.zwaard && !Array.isArray(o.zwaard) ? o.zwaard : {};
+        const oudeLijst = Array.isArray(o.zwaard) ? o.zwaard : (o.polair && Array.isArray(o.polair.zwaardstand) && !o.zwaard ? o.polair.zwaardstand : null);
+        if (oudeLijst) { const ta = (o.polair && o.polair.twa_graden) || OUDE_TWA; ta.forEach((a, j) => { if (oudeLijst[j]) zwaard[a] = oudeLijst[j]; }); }
         Object.assign(S, { versie: o.versie || 0, aangemaakt: o.aangemaakt, gewijzigd: o.gewijzigd, schip: { ...S.schip, ...o.schip },
           instellingen: { ...S.instellingen, ...o.instellingen, filters: { ...STANDAARD_FILTERS, ...(o.instellingen || {}).filters } },
-          zwaard: (o.polair && o.polair.zwaardstand) || S.zwaard, handmatig: o.handmatig || {}, uitgesloten: o.uitgesloten || [],
+          zwaard, handmatig: o.handmatig || {}, uitgesloten: o.uitgesloten || [],
           basis: o.basis || null, bronnen: o.bronnen || [] });
         return { S, soort: 'polartool' };
       }
@@ -632,12 +871,14 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         const kk = o.keuzeknoppen || {};
         S.schip.overstagverlies_s = kk.overstagverlies?.waarde_s ?? null;
         S.schip.gijpverlies_s = kk.gijpverlies_s?.waarde ?? null;
+        // zwaard per zeilstand uit het oude bestand; 'knik in de schoot' volgt 'aan de wind'
         const sp = z.stand_per_zeilstand;
-        if (sp) S.zwaard = TWA.map(a => (a < 85 ? sp['aan de wind'] : a < 110 ? sp['halve wind'] : a < 160 ? sp['ruime wind'] : sp['voor de wind']) || zwaardStandaard(a));
-        const ti = o.polair.tws_kn, ta = o.polair.twa_graden;
-        S.basis = { bron: o.polair.naam || 'eerder scheepsbestand', snelheid: TWS.map(t => TWA.map(a => {
-          const i = ti.indexOf(t), j = ta.indexOf(a); return i < 0 || j < 0 ? null : o.polair.snelheid_kn[i][j];
-        })), herkomst: o.polair.herkomst ? TWS.map(t => TWA.map(a => { const i = ti.indexOf(t), j = ta.indexOf(a); return i < 0 || j < 0 ? null : o.polair.herkomst[i][j]; })) : null };
+        if (sp) {
+          const oud = { 'aan de wind': sp['aan de wind'], 'knik in de schoot': sp['aan de wind'], 'halve wind': sp['halve wind'], 'ruime wind': sp['ruime wind'], 'voor de wind': sp['voor de wind'] };
+          for (let a = KRUISHOEK.opties[0]; a <= 180; a += 5) { const s = oud[zeilstand(a).naam]; if (s && s !== zwaardStandaard(a)) S.zwaard[a] = s; }
+        }
+        S.basis = { bron: o.polair.naam || 'eerder scheepsbestand', actief: true, tws_kn: o.polair.tws_kn, twa_graden: o.polair.twa_graden,
+          snelheid: o.polair.snelheid_kn, herkomst: o.polair.herkomst || null };
         return { S, soort: 'scheepsbestand' };
       }
       throw new Error('Onbekend bestand: geen polartool-bestand en geen scheepsbestand met polair.');
@@ -645,8 +886,8 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     /* vingerafdruk van een VDR-bron: begin- en eindtijd plus controlesom (SHA-256 van het bestand) */
     function vingerafdruk(inv, sha256) { return { start: inv.start, eind: inv.eind, sha256 }; }
 
-    return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit, motorVermoed,
-      nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, nieuwId, kwantiel };
+    return { TWS, KRUISHOEK, ZEILSTANDEN, raster, zeilstand, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit, motorVermoed,
+      nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, zwaardVoor, nieuwId, kwantiel };
   })();
 </script>
 <script id="app">
@@ -672,6 +913,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       if (naam === 'vdr' && vdr && !$('#tijdvakken').hidden) werkTijdvakkenBij();
     }
     tabs.forEach(b => b.addEventListener('click', () => toon(b.dataset.tab)));
+    document.querySelectorAll('[data-naar]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); toon(a.dataset.naar); window.scrollTo(0, 0); }));
 
     function wijzig() { gewijzigd = true; polair = null; tekenSchipregel(); }
     window.addEventListener('beforeunload', e => { if (gewijzigd) { e.preventDefault(); e.returnValue = ''; } });
@@ -719,17 +961,18 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
 
     /* ---------- profiel ---------- */
     const PROFIEL = [
-      { pad: 'naam', label: 'Scheepsnaam *', type: 'text', verplicht: true },
-      { pad: 'id', label: 'Scheeps-ID', type: 'text', alleenLezen: true, hint: 'Automatisch aangemaakt; verandert nooit.' },
-      { pad: 'tuigage', label: 'Tuigage *', type: 'select', opties: [['eenmaster', 'één-mast'], ['tweemaster', 'twee-mast']], hint: 'Nu alleen informatief.' },
-      { pad: 'diepgang_m.neer', label: 'Diepgang zwaard neer (m) *', verplicht: true, min: 0, max: 6 },
-      { pad: 'diepgang_m.half', label: 'Diepgang zwaard half (m)', min: 0, max: 6, hint: 'Alleen als je die stand gebruikt.' },
-      { pad: 'diepgang_m.op', label: 'Diepgang zwaard op (m) *', verplicht: true, min: 0, max: 6 },
-      { pad: 'kielspeling_m', label: 'Minimale kielspeling (m) *', verplicht: true, min: 0, max: 3, hint: 'Standaardwaarde; het routemodel kan per berekening afwijken.' },
-      { pad: 'overstagverlies_s', label: 'Tijdverlies per overstag (s)', min: 0, max: 300, hint: 'Inclusief wisselen van zwaard.' },
-      { pad: 'gijpverlies_s', label: 'Tijdverlies per gijp (s)', min: 0, max: 300 },
-      { pad: 'windhoogtefactor', label: 'Windhoogtefactor *', verplicht: true, min: 0.8, max: 2, hint: 'Mastwind gedeeld door deze factor geeft wind op 10 m. 1 = windmeter op 10 m.' },
-      { pad: 'windmeter_hoogte_m', label: 'Hoogte windmeter (m)', min: 0, max: 40, hint: 'Toelichting bij de windhoogtefactor.' },
+      { groep: 'Schip', pad: 'naam', label: 'Scheepsnaam *', type: 'text', verplicht: true },
+      { groep: 'Schip', pad: 'tuigage', label: 'Tuigage *', type: 'select', opties: [['eenmaster', 'één-mast'], ['tweemaster', 'twee-mast']], hint: 'Nu alleen informatief.' },
+      { groep: 'Schip', pad: 'kruishoek', label: 'Max kruishoek (°) *', type: 'select', getal: true, opties: PT.KRUISHOEK.opties.map(a => [String(a), a + '°']), hint: 'Kleinste ware windhoek waarop het schip nog goed zeilt. De polar begint hier; hoger aan de wind kruist het routemodel.' },
+      { groep: 'Schip', pad: 'id', label: 'Scheeps-ID', type: 'text', alleenLezen: true, hint: 'Automatisch aangemaakt; verandert nooit.' },
+      { groep: 'Diepgang', pad: 'diepgang_m.op', label: 'Diepgang romp, zwaard op (m) *', verplicht: true, min: 0, max: 6 },
+      { groep: 'Diepgang', pad: 'diepgang_m.neer', label: 'Diepgang heel zwaard neer (m) *', verplicht: true, min: 0, max: 6 },
+      { groep: 'Diepgang', pad: 'diepgang_m.half', label: 'Diepgang half zwaard (m)', min: 0, max: 6, hint: 'Alleen als je die stand gebruikt.' },
+      { groep: 'Diepgang', pad: 'kielspeling_m', label: 'Minimale kielspeling (m) *', verplicht: true, min: 0, max: 3, hint: 'Standaardwaarde; het routemodel kan per berekening afwijken.' },
+      { groep: 'Wind en manoeuvres', pad: 'windhoogtefactor', label: 'Windhoogtefactor *', verplicht: true, min: 0.8, max: 2, hint: 'Mastwind gedeeld door deze factor geeft wind op 10 m. 1 = windmeter op 10 m.' },
+      { groep: 'Wind en manoeuvres', pad: 'windmeter_hoogte_m', label: 'Hoogte windmeter (m)', min: 0, max: 40, hint: 'Toelichting bij de windhoogtefactor.' },
+      { groep: 'Wind en manoeuvres', pad: 'overstagverlies_s', label: 'Tijdverlies per overstag (s)', min: 0, max: 300, hint: 'Inclusief wisselen van zwaard.' },
+      { groep: 'Wind en manoeuvres', pad: 'gijpverlies_s', label: 'Tijdverlies per gijp (s)', min: 0, max: 300 },
     ];
     const lees = pad => pad.split('.').reduce((o, k) => o?.[k], S.schip);
     const schrijf = (pad, v) => { const d = pad.split('.'); const o = d.slice(0, -1).reduce((o, k) => o[k], S.schip); o[d[d.length - 1]] = v; };
@@ -743,32 +986,87 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     }
     function tekenProfiel() {
       const doel = $('#profielvelden');
-      doel.replaceChildren(...PROFIEL.map(v => {
+      const groepen = [...new Set(PROFIEL.map(v => v.groep))];
+      doel.replaceChildren(...groepen.map(g => el('div', { class: 'groep' }, el('h3', {}, g), ...PROFIEL.filter(v => v.groep === g).map(v => {
         const id = 'p-' + v.pad.replace('.', '-');
         let inp;
         if (v.type === 'select') inp = el('select', { id }, ...v.opties.map(([w, t]) => el('option', { value: w }, t)));
         else inp = el('input', { id, type: 'text', inputmode: v.type === 'text' ? 'text' : 'decimal', autocomplete: 'off' });
         const w = lees(v.pad);
-        inp.value = v.type === 'text' || v.type === 'select' ? (w ?? '') : fmt(w, 3);
+        inp.value = v.type === 'text' || v.type === 'select' ? String(w ?? '') : fmt(w, 3);
         if (v.alleenLezen) inp.readOnly = true;
         const blok = el('div', { class: 'veld' }, el('label', { for: id }, v.label), inp, v.hint ? el('div', { class: 'hint' }, v.hint) : null);
         const controleer = () => { const f = veldFout(v); blok.classList.toggle('fout', !!f); inp.title = f || ''; };
         inp.addEventListener(v.type === 'select' ? 'change' : 'input', () => {
-          schrijf(v.pad, v.type === 'text' || v.type === 'select' ? inp.value.trim() : getal(inp.value));
+          schrijf(v.pad, v.getal ? Number(inp.value) : v.type === 'text' || v.type === 'select' ? inp.value.trim() : getal(inp.value));
           controleer(); wijzig();
         });
         controleer();
         return blok;
-      }));
+      }))));
+    }
+
+    /* ---------- polartabel en polardiagram (gedeeld door Handmatig en Controle) ---------- */
+    const bft = kn => Math.round(Math.pow(kn * 0.514444 / 0.836, 2 / 3));
+    const HERKOMST = {
+      data: 'gemeten', glad: 'gladgemaakt uit gemeten buurvakjes', handmatig: 'handmatig', bestaand: 'bestaande polar',
+      'geïnterpoleerd': 'geïnterpoleerd tussen bekende vakjes', doorgetrokken: 'doorgetrokken buiten het bekende gebied (schatting)',
+      tussenwaarde: 'tussenwaarde van de 5°-kolom', leeg: 'leeg',
+    };
+    // kop met zeilstanden en windhoeken, rijen met kn, m/s en Bft; cel(i, j, a) levert de inhoud
+    function polarTabel(P, cel, extraRijen = []) {
+      const groepen = [];
+      P.twa.forEach(a => { const z = PT.zeilstand(a).naam; const l = groepen[groepen.length - 1]; if (l && l.naam === z) l.n++; else groepen.push({ naam: z, n: 1 }); });
+      const kop1 = el('tr', { class: 'standen' }, el('th', { colspan: 3 }, 'zeilstand'), ...groepen.map(g => el('th', { colspan: g.n }, g.naam)));
+      const kop2 = el('tr', {}, el('th', {}, 'kn'), el('th', {}, 'm/s'), el('th', {}, 'Bft'), ...P.twa.map((a, j) => el('th', { class: P.invoer[j] ? '' : 'tussen' }, a + '°')));
+      const rijen = P.tws.map((t, i) => el('tr', {}, el('th', {}, String(t)), el('td', { class: 'eenh' }, fmt(t * 0.514444, 1)), el('td', { class: 'eenh' }, String(bft(t))),
+        ...P.twa.map((a, j) => cel(i, j, a))));
+      return el('table', { class: 'polar' }, el('thead', {}, kop1, kop2), el('tbody', {}, ...rijen, ...extraRijen));
+    }
+
+    // polardiagram: halve cirkel, 0° boven, 180° onder; een lijn per gekozen windsnelheid
+    let diagramRijen = [4, 8, 12, 16, 20, 24];
+    function polarDiagram(P, doel, markeer = null) {
+      const ns = 'http://www.w3.org/2000/svg';
+      const s = (tag, attr = {}, tekst) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v); if (tekst !== undefined) e.textContent = tekst; return e; };
+      const H = 540, r0 = 205, cx = 56, cy = H / 2, B = Math.round(cx + r0 * 1.42);
+      const rijen = diagramRijen.filter(t => P.tws.includes(t));
+      const max = Math.max(2, Math.ceil(Math.max(0, ...rijen.flatMap(t => P.snelheid[P.tws.indexOf(t)].filter(v => v !== null))) / 2) * 2);
+      const pt = (a, v) => [cx + Math.sin(a * Math.PI / 180) * v / max * r0, cy - Math.cos(a * Math.PI / 180) * v / max * r0];
+      const svg = s('svg', { viewBox: `0 0 ${B} ${H}`, class: 'diagram', role: 'img', 'aria-label': 'Polardiagram' });
+      // zeilstanden als zachte sectoren
+      PT.ZEILSTANDEN.forEach((z, k) => {
+        const a0 = k ? PT.ZEILSTANDEN[k - 1].tot : P.kruishoek, a1 = Math.min(z.tot, 180);
+        const [x0, y0] = pt(a0, max), [x1, y1] = pt(a1, max);
+        svg.append(s('path', { d: `M${cx} ${cy}L${x0} ${y0}A${r0} ${r0} 0 0 1 ${x1} ${y1}Z`, class: 'sector s' + (k % 2) }));
+        const [tx, ty] = pt((a0 + a1) / 2, max * 1.05);          // naam van de zeilstand buiten de cirkel
+        svg.append(s('text', { x: tx, y: ty + 4, class: 'sectortekst', 'text-anchor': 'start' }, z.naam));
+      });
+      for (let v = 2; v <= max; v += 2) svg.append(s('path', { d: `M${cx} ${cy - v / max * r0}A${v / max * r0} ${v / max * r0} 0 0 1 ${cx} ${cy + v / max * r0}`, class: 'ring' }), s('text', { x: cx - 4, y: cy - v / max * r0 + 4, 'text-anchor': 'end', class: 'as' }, v + ' kn'));
+      for (let a = 30; a < 180; a += 30) { const [x, y] = pt(a, max), [lx, ly] = pt(a, max * 0.93); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'ring' }), s('text', { x: lx, y: ly + 4, class: 'as', 'text-anchor': 'middle' }, a + '°')); }
+      { const [x, y] = pt(P.kruishoek, max); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'kruis' })); }
+      rijen.forEach((t, k) => {
+        const i = P.tws.indexOf(t);
+        const d = P.twa.map((a, j) => P.snelheid[i][j] === null ? null : pt(a, P.snelheid[i][j])).filter(Boolean).map((p, n) => (n ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+        const kleur = `var(--lijn${k % 6})`;
+        svg.append(s('path', { d, class: 'curve' + (markeer === t ? ' dik' : ''), stroke: kleur }));
+        P.twa.forEach((a, j) => { const h = P.herkomst[i][j]; if (P.snelheid[i][j] === null || !['data', 'handmatig'].includes(h)) return; const [x, y] = pt(a, P.snelheid[i][j]); svg.append(s('circle', { cx: x, cy: y, r: 3, class: 'punt-' + h, stroke: kleur })); });
+      });
+      const keuze = el('div', { class: 'diagramkeuze' }, el('span', { class: 'sub' }, 'Windsnelheid: '),
+        ...P.tws.map(t => { const k = diagramRijen.indexOf(t); const b = el('button', { type: 'button', class: 'chipknop' + (k >= 0 ? ' aan' : ''), style: k >= 0 ? `--c:var(--lijn${rijen.indexOf(t) % 6})` : '' }, String(t));
+          b.addEventListener('click', () => { diagramRijen = k >= 0 ? diagramRijen.filter(x => x !== t) : [...diagramRijen, t].sort((a, b) => a - b); polarDiagram(P, doel, markeer); }); return b; }),
+        el('span', { class: 'sub' }, ' kn · ● gemeten  ○ handmatig'));
+      doel.replaceChildren(keuze, svg);
     }
 
     /* ---------- handmatig ---------- */
     function huidigePolair() { if (!polair) polair = PT.bouwPolair(S); return polair; }
     function tekenHandmatig() {
       const P = huidigePolair();
-      const kop = el('tr', {}, el('th', {}, 'TWS \\ TWA'), ...PT.TWA.map(a => el('th', {}, a + '°')));
-      const rijen = PT.TWS.map((t, i) => el('tr', {}, el('th', {}, t + ' kn'), ...PT.TWA.map((a, j) => {
-        const k = PT.sleutel(i, j), w = S.handmatig[k];
+      const tabel = polarTabel(P, (i, j, a) => {
+        const t = P.tws[i];
+        if (!P.invoer[j]) return el('td', { class: 'tussen', title: 'Tussenwaarde: rekent de tool uit' }, P.snelheid[i][j] === null ? '' : fmt(P.snelheid[i][j], 1));
+        const k = PT.sleutel(t, a), w = S.handmatig[k];
         const inp = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t} kn wind, ${a}°`, value: w !== undefined ? fmt(w) : '' });
         if (P.snelheid[i][j] !== null && P.herkomst[i][j] !== 'handmatig') inp.placeholder = fmt(P.snelheid[i][j], 1);
         const td = el('td', { class: 'inv' + (w !== undefined ? ' gevuld' : '') }, inp);
@@ -778,12 +1076,14 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
           td.classList.toggle('fout', fout); inp.title = fout ? 'Vul een snelheid tussen 0 en 20 kn in' : '';
           if (fout) return;
           if (v === null) delete S.handmatig[k]; else S.handmatig[k] = v;
-          td.classList.toggle('gevuld', v !== null);
-          wijzig();
+          wijzig(); tekenHandmatig();
+          const volgende = [...$('#handtabel').querySelectorAll('input')].find(x => x.getAttribute('aria-label') === inp.getAttribute('aria-label'));
+          if (volgende) volgende.focus();
         });
         return td;
-      })));
-      $('#handtabel').replaceChildren(el('table', { class: 'polar' }, el('thead', {}, kop), el('tbody', {}, ...rijen)));
+      });
+      $('#handtabel').replaceChildren(tabel);
+      polarDiagram(P, $('#handdiagram'));
     }
     $('#handwissen').addEventListener('click', () => {
       if (!Object.keys(S.handmatig).length || !confirm('Alle handmatige waarden wissen?')) return;
@@ -793,13 +1093,12 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     /* ---------- controle (voorlopig) en opslaan ---------- */
     function tekenControle() {
       const P = huidigePolair();
-      const kop = el('tr', {}, el('th', {}, 'TWS \\ TWA'), ...PT.TWA.map(a => el('th', {}, a + '°')));
-      const rijen = PT.TWS.map((t, i) => el('tr', {}, el('th', {}, t + ' kn'), ...PT.TWA.map((a, j) => {
+      const zw = el('tr', { class: 'zwaardrij' }, el('th', { colspan: 3 }, 'zwaard'), ...P.twa.map(a => el('td', { class: 'z-' + PT.zwaardVoor(S, a) }, PT.zwaardVoor(S, a))));
+      $('#controletabel').replaceChildren(polarTabel(P, (i, j) => {
         const h = P.herkomst[i][j];
-        return el('td', { class: 'h-' + h, title: `${h}${P.n[i][j] ? ', ' + P.n[i][j] + ' metingen' : ''}` }, P.snelheid[i][j] === null ? '–' : fmt(P.snelheid[i][j], 1));
-      })));
-      const zw = el('tr', {}, el('th', {}, 'zwaard'), ...S.zwaard.map(z => el('td', {}, z)));
-      $('#controletabel').replaceChildren(el('table', { class: 'polar' }, el('thead', {}, kop), el('tbody', {}, ...rijen, zw)));
+        return el('td', { class: 'h-' + h + (h === 'data' && P.n[i][j] >= 20 ? ' veel' : ''), title: `${HERKOMST[h]}${P.n[i][j] ? ', ' + P.n[i][j] + ' blokken' : ''}` }, P.snelheid[i][j] === null ? '–' : fmt(P.snelheid[i][j], 1));
+      }, [zw]));
+      polarDiagram(P, $('#controlediagram'));
       const fouten = PROFIEL.filter(v => veldFout(v)).map(v => v.label.replace(' *', ''));
       const leeg = P.herkomst.flat().every(h => h === 'leeg');
       if (fouten.length) melding($('#opslaanmelding'), 'fout', 'Vul eerst het profiel aan: ' + fouten.join(', ') + '.');
