@@ -333,7 +333,7 @@ tr.sel td{background:var(--sel)}
 <!-- POLAIR -->
 <section id="s-polair">
   <div class="card">
-    <h2>Polair Willem Jacob</h2>
+    <h2>Polair (voorbeeld)</h2>
     <p class="muted">Bootsnelheid door het water in <b>knopen</b> per Beaufort en zeilstand.</p>
     <div class="row" style="margin-bottom:10px">
       <label class="f">Aan de wind vanaf (°)<input type="number" id="pb0"></label>
@@ -346,7 +346,7 @@ tr.sel td{background:var(--sel)}
     </div>
     <div class="tbl"><table id="polTbl" class="pol"></table></div>
     <p class="muted">Kruisen: ligt de koers hoger dan de aan-de-windhoek, dan wordt gezeild met de aan-de-windsnelheid en de gezeilde afstand = afstand × cos(hoek) / cos(aan-de-windhoek), zoals in je Excel. “Bft interpoleren” rekent tussen twee Bft-rijen in op basis van de echte windsnelheid; uitgezet gebruikt de tool hele Bft zoals de Excel.</p>
-    <button class="s" id="resetPolar">Terug naar Willem Jacob</button>
+    <button class="s" id="resetPolar">Terug naar standaardwaarden</button>
     <label class="s" style="display:inline-block">Polair importeren (.json)… <input type="file" id="polImport" accept=".json,application/json" style="display:none"></label>
     <div id="polImpMsg"></div>
   </div>
@@ -387,11 +387,11 @@ tr.sel td{background:var(--sel)}
     <ul>
       <li><b>Ondergrond</b> (rechtsboven): Luchtfoto, Topo, Grijs, OpenTopoMap of geen ondergrond. De laatste keuze wordt onthouden.</li>
       <li><b>Windkaart en positie om</b>: tijdschuifje per 15 minuten (kloktijd), met ernaast de gekozen tijd. Met <b>Kruisslagen</b> aan (standaard) staat er ook een bootje op de berekende positie op dat tijdstip (op kruisrakken op de voorgestelde zigzag), met boven de kaart een korte beschrijving (staat Kruisslagen uit, dan meldt de regel boven de kaart dat het bootje alleen bij Kruisslagen verschijnt): rak, zeilstand, koers, afstand tot de volgende boei en de wind ter plaatse.</li>
-      <li><b>Kaartlagen</b> (vak rechtsboven): ondergrond, en aan/uit voor Windlaag, Kruisslagen, Waterdiepte RWS (2022), Betonning RWS, Boeien andere banen (boeien die niet in de geselecteerde route zitten) en Track Willem Jacob 2025. De keuzes worden onthouden. Boven de kaart: het tijdschuifje met tijdvak, de windverandering en de maximale slaglengte.</li>
+      <li><b>Kaartlagen</b> (vak rechtsboven): ondergrond, en aan/uit voor Windlaag, Kruisslagen, Waterdiepte RWS (2022), Betonning RWS, Boeien andere banen (boeien die niet in de geselecteerde route zitten) en Track winnaar 2025. De keuzes worden onthouden. Boven de kaart: het tijdschuifje met tijdvak, de windverandering en de maximale slaglengte.</li>
       <li><b>Windlaag</b>: kleurvlak per Bft , bewegende stroomlijnen en grote pijlen met knopen en Bft.</li>
       <li><b>Kruisslagen</b>: vaart de kruisrakken na in stapjes van 30 seconden, met de wind op die plek en dat moment, dus inclusief de verwachte draaiing van de wind. Regels: begin op de slag die het meest naar het merkteken wijst; ga overstag bij een krimper (de wind draait zo dat de huidige slag meer dan 10° slechter naar het merkteken wijst), als de maximale slaglengte bereikt is, of zodra het merkteken bezeild is. De rechte baanlijn wordt dan gestippeld. Beweeg over de zigzag voor het aantal keer overstag, de afstand, de tijd en de aankomsttijd. Het voorstel houdt ook rekening met de <b>te vermijden gebieden</b> (overstag vóór de veiligheidsafstand tot de tonnen) en met de <b>waterdiepte</b>: hoe dieper hoe sneller, en te ondiep water geldt als hindernis (instellingen op het tabblad Polair). Het is een voorstel om te tonen; de berekende tijden in de tabellen veranderen er niet door.</li>
       <li><b>Waterdiepte RWS</b>: de bodemhoogte van het IJsselmeergebied (Rijkswaterstaat, opname 2022) in klassen van 1 m tussen −6 en +1 m NAP; dieper dan −6 krijgt de donkerste kleur, hoger dan +1 is doorzichtig. Legenda rechtsonder op de kaart. Klik op de kaart (als de laag aan staat) voor de bodemhoogte op dat punt.</li>
-      <li><b>Track 2025</b>: de gevaren track van de Willem Jacob ter vergelijking.</li>
+      <li><b>Track winnaar 2025</b>: de gevaren track van de winnaar van de 3-stedenrace 2025 ter vergelijking.</li>
       <li>Rood vlak = actief verboden gebied, rode stippellijn = niet-actief gebied. Blauwe labels = rondingstijden, witte stipjes = omwegpunten.</li>
     </ul>
     <h3>Wind</h3>
@@ -423,7 +423,7 @@ tr.sel td{background:var(--sel)}
       <li><b>Kruistoeslag</b>: extra procent gezeilde afstand bij kruisen (voor tijdverlies bij overstag gaan). Standaard 0.</li>
       <li><b>Snelheidsfactor</b>: schaalt alle snelheden. Laat op 100% tenzij je een duidelijke reden hebt.</li>
       <li><b>Bft interpoleren</b>: rekent tussen twee Bft-rijen in op basis van de echte windsnelheid (aanbevolen). Uit = hele Bft, zoals in de oude Excel.</li>
-      <li><b>Polair importeren</b>: laadt een polair uit de tool PolairDiagram Tuning. <b>Terug naar Willem Jacob</b> zet de oorspronkelijke waarden terug.</li>
+      <li><b>Polair importeren</b>: laadt een polair uit de tool PolairDiagram Tuning. <b>Terug naar standaardwaarden</b> zet de oorspronkelijke waarden terug.</li>
     </ul>
     <h3>Opslaan</h3>
     <ul>
@@ -481,7 +481,7 @@ tr.sel td{background:var(--sel)}
     <h2>Tool + gegevens versturen</h2>
     <p class="muted">Maakt één HTML-bestand met de tool én al je gegevens erin (boeien, banen, jaarsets, gebieden, polair, wind en instellingen). Dat bestand kun je mailen, via WhatsApp of een USB-stick doorgeven of als reservekopie bewaren. Wie het opent, krijgt de vraag of hij jouw gegevens wil overnemen.</p>
     <div class="row">
-      <label class="f">Afzender / opmerking (optioneel)<input id="bundleNote" placeholder="bijv. Arjen – Willem Jacob" style="width:240px"></label>
+      <label class="f">Afzender / opmerking (optioneel)<input id="bundleNote" placeholder="bijv. je naam – je schip" style="width:240px"></label>
       <button class="b" id="btnBundle">⬇ Download tool met gegevens (.html)</button>
       <button class="s" id="btnWa" title="Bestand delen via WhatsApp">WhatsApp</button>
       <button class="s" id="btnMail" title="Bestand versturen per e-mail">E-mail</button>
@@ -501,7 +501,7 @@ tr.sel td{background:var(--sel)}
   </div>
   <div class="card">
     <h2>IJking tegen 2025</h2>
-    <p class="muted">In 2025 voer de Willem Jacob de korte baan Medemblik–Stavoren: start 10:00, finish ca. 16:15 (6 u 15). Laad de windtabel 2025, zet de datum op 11-10-2025 en kijk wat het model voor die route geeft. Het verschil kun je met de snelheidsfactor in Polair corrigeren.</p>
+    <p class="muted">In 2025 voer je schip de korte baan Medemblik–Stavoren: start 10:00, finish ca. 16:15 (6 u 15). Laad de windtabel 2025, zet de datum op 11-10-2025 en kijk wat het model voor die route geeft. Het verschil kun je met de snelheidsfactor in Polair corrigeren.</p>
     <button class="s" id="btnCal">Rekenen met wind 2025</button>
     <div id="calMsg"></div>
   </div>
@@ -861,7 +861,7 @@ function setKG9(routes) {
 }
 applySides(DEFAULT_ROUTES);
 
-// Polair Willem Jacob (tabblad DATA, knopen). Kolommen: aan / half / ruim / voor
+// Polair (tabblad DATA, knopen). Kolommen: aan / half / ruim / voor
 const DEFAULT_POLAR = {
   bounds: [55, 85, 110, 160, 180],
   tackPenaltyPct: 0,
@@ -1791,10 +1791,10 @@ function initMap() {
   if (st.showTrack) layers.track.addTo(map);
   const overlays = {
     'Windlaag': windLayer, 'Kruisslagen': layers.tacks, 'Waterdiepte RWS (2022)': bodem, 'Betonning RWS': rwsBetonning,
-    'Boeien andere banen': layers.other, 'Track Willem Jacob 2025': layers.track
+    'Boeien andere banen': layers.other, 'Track winnaar 2025': layers.track
   };
   L.control.layers(bases, overlays, { collapsed: false }).addTo(map);
-  const ovKey = { 'Windlaag': 'windOn', 'Kruisslagen': 'showTacks', 'Boeien andere banen': 'mapOther', 'Track Willem Jacob 2025': 'showTrack' };
+  const ovKey = { 'Windlaag': 'windOn', 'Kruisslagen': 'showTacks', 'Boeien andere banen': 'mapOther', 'Track winnaar 2025': 'showTrack' };
   map.on('overlayadd overlayremove', ev => {
     const k = ovKey[ev.name]; if (!k || progChange) return;
     S.settings[k] = ev.type === 'overlayadd'; save();
@@ -1897,6 +1897,7 @@ function drawMap() {
         html: `<svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(${brg}deg);display:block"><path d="M9 1 L16 16 L9 12 L2 16 Z" fill="#13202b" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>` }) }).addTo(layers.route));
     }
   }
+  if (TRACK_2025.length) L.polyline(TRACK_2025.map(p => [p[0], p[1]]), { color: '#c0392b', weight: 2, opacity: .8 }).bindTooltip('Winnaar 2025').addTo(layers.track);
   // bootje op de berekende positie bij de tijd van het schuifje (alleen met kruisslagen aan)
   layers.boat && layers.boat.clearLayers();
   $('boatInfo').innerHTML = S.settings.showTacks === false ? '<span class="muted">⛵ Het bootje met de positie op het gekozen tijdstip verschijnt alleen als <b>Kruisslagen</b> aan staat (kaartvak rechtsboven).</span>' : (!S.wind ? '<span class="muted">⛵ Haal eerst de wind op om de positie van het bootje te berekenen.</span>' : '');
@@ -1912,7 +1913,6 @@ function drawMap() {
   showLegends();
   if (windLayer) { windLayer.t = wm ? mapClock() : null; windLayer.wm = wm;
     const wantWind = S.settings.windOn !== false && wm; progChange = true; if (wantWind) { if (!map.hasLayer(windLayer)) windLayer.addTo(map); else windLayer.refresh(); } else if (map.hasLayer(windLayer)) map.removeLayer(windLayer); progChange = false; }
-  if (TRACK_2025.length) L.polyline(TRACK_2025.map(p => [p[0], p[1]]), { color: '#c0392b', weight: 2, opacity: .8 }).bindTooltip('Willem Jacob 2025').addTo(layers.track);
 }
 function routeOptions() {
   return shownBanen().map(b => `<optgroup label="${BAAN[b]}">` + S.routes[b].map((r, i) => {
@@ -2090,7 +2090,7 @@ function renderDepth() {
   const c = depthCfg();
   $('dUse').checked = c.use; $('dDraft').value = c.draft; $('dClear').value = c.clear; $('dFull').value = c.full; $('dMin').value = c.minPct; $('dPeil').value = c.peil;
   const g = S.depthGrid;
-  if (g) { const n = g.v.filter(z => z != null).length; $('depthMsg').innerHTML = `<div class="msg ok">Dieptedata geladen (${n} rastercellen van ca. ${Math.round(g.dx * 111320 * Math.cos(52.75 * D2R))} m, ${new Date(g.loaded).toLocaleDateString('nl-NL')}). Minimale diepte voor de Willem Jacob: ${fmt1(c.draft + c.clear)} m.</div>`; }
+  if (g) { const n = g.v.filter(z => z != null).length; $('depthMsg').innerHTML = `<div class="msg ok">Dieptedata geladen (${n} rastercellen van ca. ${Math.round(g.dx * 111320 * Math.cos(52.75 * D2R))} m, ${new Date(g.loaded).toLocaleDateString('nl-NL')}). Minimale diepte voor je schip: ${fmt1(c.draft + c.clear)} m.</div>`; }
   else if (!$('depthMsg').innerHTML) $('depthMsg').innerHTML = '<span class="muted">Nog geen dieptedata geladen.</span>';
 }
 ['dDraft', 'dClear', 'dFull', 'dMin', 'dPeil'].forEach((id, k) => $(id).onchange = () => {
