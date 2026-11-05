@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polartool</title>
+<meta name="description" content="Polair diagram voor een platbodem opbouwen uit handmatige waarden en VDR-logs, volledig in de browser.">
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#fffdf8; --ink:#1d2a33; --muted:#5d6b74; --line:#d9d2c3;
+  --accent:#1f4e79; --accent-ink:#fff; --warn:#9a5b00; --warn-bg:#fdf0d8;
+  --bad:#a12a2a; --bad-bg:#f9e0e0; --chip:#ebe5d8;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12181d; --panel:#1a232a; --ink:#e3e8eb; --muted:#93a1aa; --line:#2c3a44;
+  --accent:#6aa7dd; --accent-ink:#0d1418; --warn:#f2b45a; --warn-bg:#3a2c12;
+  --bad:#f08a8a; --bad-bg:#3b1c1c; --chip:#25313a;
+}}
+:root[data-theme="dark"]{
+  --bg:#12181d; --panel:#1a232a; --ink:#e3e8eb; --muted:#93a1aa; --line:#2c3a44;
+  --accent:#6aa7dd; --accent-ink:#0d1418; --warn:#f2b45a; --warn-bg:#3a2c12;
+  --bad:#f08a8a; --bad-bg:#3b1c1c; --chip:#25313a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header,main,footer{max-width:1200px;margin:0 auto;padding:0 16px}
+header{padding-top:14px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:13px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:14px 0}
+h2{font-size:16px;margin:0 0 8px}
+.aanname{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px}
+footer{color:var(--muted);font-size:12px;padding-bottom:30px}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Polartool</h1>
+  <div class="sub">Polair diagram voor een platbodem opbouwen uit handmatige waarden en VDR-logs. Alles gebeurt in je browser; de tool slaat niets op en uploadt niets.</div>
+</header>
+<main>
+  <section>
+    <h2>In aanbouw</h2>
+    <p>Deze pagina wordt stap voor stap opgebouwd.</p>
+    <p class="aanname">Aanname: stilstaand water. De tool rekent met snelheid over de grond (SOG) en houdt geen rekening met stroom.</p>
+  </section>
+</main>
+<footer>
+  &copy; Arjen Geluk. Gelicenseerd onder <a href="../LICENSE">CC BY-NC-ND 4.0</a>.
+</footer>
+</body>
+</html>

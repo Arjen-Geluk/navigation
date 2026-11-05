@@ -1,0 +1,7 @@
+# Echte scheepsdata (VDR-logs, scheepsbestanden) blijft lokaal en komt nooit in deze publieke repo
+lokaal/
+*.vdr
+vdr_*.txt
+
+# Lokale instellingen van Claude Code
+.claude/
