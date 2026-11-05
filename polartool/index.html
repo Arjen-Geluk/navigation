@@ -77,6 +77,14 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
 .legenda .l-handmatig::before{background:rgba(230,126,34,.28)} .legenda .l-bestaand::before{background:rgba(46,125,79,.22)}
 .legenda .l-geïnterpoleerd::before{background:transparent}
 .knoppenrij{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+#vdrvoortgang{margin-top:12px} #vdrvoortgang progress{width:min(360px,100%);vertical-align:middle}
+table.lijst{border-collapse:collapse;font-size:13px;margin-top:10px;min-width:min(100%,640px)}
+table.lijst th,table.lijst td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.lijst th{color:var(--muted);font-weight:600}
+table.lijst td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
+.ja{color:inherit} .nee{color:var(--bad);font-weight:600}
+.kv{font-size:13px} .kv b{display:block;font-weight:600;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -88,7 +96,7 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
     <button role="tab" data-tab="start" aria-selected="true">Start</button>
     <button role="tab" data-tab="profiel" disabled>Profiel</button>
     <button role="tab" data-tab="handmatig" disabled>Handmatig</button>
-    <button role="tab" data-tab="vdr" disabled title="Volgt">VDR inladen</button>
+    <button role="tab" data-tab="vdr" disabled>VDR inladen</button>
     <button role="tab" data-tab="controle" disabled>Controle en opslaan</button>
   </nav>
 </header>
@@ -131,7 +139,21 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
   </div>
 
   <div id="tab-vdr" hidden>
-    <section><h2>VDR inladen</h2><p>Volgt in de volgende stap.</p></section>
+    <section>
+      <h2>VDR-bestand inladen</h2>
+      <p>Kies een VDR-log uit OpenCPN (ruwe NMEA 0183-zinnen). Het bestand wordt alleen in deze browser gelezen en nergens naartoe gestuurd.</p>
+      <p class="aanname">Aanname: stilstaand water. Snelheid over de grond geldt als bootsnelheid; kies straks alleen tijdvakken zonder merkbare stroom en met de zeilvoering die bij die windsterkte hoort.</p>
+      <div class="knoppenrij"><label class="knop" id="vdrknop">VDR-bestand kiezen…<input type="file" id="vdrbestand" accept=".txt,.log,.nmea,text/plain" hidden></label></div>
+      <div id="vdrvoortgang" hidden><progress max="1" value="0"></progress> <span class="sub"></span></div>
+      <div id="vdrmelding"></div>
+    </section>
+    <section id="inventaris" hidden>
+      <h2>Data-inventaris</h2>
+      <div id="invkop" class="velden"></div>
+      <div class="tabelvak"><table class="lijst" id="invtabel"></table></div>
+      <div id="invgaten"></div>
+      <div id="invslot"></div>
+    </section>
   </div>
 
   <div id="tab-controle" hidden>
@@ -189,8 +211,8 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
       return (h === 'S' || h === 'W') ? -d : d;
     }
 
-    const VELDEN = ['t', 'lat', 'lon', 'sog', 'cog', 'hdt', 'awa', 'aws', 'tws_i', 'twd_i', 'rot'];
-    const RELEVANT = new Set(['ZDA', 'RMC', 'VTG', 'HDT', 'HDG', 'MWV', 'MWD', 'ROT', 'GGA', 'GLL', 'VHW', 'MDA', 'XDR']);
+    const VELDEN = ['t', 'lat', 'lon', 'sog', 'cog', 'hdt', 'awa', 'aws', 'rot', 'druk', 'temp', 'vocht'];
+    const RELEVANT = new Set(['ZDA', 'RMC', 'VTG', 'HDT', 'MWV', 'ROT', 'GGA', 'GLL', 'MDA']);
 
     class VdrParser {
       constructor() {
@@ -270,7 +292,7 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
             if (p[5] !== 'A') break;
             if (p[2] === 'R') { const s = num(p[3]); this.zet('awa', num(p[1])); this.zet('aws', p[4] === 'K' ? s / 1.852 : p[4] === 'M' ? s / 0.514444 : s); }
             break;
-          case 'MWD': this.zet('twd_i', num(p[1])); this.zet('tws_i', num(p[5])); break;
+          case 'MDA': this.zet('druk', num(p[3])); this.zet('temp', num(p[5])); this.zet('vocht', num(p[9])); break;  // bar, °C, %
         }
       }
       einde() {
@@ -296,19 +318,28 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
           tijdbron: this.heeftZDA ? 'ZDA' : 'RMC', rollover: this.rollover,
           dekking: Object.fromEntries(VELDEN.slice(1).map(k => [k, rows.length ? tel(k) / rows.length : 0])),
           types, kompasGaten,
-          verplicht: {
-            'Tijd (ZDA of RMC)': heeft('ZDA', 'RMC'),
-            'Positie': heeft('RMC', 'GGA', 'GLL'),
-            'Snelheid en koers over de grond': heeft('VTG', 'RMC'),
-            'Schijnbare wind (MWV)': heeft('MWV'),
-            'Kompaskoers (HDT)': heeft('HDT'),
-          },
-          optioneel: {
-            'Draaisnelheid (ROT)': heeft('ROT'),
-            'Luchtdruk en temperatuur (MDA)': heeft('MDA'), 'Snelheid door het water (VHW)': heeft('VHW'),
-          },
+          nietGebruikt: Object.entries(types).reduce((a, [k, n]) => a + (k[0] === '!' || !RELEVANT.has(k.slice(3)) ? n : 0), 0),
         };
-        inv.ok = Object.values(inv.verplicht).every(Boolean);
+        // per gegeven: welke zinnen, welk deel van de seconden het een waarde heeft, en wat er gebeurt als het ontbreekt
+        const item = (naam, bron, veld, gevolg) => {
+          const dekking = veld ? inv.dekking[veld] : (heeft(bron) ? null : 0);
+          return { naam, bron, dekking, aanwezig: veld ? dekking > 0 : heeft(bron), gevolg };
+        };
+        inv.verplicht = [
+          { naam: 'Tijd', bron: inv.tijdbron === 'ZDA' ? 'ZDA' : 'RMC', dekking: rows.length ? 1 : 0, aanwezig: rows.length > 0 },
+          item('Positie', 'RMC, GGA', 'lat'),
+          item('Snelheid en koers over de grond', 'RMC, VTG', 'sog'),
+          item('Schijnbare wind', 'MWV', 'awa'),
+          item('Kompaskoers', 'HDT', 'hdt'),
+        ];
+        inv.optioneel = [
+          item('Draaisnelheid', 'ROT', 'rot', 'Nu niet gebruikt: manoeuvres herkent de tool aan het wisselen van windzijde.'),
+          item('Luchtdruk', 'MDA', 'druk', 'Alleen ter informatie.'),
+          item('Temperatuur', 'MDA', 'temp', 'Alleen ter informatie.'),
+          item('Luchtvochtigheid', 'MDA', 'vocht', 'Alleen ter informatie.'),
+          item('Snelheid door het water', 'VHW', null, 'Niet gebruikt: de tool rekent met snelheid over de grond.'),
+        ];
+        inv.ok = inv.verplicht.every(x => x.aanwezig);
         return { rows, inventaris: inv };
       }
     }
@@ -531,7 +562,8 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
       }
       throw new Error('Onbekend bestand: geen polartool-bestand en geen scheepsbestand met polair.');
     }
-    function vingerafdruk(naam, grootte, inv) { return [naam, grootte, inv.start, inv.eind].join('|'); }
+    /* vingerafdruk van een VDR-bron: begin- en eindtijd plus controlesom (SHA-256 van het bestand) */
+    function vingerafdruk(inv, sha256) { return { start: inv.start, eind: inv.eind, sha256 }; }
 
     return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit,
       nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, nieuwId, kwantiel };
@@ -576,7 +608,8 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
 
     function open(nieuweS, bericht) {
       S = nieuweS; polair = null; gewijzigd = false;
-      tabs.forEach(b => { if (b.dataset.tab !== 'vdr') b.disabled = false; });
+      tabs.forEach(b => { b.disabled = false; });
+      vdr = null; $('#inventaris').hidden = true; melding($('#vdrmelding'), '', '');
       tekenProfiel(); tekenSchipregel();
       melding($('#startmelding'), 'ok', bericht);
       toon('profiel');
@@ -710,7 +743,91 @@ td.h-geïnterpoleerd{color:var(--muted)} td.h-leeg{color:var(--muted)}
       melding($('#opslaanmelding'), 'ok', `Opgeslagen als ${naam}. Bewaar dit bestand; het is je nieuwe versie en het startpunt voor de volgende verfijning.`);
     });
 
-    window.PolartoolApp = { staat: () => S };   // voor testen in de console
+    /* ---------- VDR inladen en data-inventaris ---------- */
+    let vdr = null;          // ingelezen VDR die nog niet is toegevoegd: { bestand, inventaris, punten (10 s) }
+    const tijd = s => new Date(s * 1000).toLocaleString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const klok = s => new Date(s * 1000).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    const duur = s => { const u = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return u ? `${u} u ${m} min` : `${m} min`; };
+    const pct = x => x === null ? 'aanwezig' : x === 0 ? '–' : x >= 0.995 ? '100%' : x < 0.01 ? '< 1%' : Math.round(x * 100) + '%';
+    const wacht = () => new Promise(r => setTimeout(r, 0));   // geeft de browser ruimte om de voortgang te tekenen (ook in een tabblad op de achtergrond)
+
+    async function leesVdr(file, voortgang) {
+      const P = new PT.VdrParser(), lezer = file.stream().getReader(), dec = new TextDecoder();
+      let gelezen = 0, laatst = 0;
+      for (;;) {
+        const { done, value } = await lezer.read();
+        if (done) break;
+        gelezen += value.length;
+        P.feed(dec.decode(value, { stream: true }));
+        if (performance.now() - laatst > 100) { voortgang(gelezen / file.size); laatst = performance.now(); await wacht(); }
+      }
+      P.feed(dec.decode());
+      voortgang(1);
+      return P.einde();
+    }
+    async function sha256(file) {
+      const h = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+      return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    $('#vdrbestand').addEventListener('change', async e => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      const vg = $('#vdrvoortgang'), balk = vg.querySelector('progress'), tekst = vg.querySelector('span');
+      vdr = null; $('#inventaris').hidden = true; melding($('#vdrmelding'), '', '');
+      vg.hidden = false; $('#vdrknop').hidden = true;
+      try {
+        const t0 = performance.now();
+        const { rows, inventaris } = await leesVdr(f, x => { balk.value = x; tekst.textContent = `${f.name}: ${Math.round(x * 100)}% gelezen`; });
+        tekst.textContent = 'ware wind berekenen en controlesom bepalen…'; await wacht();
+        const punten = inventaris.ok ? PT.tienSeconden(rows) : [];
+        const som = await sha256(f);
+        vdr = { bestand: { naam: f.name, grootte: f.size, vingerafdruk: PT.vingerafdruk(inventaris, som) }, inventaris, punten, leesduur: (performance.now() - t0) / 1000 };
+        tekenInventaris();
+      } catch (err) {
+        melding($('#vdrmelding'), 'fout', 'Het bestand kon niet worden gelezen: ' + err.message);
+      } finally {
+        vg.hidden = true; $('#vdrknop').hidden = false;
+      }
+    });
+
+    function tekenInventaris() {
+      const { bestand, inventaris: inv, punten } = vdr;
+      $('#inventaris').hidden = false;
+      const kv = (k, v) => el('div', { class: 'kv' }, el('b', {}, k), v);
+      $('#invkop').replaceChildren(
+        kv('Bestand', `${bestand.naam} (${fmt(bestand.grootte / 1048576, 1)} MB)`),
+        kv('Periode', inv.start === null ? 'geen tijd gevonden' : `${tijd(inv.start)} – ${klok(inv.eind)} (${duur(inv.eind - inv.start)})`),
+        kv('Tijd uit', inv.tijdbron === 'ZDA' ? 'ZDA (datum en tijd)' : 'RMC' + (inv.rollover ? ', GPS-datum gecorrigeerd (+1024 weken)' : '')),
+        kv('Regels', `${inv.regels.toLocaleString('nl-NL')}, waarvan ${Math.round(inv.nietGebruikt / inv.regels * 100)}% niet nodig (AIS, satellieten, route)`),
+        kv('Controlesom NMEA', inv.checksumFout ? `${inv.checksumFout.toLocaleString('nl-NL')} regels met foute controlesom overgeslagen` : 'geen fouten'));
+      const rij = (x, verplicht) => el('tr', {},
+        el('td', {}, x.naam), el('td', { class: 'sub' }, x.bron),
+        el('td', { class: x.aanwezig ? 'ja' : verplicht ? 'nee' : 'sub' }, x.aanwezig ? '✓ gevonden' : verplicht ? '✗ ontbreekt' : '– niet aanwezig'),
+        el('td', { class: 'num' }, x.aanwezig ? pct(x.dekking) : ''),
+        el('td', { class: 'sub' }, x.aanwezig ? '' : (x.gevolg || 'De tool kan zonder dit gegeven geen polar maken.')));
+      $('#invtabel').replaceChildren(
+        el('thead', {}, el('tr', {}, el('th', {}, 'Gegeven'), el('th', {}, 'NMEA'), el('th', {}, 'Status'), el('th', { class: 'num' }, 'Seconden met waarde'), el('th', {}, 'Gevolg als het ontbreekt'))),
+        el('tbody', {}, el('tr', { class: 'kop' }, el('td', { colspan: 5 }, 'Verplicht')), ...inv.verplicht.map(x => rij(x, true)),
+          el('tr', { class: 'kop' }, el('td', { colspan: 5 }, 'Optioneel')), ...inv.optioneel.map(x => rij(x, false))));
+      const gaten = inv.kompasGaten;
+      $('#invgaten').replaceChildren(gaten.length && inv.ok
+        ? el('div', { class: 'melding let' }, `Kompaskoers ontbreekt ${gaten.map(g => `${klok(g.van)}–${klok(g.tot)}`).join(', ')}. Zonder kompaskoers is de windhoek onbetrouwbaar; deze periode${gaten.length > 1 ? 's vallen' : ' valt'} af.`)
+        : '');
+      if (!inv.ok) {
+        const mist = inv.verplicht.filter(x => !x.aanwezig).map(x => x.naam.toLowerCase());
+        const opsom = mist.length > 1 ? mist.slice(0, -1).join(', ') + ' en ' + mist[mist.length - 1] : mist[0];
+        const geenNmea = !Object.keys(inv.types).length;
+        const windMist = inv.verplicht.slice(3).some(x => !x.aanwezig);
+        $('#invslot').replaceChildren(el('div', { class: 'melding fout' }, geenNmea
+          ? 'Dit lijkt geen VDR-bestand: er staan geen NMEA-zinnen in. Kies een log uit OpenCPN.'
+          : `Dit bestand is niet bruikbaar: ${opsom} ontbre${mist.length > 1 ? 'ken' : 'ekt'}.` + (windMist ? ' Zonder schijnbare wind en kompaskoers kan de tool de ware wind niet betrouwbaar berekenen; vul de polar dan handmatig in.' : '')));
+      } else {
+        $('#invslot').replaceChildren(el('div', { class: 'melding ok' }, `${punten.length.toLocaleString('nl-NL')} blokken van 10 seconden met ware wind (${duur(punten.length * 10)}). Ingelezen in ${fmt(vdr.leesduur, 1)} s. De volgende stap is tijdvakken kiezen; die volgt.`));
+      }
+    }
+
+    window.PolartoolApp = { staat: () => S, vdr: () => vdr };   // voor testen in de console
   })();
 </script>
 </body>
