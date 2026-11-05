@@ -49,5 +49,387 @@ footer a{color:var(--accent)}
 <footer>
   &copy; Arjen Geluk. Gelicenseerd onder <a href="../LICENSE">CC BY-NC-ND 4.0</a>.
 </footer>
+<script id="rekenkern">
+  /* Polartool — rekenkern (geen DOM). Ook bruikbaar in Node voor tests. */
+  const PT = (() => {
+    const TWS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+    const TWA = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
+    const R = Math.PI / 180;
+    const FORMAAT = 'polartool/1';
+    const STANDAARD_FILTERS = { sogMin: 2, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
+    const GEWICHT = { wedstrijd: 1, overtocht: 0.5 };
+    const REGELS = 'lineair interpoleren in TWS en TWA; TWS < 2 kn lineair naar 0; TWS > 30 kn: rij 30; TWA < 50°: kruisen op de beste VMG-hoek uit het raster; minimumsnelheid 0,3 kn';
+
+    function zwaardStandaard(twa) { return twa < 85 ? 'neer' : twa < 160 ? 'half' : 'op'; }
+
+    /* ---------- NMEA ---------- */
+    function checksumOk(l) {
+      const i = l.indexOf('*');
+      if (i < 0 || l.length < i + 3) return false;
+      let c = 0;
+      for (let k = 1; k < i; k++) c ^= l.charCodeAt(k);
+      return c === parseInt(l.substr(i + 1, 2), 16);
+    }
+    const num = x => { if (x === undefined || x === '') return null; const v = Number(x); return Number.isFinite(v) ? v : null; };
+    function hms(s) {
+      if (!s) return null;
+      const [a, b = '0'] = s.split('.');
+      const p = a.padStart(6, '0');
+      return Number(p.slice(0, 2)) * 3600 + Number(p.slice(2, 4)) * 60 + Number(p.slice(4, 6)) + Number('0.' + b);
+    }
+    function latlon(v, h, deg) {
+      if (!v) return null;
+      const d = Number(v.slice(0, deg)) + Number(v.slice(deg)) / 60;
+      return (h === 'S' || h === 'W') ? -d : d;
+    }
+
+    const VELDEN = ['t', 'lat', 'lon', 'sog', 'cog', 'hdt', 'awa', 'aws', 'tws_i', 'twd_i', 'rot'];
+    const RELEVANT = new Set(['ZDA', 'RMC', 'VTG', 'HDT', 'HDG', 'MWV', 'MWD', 'ROT', 'GGA', 'GLL', 'VHW', 'MDA', 'XDR']);
+
+    class VdrParser {
+      constructor() {
+        this.rest = ''; this.regels = 0; this.fout = 0; this.types = {};
+        this.heeftZDA = false; this.rollover = false; this.sec = null; this.rows = [];
+        this.v = {}; this.vt = {};
+      }
+      zet(k, val) { if (val !== null && val !== undefined) { this.v[k] = val; this.vt[k] = this.sec; } }
+      positie(la, nz, lo, ow) { this.zet('lat', latlon(la, nz, 2)); this.zet('lon', latlon(lo, ow, 3)); }
+      tick(sec) {
+        sec = Math.floor(sec);
+        if (sec === this.sec) return;
+        if (this.sec !== null && sec < this.sec - 5) return;           // terugspringende tijd negeren
+        this.flush();
+        this.sec = sec;
+      }
+      flush() {
+        if (this.sec === null) return;
+        const r = [this.sec];
+        for (let i = 1; i < VELDEN.length; i++) {
+          const k = VELDEN[i];
+          r.push(this.vt[k] !== undefined && this.sec - this.vt[k] <= 3 ? this.v[k] : null);
+        }
+        this.rows.push(r);
+      }
+      feed(tekst) {
+        const d = (this.rest + tekst).split('\n');
+        this.rest = d.pop();
+        for (const l of d) this.regel(l);
+      }
+      regel(l) {
+        l = l.trim();
+        if (!l) return;
+        this.regels++;
+        const c0 = l.charCodeAt(0);
+        if (c0 !== 36 && c0 !== 33) return;                            // $ of !
+        const k = l.indexOf(',');
+        const kop = k > 0 ? l.slice(0, k) : l.slice(0, 6);
+        this.types[kop] = (this.types[kop] || 0) + 1;
+        if (c0 !== 36) return;
+        const t = kop.slice(3);
+        if (!RELEVANT.has(t)) return;
+        if (!checksumOk(l)) { this.fout++; return; }
+        const p = l.slice(0, l.indexOf('*')).split(',');
+        switch (t) {
+          case 'ZDA': {
+            const s = hms(p[1]); const dd = num(p[2]), mm = num(p[3]), yy = num(p[4]);
+            if (s === null || !dd || !mm || !yy) break;
+            this.heeftZDA = true;
+            // ZDA komt net vóór de RMC van de volgende seconde (bijv. 08:29:59.86): afronden houdt beide in dezelfde seconde
+            this.tick(Math.round(Date.UTC(yy, mm - 1, dd) / 1000 + s));
+            break;
+          }
+          case 'RMC': {
+            if (p[2] !== 'A') break;
+            if (!this.heeftZDA && p[9] && p[9].length === 6) {
+              let ms = Date.UTC(2000 + Number(p[9].slice(4, 6)), Number(p[9].slice(2, 4)) - 1, Number(p[9].slice(0, 2)));
+              if (new Date(ms).getUTCFullYear() < 2019) { ms += 1024 * 7 * 86400000; this.rollover = true; }
+              this.tick(ms / 1000 + hms(p[1]));
+            } else if (p[9] && p[9].length === 6 && Number(p[9].slice(4, 6)) < 19) this.rollover = true;
+            this.positie(p[3], p[4], p[5], p[6]); this.vt.posRmcGga = this.sec;
+            // SOG/COG uit de eerste RMC per seconde, zoals de referentie-analyse
+            if (this.vt.rmc !== this.sec) { this.zet('sog', num(p[7])); this.zet('cog', num(p[8])); this.vt.rmc = this.sec; }
+            break;
+          }
+          case 'VTG': {                                                    // alleen als er geen RMC is
+            if (this.vt.rmc !== undefined && this.sec - this.vt.rmc <= 3) break;
+            const sog = num(p[5]), cog = num(p[1]); if (sog !== null) this.zet('sog', sog); if (cog !== null) this.zet('cog', cog); break;
+          }
+          case 'GGA': if (p[6] && p[6] !== '0') { this.positie(p[2], p[3], p[4], p[5]); this.vt.posRmcGga = this.sec; } break;
+          case 'GLL':                                                      // alleen als RMC en GGA ontbreken (sommige ontvangers geven een verkeerde O/W)
+            if (p[6] === 'A' && (this.vt.posRmcGga === undefined || this.sec - this.vt.posRmcGga > 3)) this.positie(p[1], p[2], p[3], p[4]);
+            break;
+          case 'HDT': this.zet('hdt', num(p[1])); break;
+          case 'ROT': if (p[2] === 'A') this.zet('rot', num(p[1])); break;
+          case 'MWV':
+            if (p[5] !== 'A') break;
+            if (p[2] === 'R') { const s = num(p[3]); this.zet('awa', num(p[1])); this.zet('aws', p[4] === 'K' ? s / 1.852 : p[4] === 'M' ? s / 0.514444 : s); }
+            break;
+          case 'MWD': this.zet('twd_i', num(p[1])); this.zet('tws_i', num(p[5])); break;
+        }
+      }
+      einde() {
+        if (this.rest) this.regel(this.rest);
+        this.rest = '';
+        this.flush();
+        const rows = this.rows;
+        const tel = k => rows.reduce((a, r) => a + (r[VELDEN.indexOf(k)] !== null ? 1 : 0), 0);
+        const types = this.types;
+        const heeft = (...ks) => ks.some(k => Object.keys(types).some(x => x.endsWith(k)));
+        // perioden van meer dan een minuut zonder kompaskoers terwijl er wel gevaren wordt (wind daar niet bruikbaar)
+        const iH = VELDEN.indexOf('hdt'), iS = VELDEN.indexOf('sog');
+        const kompasGaten = [];
+        let van = null;
+        for (const r of rows) {
+          if (r[iH] === null && r[iS] !== null) { if (van === null) van = r[0]; }
+          else if (r[iH] !== null && van !== null) { if (r[0] - van > 60) kompasGaten.push({ van, tot: r[0] }); van = null; }
+        }
+        if (van !== null && rows.length && rows[rows.length - 1][0] - van > 60) kompasGaten.push({ van, tot: rows[rows.length - 1][0] });
+        const inv = {
+          regels: this.regels, checksumFout: this.fout, seconden: rows.length,
+          start: rows.length ? rows[0][0] : null, eind: rows.length ? rows[rows.length - 1][0] : null,
+          tijdbron: this.heeftZDA ? 'ZDA' : 'RMC', rollover: this.rollover,
+          dekking: Object.fromEntries(VELDEN.slice(1).map(k => [k, rows.length ? tel(k) / rows.length : 0])),
+          types, kompasGaten,
+          verplicht: {
+            'Tijd (ZDA of RMC)': heeft('ZDA', 'RMC'),
+            'Positie': heeft('RMC', 'GGA', 'GLL'),
+            'Snelheid en koers over de grond': heeft('VTG', 'RMC'),
+            'Schijnbare wind (MWV)': heeft('MWV'),
+            'Kompaskoers (HDT)': heeft('HDT'),
+          },
+          optioneel: {
+            'Draaisnelheid (ROT)': heeft('ROT'),
+            'Luchtdruk en temperatuur (MDA)': heeft('MDA'), 'Snelheid door het water (VHW)': heeft('VHW'),
+          },
+        };
+        inv.ok = Object.values(inv.verplicht).every(Boolean);
+        return { rows, inventaris: inv };
+      }
+    }
+
+    /* ---------- ware wind per 10 s (vectorgemiddeld) ---------- */
+    function tienSeconden(rows, stap = 10) {
+      const I = Object.fromEntries(VELDEN.map((k, i) => [k, i]));
+      const B = new Map();
+      for (const r of rows) {
+        const sog = r[I.sog], cog = r[I.cog];
+        if (sog === null || cog === null) continue;
+        // Ware wind alleen uit schijnbare wind + kompaskoers. Zonder kompaskoers is de windhoek enkele graden
+        // tot meer dan 20° onzeker (drift); die seconden vallen af. De ware wind van het instrument (MWD)
+        // gebruiken we niet: die bleek in de testlog met COG te rekenen en wijkt evenveel af.
+        if (r[I.hdt] === null || r[I.awa] === null || r[I.aws] === null) continue;
+        const bx = sog * Math.sin(cog * R), by = sog * Math.cos(cog * R);
+        const awd = (r[I.hdt] + r[I.awa]) * R;
+        const wx = -r[I.aws] * Math.sin(awd) + bx, wy = -r[I.aws] * Math.cos(awd) + by;
+        const k = Math.floor(r[I.t] / stap) * stap;
+        let b = B.get(k);
+        if (!b) { b = { n: 0, bx: 0, by: 0, wx: 0, wy: 0, lat: 0, lon: 0, np: 0, rot: 0, nr: 0 }; B.set(k, b); }
+        b.n++; b.bx += bx; b.by += by; b.wx += wx; b.wy += wy;
+        if (r[I.lat] !== null) { b.lat += r[I.lat]; b.lon += r[I.lon]; b.np++; }
+        if (r[I.rot] !== null) { b.rot += r[I.rot]; b.nr++; }
+      }
+      const uit = [];
+      for (const [t, b] of [...B.entries()].sort((a, c) => a[0] - c[0])) {
+        if (b.n < 3) continue;
+        const bx = b.bx / b.n, by = b.by / b.n, wx = b.wx / b.n, wy = b.wy / b.n;
+        const sog = Math.hypot(bx, by), cog = (Math.atan2(bx, by) / R + 360) % 360;
+        const tws = Math.hypot(wx, wy), twd = (Math.atan2(-wx, -wy) / R + 360) % 360;
+        const twa_s = ((twd - cog + 540) % 360) - 180;
+        uit.push({ t, sog, cog, tws, twd, twa_s, twa: Math.abs(twa_s), lat: b.np ? b.lat / b.np : null, lon: b.np ? b.lon / b.np : null,
+          rot: b.nr ? b.rot / b.nr : null });
+      }
+      return uit;
+    }
+
+    /* ---------- stabiel varen binnen gekozen vensters ---------- */
+    function stabielePunten(pts, vensters, factor, f = STANDAARD_FILTERS) {
+      const n = pts.length, stap = 10;
+      const nV = Math.round(f.wisselVoorS / stap), nN = Math.round(f.wisselNaS / stap);
+      const wissel = new Uint8Array(n);
+      for (let i = 1; i < n; i++) wissel[i] = Math.sign(pts[i].twa_s) !== Math.sign(pts[i - 1].twa_s) ? 1 : 0;
+      const uit = [], status = new Array(n).fill(null);
+      for (let i = 0; i < n; i++) {
+        const p = pts[i];
+        const v = vensters.find(w => p.t >= w.van && p.t <= w.tot);
+        if (!v) continue;
+        let reden = null;
+        if (p.sog <= f.sogMin) reden = 'traag';
+        else if (p.twa < f.twaMin) reden = 'hoek';
+        if (!reden) {
+          if (i < 3 || i + 3 >= n || pts[i + 3].t - pts[i - 3].t !== 6 * stap) reden = 'gat';
+          else {
+            let sx = 0, sy = 0, s = 0, s2 = 0;
+            for (let k = -3; k <= 3; k++) { const q = pts[i + k]; sx += Math.sin(q.cog * R); sy += Math.cos(q.cog * R); s += q.sog; s2 += q.sog * q.sog; }
+            const Rl = Math.min(1, Math.max(1e-9, Math.hypot(sx, sy) / 7));
+            const cogSd = Math.sqrt(-2 * Math.log(Rl)) / R;
+            const sogSd = Math.sqrt(Math.max(0, (s2 - s * s / 7) / 6));
+            if (cogSd >= f.cogSdMax || sogSd >= f.sogSdMax) reden = 'onrustig';
+          }
+        }
+        if (!reden) for (let j = Math.max(1, i - nN); j <= Math.min(n - 1, i + nV); j++) if (wissel[j]) { reden = 'manoeuvre'; break; }
+        status[i] = reden || 'ok';
+        if (!reden) uit.push([+(p.tws / factor).toFixed(2), +p.twa.toFixed(1), +p.sog.toFixed(2), GEWICHT[v.soort] ?? 1]);
+      }
+      return { punten: uit, status };
+    }
+
+    /* ---------- polar opbouwen ---------- */
+    const sleutel = (i, j) => TWS[i] + '_' + TWA[j];
+    function vakIndex(tws, twa) {
+      const i = TWS.indexOf(Math.round(tws / 2) * 2), j = TWA.indexOf(Math.round(twa / 10) * 10);
+      return i < 0 || j < 0 ? null : [i, j];
+    }
+    /* Gewogen kwantiel met lineaire interpolatie. Bij gelijke gewichten precies gelijk aan
+       pandas quantile (methode 'linear'), zoals in de referentie-analyse. vw = [[waarde, gewicht], ...] */
+    function kwantiel(vw, q) {
+      vw.sort((a, b) => a[0] - b[0]);
+      const n = vw.length;
+      if (n === 1) return vw[0][0];
+      const tot = vw.reduce((s, x) => s + x[1], 0), noemer = tot - vw[n - 1][1];
+      if (noemer <= 0) return vw[n - 1][0];
+      let c = 0, vorigeP = 0;
+      for (let k = 0; k < n; k++) {
+        const p = c / noemer;                 // positie van meting k op de schaal 0..1
+        if (p >= q) {
+          if (k === 0) return vw[0][0];
+          const f = (q - vorigeP) / (p - vorigeP);
+          return vw[k - 1][0] + f * (vw[k][0] - vw[k - 1][0]);
+        }
+        vorigeP = p; c += vw[k][1];
+      }
+      return vw[n - 1][0];
+    }
+    function vakkenUitBronnen(bronnen, q) {
+      const vak = TWS.map(() => TWA.map(() => []));
+      const herk = TWS.map(() => TWA.map(() => new Set()));
+      for (const b of bronnen) {
+        if (!b.actief) continue;
+        for (const [tws, twa, sog, w] of b.punten) {
+          const ij = vakIndex(tws, twa); if (!ij) continue;
+          vak[ij[0]][ij[1]].push([sog, w]); herk[ij[0]][ij[1]].add(b.id);
+        }
+      }
+      return { waarde: vak.map(r => r.map(v => v.length ? kwantiel(v.slice(), q) : null)), n: vak.map(r => r.map(v => v.length)), bronnen: herk };
+    }
+
+    function bouwPolair(S) {
+      const q = S.instellingen.polarwaarde === 'p75' ? 0.75 : 0.5;
+      const minN = S.instellingen.filters.minPunten;
+      const V = vakkenUitBronnen(S.bronnen, q);
+      const W = TWS.map(() => TWA.map(() => null)), H = TWS.map(() => TWA.map(() => 'leeg'));
+      const uitg = new Set(S.uitgesloten || []);
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
+        const k = sleutel(i, j);
+        if (!uitg.has(k) && V.n[i][j] >= minN) { W[i][j] = V.waarde[i][j]; H[i][j] = 'data'; }
+        else if (S.handmatig && S.handmatig[k] !== undefined) { W[i][j] = S.handmatig[k]; H[i][j] = 'handmatig'; }
+        else if (S.basis && S.basis.snelheid[i] && S.basis.snelheid[i][j] !== null && S.basis.snelheid[i][j] !== undefined) { W[i][j] = S.basis.snelheid[i][j]; H[i][j] = 'bestaand'; }
+      }
+      // gladmaken vanuit buurvakken met data
+      const G = W.map(r => r.slice());
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
+        if (H[i][j] !== 'leeg') continue;
+        let a = 0, d = 0;
+        for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) {
+          const ii = i + di, jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= TWS.length || jj >= TWA.length || H[ii][jj] !== 'data') continue;
+          const w = Math.exp(-0.5 * (di * di + dj * dj)) * V.n[ii][jj]; a += w * W[ii][jj]; d += w;
+        }
+        if (d >= minN) { G[i][j] = a / d; H[i][j] = 'glad'; }
+      }
+      // interpoleren: eerst per TWA-kolom (met 0 kn bij 0 kn wind), dan per TWS-rij
+      for (let j = 0; j < TWA.length; j++) {
+        const bek = [[0, 0]]; for (let i = 0; i < TWS.length; i++) if (G[i][j] !== null) bek.push([TWS[i], G[i][j]]);
+        if (bek.length < 2) continue;
+        for (let i = 0; i < TWS.length; i++) if (G[i][j] === null) { G[i][j] = interp(TWS[i], bek); H[i][j] = 'geïnterpoleerd'; }
+      }
+      for (let i = 0; i < TWS.length; i++) {
+        const bek = []; for (let j = 0; j < TWA.length; j++) if (H[i][j] !== 'leeg') bek.push([TWA[j], G[i][j]]);
+        for (let j = 0; j < TWA.length; j++) if (G[i][j] === null && bek.length) { G[i][j] = interp(TWA[j], bek); H[i][j] = 'geïnterpoleerd'; }
+      }
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) if (G[i][j] !== null) G[i][j] = Math.round(G[i][j] * 100) / 100;
+      return { snelheid: G, herkomst: H, n: V.n, bronnenPerVak: V.bronnen, ruw: V.waarde };
+    }
+    function interp(x, pts) {
+      if (x <= pts[0][0]) return pts[0][1];
+      for (let k = 1; k < pts.length; k++) if (x <= pts[k][0]) {
+        const [x0, y0] = pts[k - 1], [x1, y1] = pts[k]; return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+      }
+      return pts[pts.length - 1][1];
+    }
+
+    /* plausibiliteit: nieuwe punten tegen de huidige polar */
+    function plausibiliteit(punten, polair, minN, grens = 0.15) {
+      const tmp = vakkenUitBronnen([{ id: 'nieuw', actief: true, punten }], 0.5);
+      const m = [];
+      for (let i = 0; i < TWS.length; i++) for (let j = 0; j < TWA.length; j++) {
+        if (tmp.n[i][j] < minN || !polair || polair.herkomst[i][j] === 'leeg' || polair.herkomst[i][j] === 'geïnterpoleerd') continue;
+        const oud = polair.snelheid[i][j], nw = tmp.waarde[i][j];
+        if (oud > 0 && Math.abs(nw - oud) / oud > grens) m.push({ tws: TWS[i], twa: TWA[j], oud, nieuw: nw, n: tmp.n[i][j] });
+      }
+      return m;
+    }
+
+    /* ---------- bestanden ---------- */
+    function nieuwId() {
+      const c = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'x' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      return c;
+    }
+    function nieuweStaat() {
+      return {
+        formaat: FORMAAT, versie: 0, aangemaakt: new Date().toISOString(), gewijzigd: null,
+        schip: { id: nieuwId(), naam: '', tuigage: 'eenmaster', diepgang_m: { neer: null, half: null, op: null }, kielspeling_m: null,
+          overstagverlies_s: null, gijpverlies_s: null, windhoogtefactor: 1.0, windmeter_hoogte_m: null },
+        instellingen: { polarwaarde: 'mediaan', filters: { ...STANDAARD_FILTERS } },
+        zwaard: TWA.map(zwaardStandaard), handmatig: {}, uitgesloten: [], basis: null, bronnen: [],
+      };
+    }
+    function naarBestand(S, polair) {
+      return {
+        formaat: FORMAAT, versie: S.versie, aangemaakt: S.aangemaakt, gewijzigd: S.gewijzigd,
+        aanname: 'stilstaand water: snelheid over de grond (SOG) = snelheid door het water',
+        schip: S.schip,
+        polair: { wind: 'ware wind (TWS) op 10 m hoogte, kn', twa: 'ware windhoek in graden t.o.v. de koers over de grond',
+          waarde: S.instellingen.polarwaarde, regels: REGELS, tws_kn: TWS, twa_graden: TWA,
+          snelheid_kn: polair.snelheid, herkomst: polair.herkomst, aantal_punten: polair.n,
+          zwaardstand: S.zwaard },
+        instellingen: S.instellingen, handmatig: S.handmatig, uitgesloten: S.uitgesloten, basis: S.basis,
+        bronnen: S.bronnen,
+      };
+    }
+    /* leest een polartool-bestand of een ouder scheepsbestand (naam, zwaard, polair met raster) */
+    function vanBestand(o) {
+      if (o.formaat === FORMAAT) {
+        const S = nieuweStaat();
+        Object.assign(S, { versie: o.versie || 0, aangemaakt: o.aangemaakt, gewijzigd: o.gewijzigd, schip: { ...S.schip, ...o.schip },
+          instellingen: { ...S.instellingen, ...o.instellingen, filters: { ...STANDAARD_FILTERS, ...(o.instellingen || {}).filters } },
+          zwaard: (o.polair && o.polair.zwaardstand) || S.zwaard, handmatig: o.handmatig || {}, uitgesloten: o.uitgesloten || [],
+          basis: o.basis || null, bronnen: o.bronnen || [] });
+        return { S, soort: 'polartool' };
+      }
+      if (o.polair && o.polair.snelheid_kn && o.naam) {
+        const S = nieuweStaat();
+        const z = o.zwaard || {};
+        S.schip.naam = o.naam;
+        S.schip.diepgang_m = { neer: z.diepgang_m?.neer ?? null, half: z.diepgang_m?.half ?? null, op: z.diepgang_m?.op ?? o.diepgang_m ?? null };
+        S.schip.kielspeling_m = o.kielspeling_m ?? null;
+        const kk = o.keuzeknoppen || {};
+        S.schip.overstagverlies_s = kk.overstagverlies?.waarde_s ?? null;
+        S.schip.gijpverlies_s = kk.gijpverlies_s?.waarde ?? null;
+        const sp = z.stand_per_zeilstand;
+        if (sp) S.zwaard = TWA.map(a => (a < 85 ? sp['aan de wind'] : a < 110 ? sp['halve wind'] : a < 160 ? sp['ruime wind'] : sp['voor de wind']) || zwaardStandaard(a));
+        const ti = o.polair.tws_kn, ta = o.polair.twa_graden;
+        S.basis = { bron: o.polair.naam || 'eerder scheepsbestand', snelheid: TWS.map(t => TWA.map(a => {
+          const i = ti.indexOf(t), j = ta.indexOf(a); return i < 0 || j < 0 ? null : o.polair.snelheid_kn[i][j];
+        })), herkomst: o.polair.herkomst ? TWS.map(t => TWA.map(a => { const i = ti.indexOf(t), j = ta.indexOf(a); return i < 0 || j < 0 ? null : o.polair.herkomst[i][j]; })) : null };
+        return { S, soort: 'scheepsbestand' };
+      }
+      throw new Error('Onbekend bestand: geen polartool-bestand en geen scheepsbestand met polair.');
+    }
+    function vingerafdruk(naam, grootte, inv) { return [naam, grootte, inv.start, inv.eind].join('|'); }
+
+    return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit,
+      nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, nieuwId, kwantiel };
+  })();
+</script>
 </body>
 </html>
