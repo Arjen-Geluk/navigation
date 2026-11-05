@@ -7,7 +7,7 @@ Online overzicht: https://arjen-geluk.github.io/navigation/
 ## Inhoud
 
 - [`getijkaart/`](getijkaart/) — Getijkaart Waddenzee: bodemhoogte en waterstand met tijdschuif, route-export voor OpenCPN.
-- [`3-stedenrace/`](3-stedenrace/) — Klipperrace 3 Steden: wedstrijdanalyse en route met Willem Jacob.
+- [`3-stedenrace/`](3-stedenrace/) — Klipperrace 3 Steden: routeringstool met polair diagram en kruisslagen-voorstel.
 
 ## Licentie
 
