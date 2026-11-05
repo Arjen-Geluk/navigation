@@ -85,6 +85,24 @@ table.lijst td.num{text-align:right;font-variant-numeric:tabular-nums}
 table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
 .ja{color:inherit} .nee{color:var(--bad);font-weight:600}
 .kv{font-size:13px} .kv b{display:block;font-weight:600;color:var(--muted);font-size:12px}
+/* tijdlijn */
+#tijdlijn{margin-top:8px;user-select:none;touch-action:none}
+#tijdlijn svg{display:block;width:100%;font-size:11px}
+#tijdlijn .as{stroke:var(--line)} #tijdlijn text{fill:var(--muted)}
+#tijdlijn .lijn{fill:none;stroke:var(--ink);stroke-width:1}
+#tijdlijn .venster{fill:var(--accent);fill-opacity:.14;stroke:var(--accent);stroke-opacity:.6}
+#tijdlijn .sleep{fill:var(--accent);fill-opacity:.25}
+#tijdlijn .geenwind{fill:var(--muted);fill-opacity:.12}
+:root{--s-ok:#1f6fbe;--s-onrustig:#d9a400;--s-manoeuvre:#8e5bb5;--s-traag:#8a949c;--s-hoek:#e67e22;--s-gat:#3b3b3b;--s-geen:#c9c2b3;--s-motor:#c0392b}
+.s-ok{fill:var(--s-ok)} .s-onrustig{fill:var(--s-onrustig)} .s-manoeuvre{fill:var(--s-manoeuvre)} .s-traag{fill:var(--s-traag)}
+.s-hoek{fill:var(--s-hoek)} .s-gat{fill:var(--s-gat)} .s-motor{fill:var(--s-motor)}
+.legenda .l-s{display:inline-flex;align-items:center} .legenda .l-s::before{display:none}
+.legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px}
+table.lijst input[type=time]{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+table.lijst select{font:inherit;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;color:var(--ink);cursor:pointer}
+#bevestig h2{font-size:20px}
+#bevestig.actief{border:2px solid var(--accent)}
 </style>
 </head>
 <body>
@@ -155,6 +173,21 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
       <div id="invgaten"></div>
       <div id="invslot"></div>
     </section>
+    <section id="tijdvakken" hidden>
+      <h2>Tijdvakken kiezen</h2>
+      <p>Sleep over de tijdlijn om een tijdvak te kiezen. Kies alleen stukken waarin <strong>goed gezeild</strong> is: de juiste zeilvoering voor die windsterkte, goed gestuurd, zonder motor en zonder merkbare stroom. Alles daarbuiten telt niet mee.</p>
+      <div class="legenda" id="tijdlijnlegenda"></div>
+      <div id="tijdlijn"></div>
+      <div id="vensterlijst"></div>
+      <div id="filteroverzicht"></div>
+      <details id="filterinstellingen">
+        <summary>Filterinstellingen</summary>
+        <p class="sub">Binnen de gekozen tijdvakken houdt de tool alleen blokken van 10 s waarin stabiel gevaren wordt. De standaardwaarden komen uit de werkende polaranalyse.</p>
+        <div class="velden" id="filtervelden"></div>
+      </details>
+      <div class="knoppenrij"><button class="knop" id="toevoegen" disabled>Toevoegen aan de polar…</button></div>
+    </section>
+    <section id="bevestig" hidden></section>
   </div>
 
   <div id="tab-controle" hidden>
@@ -534,6 +567,14 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
     }
 
     /* plausibiliteit: nieuwe punten tegen de huidige polar */
+    /* motor vermoed: een platbodem zeilt niet hoger dan ca. 35° ware wind en niet sneller dan de wind in lichte wind.
+       Alleen een hint op de tijdlijn; de gebruiker beslist welke tijdvakken goed gezeild zijn. */
+    const MOTOR = { twaMax: 35, sogBijHoek: 2.5, lichteWind: 8, sogBovenWind: 0.5 };
+    function motorVermoed(p, factor) {
+      const tws10 = p.tws / factor;
+      return (p.twa < MOTOR.twaMax && p.sog > MOTOR.sogBijHoek) || (tws10 < MOTOR.lichteWind && p.sog > tws10 + MOTOR.sogBovenWind);
+    }
+
     function plausibiliteit(punten, polair, minN, grens = 0.15) {
       const tmp = vakkenUitBronnen([{ id: 'nieuw', actief: true, punten }], 0.5);
       const m = [];
@@ -604,7 +645,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
     /* vingerafdruk van een VDR-bron: begin- en eindtijd plus controlesom (SHA-256 van het bestand) */
     function vingerafdruk(inv, sha256) { return { start: inv.start, eind: inv.eind, sha256 }; }
 
-    return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit,
+    return { TWS, TWA, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit, motorVermoed,
       nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, nieuwId, kwantiel };
   })();
 </script>
@@ -628,6 +669,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
       for (const b of tabs) $('#tab-' + b.dataset.tab).hidden = b.dataset.tab !== naam;
       if (naam === 'handmatig') tekenHandmatig();
       if (naam === 'controle') tekenControle();
+      if (naam === 'vdr' && vdr && !$('#tijdvakken').hidden) werkTijdvakkenBij();
     }
     tabs.forEach(b => b.addEventListener('click', () => toon(b.dataset.tab)));
 
@@ -648,7 +690,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
     function open(nieuweS, bericht) {
       S = nieuweS; polair = null; gewijzigd = false;
       tabs.forEach(b => { b.disabled = false; });
-      vdr = null; $('#inventaris').hidden = true; melding($('#vdrmelding'), '', '');
+      vdr = null; $('#inventaris').hidden = true; $('#tijdvakken').hidden = true; $('#bevestig').hidden = true; melding($('#vdrmelding'), '', '');
       tekenProfiel(); tekenSchipregel();
       melding($('#startmelding'), 'ok', bericht);
       toon('profiel');
@@ -813,7 +855,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
       const f = e.target.files[0]; e.target.value = '';
       if (!f) return;
       const vg = $('#vdrvoortgang'), balk = vg.querySelector('progress'), tekst = vg.querySelector('span');
-      vdr = null; $('#inventaris').hidden = true; melding($('#vdrmelding'), '', '');
+      vdr = null; $('#inventaris').hidden = true; $('#tijdvakken').hidden = true; $('#bevestig').hidden = true; melding($('#vdrmelding'), '', '');
       vg.hidden = false; $('#vdrknop').hidden = true;
       try {
         const t0 = performance.now();
@@ -872,11 +914,221 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
           ? 'Dit lijkt geen VDR-bestand: er staan geen NMEA-zinnen in. Kies een log uit OpenCPN.'
           : `Dit bestand is niet bruikbaar: ${opsom} ontbre${mist.length > 1 ? 'ken' : 'ekt'}.` + (windMist ? ' Zonder schijnbare wind en kompaskoers kan de tool de ware wind niet betrouwbaar berekenen; vul de polar dan handmatig in.' : '')));
       } else {
-        $('#invslot').replaceChildren(el('div', { class: 'melding ok' }, `${punten.length.toLocaleString('nl-NL')} blokken van 10 seconden met ware wind (${duur(punten.length * 10)}). Ingelezen in ${fmt(vdr.leesduur, 1)} s. De volgende stap is tijdvakken kiezen; die volgt.`));
+        $('#invslot').replaceChildren(el('div', { class: 'melding ok' }, `${punten.length.toLocaleString('nl-NL')} blokken van 10 seconden met ware wind (${duur(punten.length * 10)}). Ingelezen in ${fmt(vdr.leesduur, 1)} s. Kies hieronder de tijdvakken.`));
       }
+      vensters = [];
+      $('#bevestig').hidden = true;
+      $('#tijdvakken').hidden = !inv.ok || !punten.length;
+      if (inv.ok && punten.length) { tekenFiltervelden(); werkTijdvakkenBij(); }
     }
 
-    window.PolartoolApp = { staat: () => S, vdr: () => vdr };   // voor testen in de console
+    /* ---------- tijdvakken kiezen, filteren en toevoegen ---------- */
+    let vensters = [];       // gekozen tijdvakken in de geladen VDR: { van, tot, soort } in seconden UTC
+    let filterUitkomst = null;
+    const REDEN = {
+      ok: 'bruikbaar', onrustig: 'koers of snelheid onrustig', manoeuvre: 'overstag of gijp (marge ervoor en erna)',
+      traag: 'te langzaam voor de windsterkte', hoek: 'te hoog aan de wind (< 30°)', gat: 'data rond het blok ontbreekt',
+      geen: 'geen bruikbare wind (kompaskoers of data ontbreekt)',
+    };
+    const factorNu = () => { const f = S.schip.windhoogtefactor; return Number.isFinite(f) && f >= 0.8 && f <= 2 ? f : null; };
+
+    function werkTijdvakkenBij() {
+      const f = factorNu();
+      filterUitkomst = f ? PT.stabielePunten(vdr.punten, vensters, f, S.instellingen.filters) : null;
+      tekenTijdlijn(); tekenVensterlijst(); tekenFilteroverzicht();
+    }
+
+    function tekenTijdlijn() {
+      const doel = $('#tijdlijn'), pts = vdr.punten, f = factorNu() || 1;
+      const W = Math.max(320, doel.clientWidth || 900), L = 46, R = 8;
+      const t0 = vdr.inventaris.start, t1 = vdr.inventaris.eind;
+      const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
+      const ns = 'http://www.w3.org/2000/svg';
+      const s = (tag, attr = {}, tekst) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v); if (tekst !== undefined) e.textContent = tekst; return e; };
+      const PANELEN = [
+        { naam: 'SOG (kn)', w: p => p.sog },
+        { naam: 'Wind 10 m (kn)', w: p => p.tws / f },
+        { naam: 'Windhoek (°)', w: p => p.twa, max: 180, lijnen: [30, 90, 150] },
+      ];
+      const H = 78, gap = 10, strook = 9;
+      let y = 6;
+      const svg = s('svg', { height: 6 + PANELEN.length * (H + gap) + 2 * (strook + 4) + 22, viewBox: `0 0 ${W} ${6 + PANELEN.length * (H + gap) + 2 * (strook + 4) + 22}` });
+      // stukken zonder bruikbare wind (geen blok van 10 s)
+      const gaten = []; for (let i = 1; i < pts.length; i++) if (pts[i].t - pts[i - 1].t > 30) gaten.push([pts[i - 1].t + 10, pts[i].t]);
+      if (pts.length && pts[0].t - t0 > 30) gaten.unshift([t0, pts[0].t]);
+      for (const pan of PANELEN) {
+        const max = pan.max || Math.max(4, Math.ceil(Math.max(...pts.map(pan.w)) / 5) * 5);
+        const yv = v => y + H - Math.min(v, max) / max * H;
+        svg.append(s('rect', { x: L, y, width: W - L - R, height: H, fill: 'none', class: 'as' }));
+        for (const [a, b] of gaten) svg.append(s('rect', { x: x(a), y, width: Math.max(1, x(b) - x(a)), height: H, class: 'geenwind' }));
+        for (const v of pan.lijnen || [max / 2]) svg.append(s('line', { x1: L, x2: W - R, y1: yv(v), y2: yv(v), class: 'as', 'stroke-dasharray': '2 3' }), s('text', { x: L - 4, y: yv(v) + 4, 'text-anchor': 'end' }, fmt(v, 0)));
+        if (!pan.lijnen) svg.append(s('text', { x: L - 4, y: y + 10, 'text-anchor': 'end' }, fmt(max, 0)));
+        svg.append(s('text', { x: L + 4, y: y + 12 }, pan.naam));
+        let d = '';
+        pts.forEach((p, i) => { d += (i && p.t - pts[i - 1].t <= 30 ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + yv(pan.w(p)).toFixed(1); });
+        svg.append(s('path', { d, class: 'lijn' }));
+        y += H + gap;
+      }
+      // statusstrook (alleen binnen gekozen tijdvakken) en motorstrook (hele log)
+      const bw = Math.max(1, x(t0 + 10) - x(t0));
+      svg.append(s('text', { x: L - 4, y: y + strook - 1, 'text-anchor': 'end' }, 'filter'));
+      if (filterUitkomst) pts.forEach((p, i) => { const st = filterUitkomst.status[i]; if (st) svg.append(s('rect', { x: x(p.t), y, width: bw, height: strook, class: 's-' + st })); });
+      y += strook + 4;
+      svg.append(s('text', { x: L - 4, y: y + strook - 1, 'text-anchor': 'end' }, 'motor?'));
+      pts.forEach(p => { if (PT.motorVermoed(p, f)) svg.append(s('rect', { x: x(p.t), y, width: bw, height: strook, class: 's-motor' })); });
+      y += strook + 4;
+      // tijdas per uur (lokale tijd)
+      const eerste = new Date(t0 * 1000); eerste.setMinutes(0, 0, 0);
+      for (let t = eerste.getTime() / 1000 + 3600; t < t1; t += 3600) svg.append(s('line', { x1: x(t), x2: x(t), y1: 6, y2: y, class: 'as' }), s('text', { x: x(t), y: y + 12, 'text-anchor': 'middle' }, klok(t)));
+      // gekozen tijdvakken
+      vensters.forEach((v, k) => {
+        svg.append(s('rect', { x: x(v.van), y: 6, width: Math.max(2, x(v.tot) - x(v.van)), height: y - 6, class: 'venster' }));
+        svg.append(s('text', { x: x(v.van) + 3, y: 18, fill: 'var(--accent)' }, String(k + 1)));
+      });
+      // slepen om een tijdvak te kiezen
+      const vlak = s('rect', { x: L, y: 6, width: W - L - R, height: y - 6, fill: 'transparent', style: 'cursor:crosshair' });
+      const sleep = s('rect', { y: 6, height: y - 6, class: 'sleep', width: 0 });
+      svg.append(sleep, vlak);
+      const tijdBij = e => { const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) * W / r.width; return Math.round(Math.min(t1, Math.max(t0, t0 + (px - L) / (W - L - R) * (t1 - t0))) / 10) * 10; };
+      let start = null;
+      vlak.addEventListener('pointerdown', e => { start = tijdBij(e); vlak.setPointerCapture(e.pointerId); });
+      vlak.addEventListener('pointermove', e => { if (start === null) return; const t = tijdBij(e); sleep.setAttribute('x', x(Math.min(start, t))); sleep.setAttribute('width', Math.abs(x(t) - x(start))); });
+      vlak.addEventListener('pointerup', e => {
+        if (start === null) return;
+        const t = tijdBij(e), van = Math.min(start, t), tot = Math.max(start, t); start = null;
+        if (tot - van >= 60) voegVensterToe(van, tot); else tekenTijdlijn();
+      });
+      doel.replaceChildren(svg);
+      $('#tijdlijnlegenda').replaceChildren(...[['ok', 'bruikbaar'], ['onrustig', 'onrustig'], ['manoeuvre', 'manoeuvre'], ['traag', 'te langzaam'], ['hoek', 'te hoog aan de wind'], ['gat', 'data ontbreekt'], ['motor', 'motor vermoed']]
+        .map(([k, t]) => el('span', { class: 'l-s' }, el('i', { style: `background:var(--s-${k})` }), t)),
+        el('span', { class: 'l-s' }, el('i', { style: 'background:var(--muted);opacity:.25' }), 'geen bruikbare wind'));
+    }
+    window.addEventListener('resize', () => { if (vdr && !$('#tijdvakken').hidden) tekenTijdlijn(); });
+
+    function voegVensterToe(van, tot) {
+      vensters.push({ van, tot, soort: 'wedstrijd' });
+      vensters.sort((a, b) => a.van - b.van);
+      // overlappende tijdvakken samenvoegen
+      vensters = vensters.reduce((o, v) => { const l = o[o.length - 1]; if (l && v.van <= l.tot) { l.tot = Math.max(l.tot, v.tot); return o; } o.push({ ...v }); return o; }, []);
+      werkTijdvakkenBij();
+    }
+
+    function tekenVensterlijst() {
+      const naarTijd = s => { const d = new Date(s * 1000); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, '0')).join(':'); };
+      const vanTijd = (basis, str) => { const [h, m, sec = 0] = str.split(':').map(Number); const d = new Date(basis * 1000); d.setHours(h, m, sec, 0); return Math.round(d.getTime() / 1000); };
+      if (!vensters.length) { $('#vensterlijst').replaceChildren(el('p', { class: 'sub' }, 'Nog geen tijdvak gekozen.')); return; }
+      const rijen = vensters.map((v, k) => {
+        const van = el('input', { type: 'time', step: 1, value: naarTijd(v.van) }), tot = el('input', { type: 'time', step: 1, value: naarTijd(v.tot) });
+        const soort = el('select', {}, el('option', { value: 'wedstrijd' }, 'wedstrijd'), el('option', { value: 'overtocht' }, 'overtocht of training'));
+        soort.value = v.soort;
+        const wis = el('button', { class: 'klein', type: 'button' }, 'verwijderen');
+        van.addEventListener('change', () => { v.van = vanTijd(v.van, van.value); if (v.tot - v.van < 60) v.tot = v.van + 60; werkTijdvakkenBij(); });
+        tot.addEventListener('change', () => { v.tot = vanTijd(v.van, tot.value); if (v.tot - v.van < 60) v.tot = v.van + 60; werkTijdvakkenBij(); });
+        soort.addEventListener('change', () => { v.soort = soort.value; werkTijdvakkenBij(); });
+        wis.addEventListener('click', () => { vensters.splice(k, 1); werkTijdvakkenBij(); });
+        const n = filterUitkomst ? vdr.punten.filter((p, i) => p.t >= v.van && p.t <= v.tot && filterUitkomst.status[i] === 'ok').length : 0;
+        return el('tr', {}, el('td', {}, String(k + 1)), el('td', {}, van, ' – ', tot), el('td', {}, duur(v.tot - v.van)), el('td', {}, soort), el('td', { class: 'num' }, n + ' bruikbaar'), el('td', {}, wis));
+      });
+      $('#vensterlijst').replaceChildren(el('table', { class: 'lijst' },
+        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Tijdvak (lokale tijd)'), el('th', {}, 'Duur'), el('th', {}, 'Soort'), el('th', { class: 'num' }, 'Blokken'), el('th', {}, ''))),
+        el('tbody', {}, ...rijen)),
+        el('p', { class: 'sub' }, 'Wedstrijddata telt zwaarder dan overtocht of training (gewicht 1 tegen 0,5).'));
+    }
+
+    function tekenFilteroverzicht() {
+      const doel = $('#filteroverzicht'), knop = $('#toevoegen');
+      knop.disabled = true;
+      if (!factorNu()) { doel.replaceChildren(el('div', { class: 'melding fout' }, 'Vul eerst een geldige windhoogtefactor in bij Profiel; zonder die factor kan de wind niet naar 10 m worden omgerekend.')); return; }
+      if (!vensters.length) { doel.replaceChildren(); return; }
+      const pts = vdr.punten, st = filterUitkomst.status;
+      const tel = {}; let motor = 0, inVenster = 0;
+      pts.forEach((p, i) => { if (st[i]) { tel[st[i]] = (tel[st[i]] || 0) + 1; inVenster++; if (st[i] === 'ok' && PT.motorVermoed(p, factorNu())) motor++; } });
+      const verwacht = vensters.reduce((s, v) => s + Math.floor((v.tot - v.van) / 10) + 1, 0);
+      tel.geen = Math.max(0, verwacht - inVenster);
+      const ok = tel.ok || 0, totaal = verwacht;
+      const regels = Object.keys(REDEN).filter(k => k !== 'ok' && tel[k]).sort((a, b) => tel[b] - tel[a])
+        .map(k => el('li', {}, `${tel[k]} × ${REDEN[k]}`));
+      const kop = `Van de ${totaal} blokken van 10 s in je tijdvakken zijn er ${ok} bruikbaar (${Math.round(ok / totaal * 100)}%, ${duur(ok * 10)}).`;
+      const meldingen = [el('div', { class: 'melding ' + (ok ? 'ok' : 'fout') }, el('strong', {}, kop), regels.length ? el('div', {}, 'Afgevallen:') : '', regels.length ? el('ul', {}, ...regels) : '')];
+      if (ok && (ok < 30 || ok / totaal < 0.3)) {
+        const grootste = Object.keys(REDEN).filter(k => k !== 'ok' && tel[k]).sort((a, b) => tel[b] - tel[a])[0];
+        meldingen.push(el('div', { class: 'melding let' }, `Deze tijdvakken leveren weinig bruikbare data op. Grootste oorzaak: ${REDEN[grootste]}.` +
+          (grootste === 'geen' ? ' Kijk in de data-inventaris welk instrument ontbrak.' : grootste === 'onrustig' ? ' Was er veel gestuurd, gegolfd of gemanoeuvreerd? Kies dan rustigere stukken.' : '')));
+      }
+      if (motor) meldingen.push(el('div', { class: 'melding let' }, `${motor} bruikbare blokken lijken op varen op de motor (dichter dan 35° bij de wind, of sneller dan de wind bij weinig wind). Controleer of die tijdvakken echt gezeild zijn.`));
+      doel.replaceChildren(...meldingen);
+      knop.disabled = ok === 0;
+    }
+
+    const FILTERVELDEN = [
+      ['sogMinFactor', 'Minimale snelheid, deel van de windsnelheid', 0, 1],
+      ['sogMinLaag', 'Minimale snelheid, ondergrens (kn)', 0, 5],
+      ['sogMin', 'Minimale snelheid, bovengrens (kn)', 0, 5],
+      ['cogSdMax', 'Max. spreiding koers over 60 s (°)', 1, 45],
+      ['sogSdMax', 'Max. spreiding snelheid over 60 s (kn)', 0.1, 3],
+      ['twaMin', 'Minimale ware windhoek (°)', 0, 90],
+      ['wisselVoorS', 'Marge vóór overstag of gijp (s)', 0, 300],
+      ['wisselNaS', 'Marge na overstag of gijp (s)', 0, 600],
+      ['minPunten', 'Minimum aantal blokken per vakje', 1, 100],
+    ];
+    function tekenFiltervelden() {
+      const F = S.instellingen.filters;
+      $('#filtervelden').replaceChildren(...FILTERVELDEN.map(([k, label, min, max]) => {
+        const inp = el('input', { type: 'text', inputmode: 'decimal', value: fmt(F[k], 2) });
+        const blok = el('div', { class: 'veld' }, el('label', {}, label), inp, el('div', { class: 'hint' }, 'standaard ' + fmt(PT.STANDAARD_FILTERS[k], 2)));
+        inp.addEventListener('change', () => {
+          const v = getal(inp.value), fout = v === null || Number.isNaN(v) || v < min || v > max;
+          blok.classList.toggle('fout', fout); if (fout) return;
+          F[k] = k === 'minPunten' ? Math.round(v) : v; wijzig(); werkTijdvakkenBij();
+        });
+        return blok;
+      }));
+    }
+
+    $('#toevoegen').addEventListener('click', () => {
+      const vf = vdr.bestand.vingerafdruk, f = factorNu();
+      const dubbel = S.bronnen.find(b => b.vingerafdruk && b.vingerafdruk.sha256 === vf.sha256);
+      const b = $('#bevestig'); b.hidden = false; b.classList.add('actief');
+      if (dubbel) {
+        b.replaceChildren(el('h2', {}, 'Dit bestand zit er al in'), el('div', { class: 'melding fout' }, `“${vdr.bestand.naam}” is al toegevoegd als bron “${dubbel.naam}”. Hetzelfde bestand twee keer toevoegen zou de metingen dubbel laten tellen.`),
+          el('div', { class: 'knoppenrij' }, Object.assign(el('button', { class: 'knop tweede' }, 'Sluiten'), { onclick: () => { b.hidden = true; } })));
+        b.scrollIntoView({ behavior: 'smooth' }); return;
+      }
+      const overlap = S.bronnen.filter(x => x.vensters && x.vensters.some(w => vensters.some(v => v.van < w.tot && v.tot > w.van)));
+      const punten = filterUitkomst.punten;
+      const plaus = PT.plausibiliteit(punten, huidigePolair(), S.instellingen.filters.minPunten);
+      b.replaceChildren(
+        el('h2', {}, `Data toevoegen aan: ${S.schip.naam || '(naamloos schip)'}`),
+        el('p', {}, `Scheeps-ID ${S.schip.id.slice(0, 8)}. Klopt dit schip? De metingen tellen daarna mee in deze polar.`),
+        el('table', { class: 'lijst' }, el('tbody', {},
+          el('tr', {}, el('th', {}, 'Nieuwe bron'), el('td', {}, `${vdr.bestand.naam}: ${vensters.length} tijdvak${vensters.length > 1 ? 'ken' : ''}, ${punten.length} blokken van 10 s, windhoogtefactor ${fmt(f, 3)}`)),
+          el('tr', {}, el('th', {}, 'Bestaande bronnen'), el('td', {}, S.bronnen.length || S.basis
+            ? el('ul', {}, ...(S.basis ? [el('li', {}, 'bestaande polar (import): ' + (S.basis.bron || ''))] : []), ...S.bronnen.map(x => el('li', {}, `${x.naam} (${x.punten.length} blokken${x.actief ? '' : ', uitgezet'})`)))
+            : 'nog geen')))),
+        overlap.length ? el('div', { class: 'melding let' }, `Let op: de tijdvakken overlappen met ${overlap.map(x => '“' + x.naam + '”').join(', ')}. Is dit dezelfde vaart uit een ander bestand? Dan tellen de metingen dubbel.`) : '',
+        plaus.length ? el('div', { class: 'melding let' }, el('strong', {}, `In ${plaus.length} vakje${plaus.length > 1 ? 's' : ''} wijkt de nieuwe data meer dan 15% af van de huidige polar. Mogelijk een ander schip, andere zeilvoering of een meetfout:`),
+          el('ul', {}, ...plaus.slice(0, 8).map(m => el('li', {}, `${m.tws} kn wind, ${m.twa}°: nu ${fmt(m.oud, 1)} kn, nieuw ${fmt(m.nieuw, 1)} kn (${m.n} blokken)`)), ...(plaus.length > 8 ? [el('li', {}, '…')] : [])))
+          : el('div', { class: 'melding ok' }, 'Geen grote afwijkingen ten opzichte van de huidige polar.'),
+        el('div', { class: 'knoppenrij' },
+          Object.assign(el('button', { class: 'knop' }, 'Ja, toevoegen'), { onclick: bevestigToevoegen }),
+          Object.assign(el('button', { class: 'knop tweede' }, 'Annuleren'), { onclick: () => { b.hidden = true; } })));
+      b.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    function bevestigToevoegen() {
+      S.bronnen.push({
+        id: PT.nieuwId(), naam: vdr.bestand.naam, vingerafdruk: vdr.bestand.vingerafdruk, toegevoegd: new Date().toISOString(), actief: true,
+        windhoogtefactor: factorNu(), filters: { ...S.instellingen.filters }, vensters: vensters.map(v => ({ ...v })), punten: filterUitkomst.punten,
+      });
+      const n = filterUitkomst.punten.length, naam = vdr.bestand.naam;
+      vdr = null; vensters = []; filterUitkomst = null;
+      $('#bevestig').hidden = true; $('#tijdvakken').hidden = true; $('#inventaris').hidden = true;
+      wijzig();
+      melding($('#vdrmelding'), 'ok', `${n} blokken uit “${naam}” toegevoegd. Bekijk het resultaat onder Controle en opslaan.`);
+      toon('controle');
+    }
+
+    window.PolartoolApp = { staat: () => S, vdr: () => vdr, vensters: () => vensters, voegVensterToe: (a, b) => voegVensterToe(a, b) };   // voor testen in de console
   })();
 </script>
 </body>
