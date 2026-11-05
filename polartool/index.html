@@ -150,6 +150,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
     <section id="inventaris" hidden>
       <h2>Data-inventaris</h2>
       <div id="invkop" class="velden"></div>
+      <div id="invkwaliteit"></div>
       <div class="tabelvak"><table class="lijst" id="invtabel"></table></div>
       <div id="invgaten"></div>
       <div id="invslot"></div>
@@ -184,7 +185,9 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
     const TWA = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180];
     const R = Math.PI / 180;
     const FORMAAT = 'polartool/1';
-    const STANDAARD_FILTERS = { sogMin: 2, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
+    // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
+    const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
+    const sogGrens = (tws10, f) => Math.min(f.sogMin, Math.max(f.sogMinLaag ?? f.sogMin, (f.sogMinFactor ?? 0) * tws10));
     const GEWICHT = { wedstrijd: 1, overtocht: 0.5 };
     const REGELS = 'lineair interpoleren in TWS en TWA; TWS < 2 kn lineair naar 0; TWS > 30 kn: rij 30; TWA < 50°: kruisen op de beste VMG-hoek uit het raster; minimumsnelheid 0,3 kn';
 
@@ -340,8 +343,44 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
           item('Snelheid door het water', 'VHW', null, 'Niet gebruikt: de tool rekent met snelheid over de grond.'),
         ];
         inv.ok = inv.verplicht.every(x => x.aanwezig);
+        inv.kwaliteit = kwaliteit(rows, this.fout, this.regels);
         return { rows, inventaris: inv };
       }
+    }
+
+    /* ---------- kwaliteit van de opname ----------
+       Alleen over de tijd dat het schip beweegt (SOG > 0,5 kn, ook in lichte wind): welk deel van die seconden heeft
+       alles wat nodig is, en wat ontbreekt het vaakst. Plus onderbrekingen in de tijd en foute NMEA-controlesommen. */
+    const KWALITEIT = { goed: 0.9, matig: 0.5, sogVaren: 0.5, onderbrekingS: 60 };
+    function kwaliteit(rows, fout, regels) {
+      const I = Object.fromEntries(VELDEN.map((k, i) => [k, i]));
+      const ontbreekt = { positie: 0, kompas: 0, wind: 0 };
+      let varen = 0, bruikbaar = 0;
+      const onderbrekingen = [];
+      for (let k = 0; k < rows.length; k++) {
+        const r = rows[k];
+        if (k && r[0] - rows[k - 1][0] > KWALITEIT.onderbrekingS) onderbrekingen.push({ van: rows[k - 1][0], tot: r[0] });
+        if (r[I.sog] === null || r[I.sog] <= KWALITEIT.sogVaren) continue;
+        varen++;
+        const pos = r[I.lat] !== null, kompas = r[I.hdt] !== null, wind = r[I.awa] !== null && r[I.aws] !== null;
+        if (!pos) ontbreekt.positie++;
+        if (!kompas) ontbreekt.kompas++;
+        if (!wind) ontbreekt.wind++;
+        if (pos && kompas && wind) bruikbaar++;
+      }
+      const deel = varen ? bruikbaar / varen : 0;
+      const ADVIES = {
+        kompas: 'Kompaskoers (HDT) ontbreekt een deel van de vaartijd. Controleer aan boord de kompas- of koerssensor, de voeding en de verbinding naar de computer met OpenCPN.',
+        wind: 'Schijnbare wind (MWV) ontbreekt een deel van de vaartijd. Controleer de windsensor in de mast, de kabel en de instellingen van de windmodule.',
+        positie: 'GPS-positie ontbreekt een deel van de vaartijd. Controleer de GPS-ontvanger en de antenne.',
+      };
+      const oorzaken = Object.entries(ontbreekt).filter(([, n]) => varen && n / varen > 0.02)
+        .sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ wat: k, deel: n / varen, advies: ADVIES[k] }));
+      if (regels && fout / regels > 0.01) oorzaken.push({ wat: 'controlesom', deel: fout / regels,
+        advies: 'Veel NMEA-regels hebben een foute controlesom. Dat wijst op een storing in de verbinding (kabel, aansluiting of baudrate).' });
+      const stil = onderbrekingen.reduce((s, o) => s + o.tot - o.van, 0);
+      return { vaartijdS: varen, bruikbaarS: bruikbaar, deel, oordeel: !varen ? 'geen vaart' : deel >= KWALITEIT.goed ? 'goed' : deel >= KWALITEIT.matig ? 'matig' : 'slecht',
+        oorzaken, onderbrekingen, onderbrekingS: stil };
     }
 
     /* ---------- ware wind per 10 s (vectorgemiddeld) ---------- */
@@ -390,7 +429,7 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
         const v = vensters.find(w => p.t >= w.van && p.t <= w.tot);
         if (!v) continue;
         let reden = null;
-        if (p.sog <= f.sogMin) reden = 'traag';
+        if (p.sog <= sogGrens(p.tws / factor, f)) reden = 'traag';
         else if (p.twa < f.twaMin) reden = 'hoek';
         if (!reden) {
           if (i < 3 || i + 3 >= n || pts[i + 3].t - pts[i - 3].t !== 6 * stap) reden = 'gat';
@@ -801,6 +840,16 @@ table.lijst tr.kop td{padding-top:12px;font-weight:600;border-bottom:0}
         kv('Tijd uit', inv.tijdbron === 'ZDA' ? 'ZDA (datum en tijd)' : 'RMC' + (inv.rollover ? ', GPS-datum gecorrigeerd (+1024 weken)' : '')),
         kv('Regels', `${inv.regels.toLocaleString('nl-NL')}, waarvan ${Math.round(inv.nietGebruikt / inv.regels * 100)}% niet nodig (AIS, satellieten, route)`),
         kv('Controlesom NMEA', inv.checksumFout ? `${inv.checksumFout.toLocaleString('nl-NL')} regels met foute controlesom overgeslagen` : 'geen fouten'));
+      // kwaliteit van de opname: oordeel plus waar je aan boord moet zoeken
+      const kw = inv.kwaliteit;
+      if (!inv.ok || kw.oordeel === 'geen vaart') $('#invkwaliteit').replaceChildren(inv.ok ? el('div', { class: 'melding let' }, 'In deze opname wordt niet gevaren (nergens meer dan 0,5 kn); er is niets bruikbaars voor de polar.') : '');
+      else {
+        const soort = { goed: 'ok', matig: 'let', slecht: 'fout' }[kw.oordeel];
+        const kop = `Kwaliteit van de opname: ${kw.oordeel}. Van de vaartijd (${duur(kw.vaartijdS)}) is ${Math.round(kw.deel * 100)}% bruikbaar voor de polar.`;
+        const regels = kw.oorzaken.map(o => el('li', {}, `${o.wat === 'controlesom' ? Math.round(o.deel * 100) + '% van de regels' : Math.round(o.deel * 100) + '% van de vaartijd'}: ${o.advies}`));
+        if (kw.onderbrekingen.length) regels.push(el('li', {}, `De opname is ${kw.onderbrekingen.length} keer onderbroken, samen ${duur(kw.onderbrekingS)} (${kw.onderbrekingen.slice(0, 3).map(o => klok(o.van) + '–' + klok(o.tot)).join(', ')}${kw.onderbrekingen.length > 3 ? ', …' : ''}). Als dat tijdens het varen was: controleer of de computer met OpenCPN niet in slaapstand ging en of de logger bleef draaien.`));
+        $('#invkwaliteit').replaceChildren(el('div', { class: 'melding ' + soort }, el('strong', {}, kop), regels.length ? el('ul', {}, ...regels) : ''));
+      }
       const rij = (x, verplicht) => el('tr', {},
         el('td', {}, x.naam), el('td', { class: 'sub' }, x.bron),
         el('td', { class: x.aanwezig ? 'ja' : verplicht ? 'nee' : 'sub' }, x.aanwezig ? '✓ gevonden' : verplicht ? '✗ ontbreekt' : '– niet aanwezig'),
