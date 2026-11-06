@@ -4,4 +4,5 @@ lokaal/
 vdr_*.txt
 
 # Lokale instellingen van Claude Code
-.claude/
+.claude/*
+!.claude/skills/
