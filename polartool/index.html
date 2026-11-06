@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Polartool</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2312263F'/%3E%3Cpath d='M16 2.5 L18.8 11.2 L27.5 14 L18.8 16.8 L16 25.5 L13.2 16.8 L4.5 14 L13.2 11.2 Z' fill='%23C9A24A'/%3E%3Crect x='8' y='27.5' width='16' height='2' rx='1' fill='%23F3EDE0'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#12263F">
 <meta name="description" content="Polar (polair diagram) voor een platbodem opbouwen uit handmatige waarden en VDR-logs, volledig in de browser.">
 <style>
 :root{
@@ -457,7 +462,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { TWS, TWA, invoer, kruishoek: k };
     }
     const R = Math.PI / 180;
-    const TOOL = { naam: 'Polartool', versie: '0.9', datum: '2026-11-05' };   // ophogen bij elke wijziging die gebruikers merken
+    const TOOL = { naam: 'Polartool', versie: '0.10', datum: '2026-11-06' };   // ophogen bij elke wijziging die gebruikers merken
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };

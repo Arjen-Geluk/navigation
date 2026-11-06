@@ -30,6 +30,12 @@ De root `index.html` is de landingspagina van dit topic (alléén zeilen/
 navigatie-projecten, geen andere rubrieken — die horen in de overkoepelende
 portfoliosite).
 
+## Favicon
+
+Elke pagina zet direct onder `<title>` het favicon-blok uit de `CLAUDE.md` van
+`arjen-geluk.github.io` (iconen in de root van het domein), met het SVG-icoon als data-URI
+in plaats van `/favicon.svg`, zodat een pagina ook los geopend een icoon heeft.
+
 ## Live
 
 - https://arjen-geluk.github.io/navigation/
