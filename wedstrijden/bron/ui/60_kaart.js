@@ -1,0 +1,202 @@
+// Tabblad 5 Kaart: ondergrond, vaargebied (diepte, bevaarbaarheid, betonning, verboden gebieden), wedstrijd, wind; tijdschuif.
+(function () {
+  let kaart = null, tijd = null;
+  const lagen = {};             // naam → Leaflet-laag
+  const ONDERGRONDEN = {
+    vast: { naam: 'Vast (ingebakken, ook offline)' },
+    grijs: { naam: 'Grijs', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
+    topo: { naam: 'Topografisch', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
+    foto: { naam: 'Luchtfoto', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, Maxar, Earthstar Geographics' },
+    geen: { naam: 'Geen' }
+  };
+  const LAGEN = [
+    ['Vaargebied', [['bodem', 'Diepte bij het peil'], ['bevaarbaar', 'Bevaarbaar voor dit schip'], ['betonning', 'Betonning'], ['zones', 'Verboden gebieden']]],
+    ['Wedstrijd', [['route', 'Gekozen route'], ['andere', 'Boeien van de andere banen']]],
+    ['Wind', [['wind', 'Wind volgens de tijdschuif']]]
+  ];
+
+  function maak() {
+    if (kaart) return;
+    kaart = L.map('kaart', { zoomSnap: 0.5, preferCanvas: true }).fitBounds([[52.66, 5.10], [52.88, 5.50]]);
+    kaart.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    kaart.on('click', klik);
+    bouwMenu();
+    teken();
+  }
+
+  // ---- lagenmenu (onthoudt de keuzes) ----
+  function bouwMenu() {
+    const m = $('lagenmenu');
+    m.replaceChildren(
+      el('h4', {}, 'Ondergrond'),
+      ...Object.entries(ONDERGRONDEN).map(([k, o]) => el('label', { class: 'vink' }, el('input', { type: 'radio', name: 'ondergrond', value: k, checked: S.kaart.ondergrond === k,
+        onchange: () => { S.kaart.ondergrond = k; bewaar(); tekenOndergrond(); } }), ' ' + o.naam)),
+      ...LAGEN.flatMap(([kop, l]) => [el('h4', {}, kop), ...l.map(([k, naam]) => el('label', { class: 'vink' }, el('input', { type: 'checkbox', checked: S.kaart.lagen[k],
+        onchange: e => { S.kaart.lagen[k] = e.target.checked; bewaar(); teken(); } }), ' ' + naam))]),
+      el('div', { id: 'legenda', class: 'legenda' }));
+    $('lagenOpen').onclick = () => { m.hidden = !m.hidden; $('lagenOpen').setAttribute('aria-expanded', !m.hidden); };
+  }
+
+  // ---- rasters uit de bodem ----
+  const DIEPTE_KLEUR = [[1.0, [200, 70, 60]], [1.5, [230, 140, 60]], [2.0, [240, 200, 90]], [2.5, [200, 225, 170]], [3.0, [170, 210, 225]], [4.0, [120, 175, 220]], [99, [60, 120, 190]]];
+  function rasterLaag(kleur) {
+    const B = BODEM, c = document.createElement('canvas'); c.width = B.nx; c.height = B.ny;
+    const ctx = c.getContext('2d'), img = ctx.createImageData(B.nx, B.ny), d = img.data;
+    for (let k = 0; k < B.codes.length; k++) {
+      const rgba = kleur(B.codes[k]); if (!rgba) continue;
+      d[4 * k] = rgba[0]; d[4 * k + 1] = rgba[1]; d[4 * k + 2] = rgba[2]; d[4 * k + 3] = rgba[3] ?? 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return L.imageOverlay(c.toDataURL(), [[B.noord - B.ny * B.dlat, B.west], [B.noord, B.west + B.nx * B.dlon]], { className: 'raster', interactive: false });
+  }
+  const vastRaster = () => rasterLaag(c => c === 255 ? [233, 230, 222] : [196, 220, 238]);
+  const diepteRaster = () => { const p = peil(); return rasterLaag(c => { if (c === 255) return null; const d = p - (c / 10 - 25); return [...DIEPTE_KLEUR.find(([g]) => d < g)[1], 200]; }); };
+  function bevaarRaster() {
+    const P = SCHIP.actief; if (!P) return null;
+    const p = peil(), ks = rekenOpties().kielspeling, dg = P.schip.diepgang_m, half = Number.isFinite(dg.half) ? dg.half : dg.neer;
+    return rasterLaag(c => {
+      if (c === 255) return null;
+      const d = p - (c / 10 - 25) - ks;
+      return d >= dg.neer ? null : d >= half ? [240, 200, 60, 150] : d >= dg.op ? [235, 130, 40, 170] : [200, 40, 40, 190];
+    });
+  }
+
+  function tekenOndergrond() {
+    if (lagen.ondergrond) { kaart.removeLayer(lagen.ondergrond); lagen.ondergrond = null; }
+    const o = ONDERGRONDEN[S.kaart.ondergrond];
+    if (o.url) lagen.ondergrond = L.tileLayer(o.url, { maxZoom: 17, attribution: o.attr }).on('tileerror', () => { $('kaartinfo').textContent = 'De online ondergrond antwoordt niet; kies Vast.'; });
+    else if (S.kaart.ondergrond === 'vast' && BODEM) lagen.ondergrond = vastRaster();
+    if (lagen.ondergrond) lagen.ondergrond.addTo(kaart).bringToBack();
+  }
+
+  // ---- alle lagen opnieuw tekenen ----
+  let rasterSleutel = '';
+  function teken() {
+    if (!kaart) return;
+    tekenOndergrond();
+    // rasters alleen opnieuw als peil, schip of keuze veranderd is (het tekenen kost even)
+    const P = SCHIP.actief, sl = [S.kaart.lagen.bodem, S.kaart.lagen.bevaarbaar, peil(), P && P.schip.id + P.versie, P && rekenOpties().kielspeling, !!BODEM].join('|');
+    if (sl !== rasterSleutel) {
+      for (const k of ['bodem', 'bevaarbaar']) if (lagen[k]) { kaart.removeLayer(lagen[k]); lagen[k] = null; }
+      if (BODEM && S.kaart.lagen.bodem) lagen.bodem = diepteRaster()?.addTo(kaart);
+      if (BODEM && S.kaart.lagen.bevaarbaar) lagen.bevaarbaar = bevaarRaster()?.addTo(kaart);
+      rasterSleutel = sl;
+    }
+    for (const k of ['betonning', 'zones', 'route', 'wind']) if (lagen[k]) { kaart.removeLayer(lagen[k]); lagen[k] = null; }
+    if (S.kaart.lagen.betonning && G.betonning) lagen.betonning = betonningLaag().addTo(kaart);
+    if (S.kaart.lagen.zones) lagen.zones = zonesLaag().addTo(kaart);
+    lagen.boot = null;
+    if (S.kaart.lagen.route) lagen.route = routeLaag().addTo(kaart);
+    if (S.kaart.lagen.wind) lagen.wind = L.layerGroup().addTo(kaart);
+    legenda();
+    tijdschuif();
+  }
+
+  const KLEUREN = { Rood: '#d22', Groen: '#1a8a3a', Geel: '#e8c21a', Zwart: '#222', Wit: '#fff', Oranje: '#f08a1c' };
+  function betonningLaag() {
+    const g = L.layerGroup(), r = L.canvas({ padding: 0.2 });
+    for (const [naam, lat, lon, kleur, vorm, licht] of G.betonning.rijen) {
+      const k = KLEUREN[(kleur || '').split(/[\s/-]/)[0]] || '#777';
+      L.circleMarker([lat, lon], { renderer: r, radius: 3.5, weight: 1, color: '#333', fillColor: k, fillOpacity: 1 })
+        .bindTooltip(`${naam}${vorm ? ' · ' + vorm : ''}${kleur ? ' · ' + kleur : ''}${licht ? ' · ' + licht : ''}`).addTo(g);
+    }
+    return g;
+  }
+  function zonesLaag() {
+    const g = L.layerGroup();
+    for (const z of huidigeEditie().zones) L.polygon(z.punten.map(p => [p.lat, p.lon]), { color: '#b42318', weight: 1.5, dashArray: z.actief ? null : '4 4', fillOpacity: z.actief ? 0.15 : 0 })
+      .bindTooltip(`${z.naam}${z.actief ? '' : ' (niet actief)'}`).addTo(g);
+    return g;
+  }
+  function routeLaag() {
+    const g = L.layerGroup(), E = huidigeEditie(), r = gekozenRoute();
+    const inRoute = new Set(r ? r.punten.map(p => p.id) : E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan].routes.flatMap(x => x.volgorde.map(s => leesStap(s).punt)));
+    const ronding = {};
+    if (r) {
+      L.polyline(r.res.track.map(p => [p.lat, p.lon]), { color: '#0b4f8a', weight: 3, opacity: 0.85 }).addTo(g);
+      r.res.rakken.forEach(k => { ronding[k.naar] = k.eind; });
+    } else {
+      const baan = E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan];
+      const pt = Object.fromEntries(E.punten.map(p => [p.id, p]));
+      baan.routes.forEach(x => L.polyline(x.volgorde.map(leesStap).map(s => [pt[s.punt].lat, pt[s.punt].lon]), { color: '#0b4f8a', weight: 1.5, opacity: 0.5, dashArray: '5 5' }).bindTooltip(x.naam, { sticky: true }).addTo(g));
+    }
+    const kleur = { start: '#2a9d4b', finish: '#b42318', via: '#0b4f8a', merkteken: '#e8831e' };
+    for (const p of E.punten) {
+      const inR = inRoute.has(p.id);
+      if (!inR && !S.kaart.lagen.andere) continue;
+      L.circleMarker([p.lat, p.lon], { radius: inR ? 6 : 4, color: '#fff', weight: 1.5, fillColor: inR ? kleur[p.soort] : '#999', fillOpacity: 1 })
+        .bindPopup(`<b>${p.id}</b>${p.rws ? ` (RWS ${p.rws})` : ''}<br>${p.toelichting || ''}`)
+        .bindTooltip(p.id + (ronding[p.id] ? ' ' + kloktijd(ronding[p.id]) : ''), { permanent: inR, direction: 'right', className: 'punt-label', offset: [6, 0] }).addTo(g);
+    }
+    if (r) lagen.boot = L.circleMarker([r.res.track[0].lat, r.res.track[0].lon], { radius: 7, color: '#0b2545', weight: 2, fillColor: '#ffd23f', fillOpacity: 1 }).addTo(g);
+    return g;
+  }
+
+  // ---- tijdschuif: boot op de berekende positie, wind op dat moment ----
+  function tijdschuif() {
+    const r = gekozenRoute(), vak = $('tijdschuif'), s = $('schuif');
+    const van = r ? r.res.start : startMs(), tot = r ? r.res.finish : limietMs();
+    vak.hidden = !(r || S.kaart.lagen.wind);
+    if (tijd == null || tijd < van || tijd > tot) tijd = van;
+    s.min = van; s.max = tot; s.step = 60000; s.value = tijd;
+    s.oninput = () => { tijd = +s.value; zetTijd(); };
+    zetTijd();
+  }
+  function zetTijd() {
+    const r = gekozenRoute();
+    let tekst = kloktijd(tijd);
+    if (r && lagen.boot) {
+      const t = r.res.track; let i = t.findIndex(p => p.t >= tijd); if (i < 0) i = t.length - 1;
+      const p = t[i]; lagen.boot.setLatLng([p.lat, p.lon]);
+      if (p.koers != null) tekst += ` · koers ${koersTekst(p.koers)} · ${getal(p.vaart)} kn · ${p.stand}, zwaard ${p.zwaard} · wind ${getal(p.tws, 0)} kn`;
+    }
+    $('schuiftijd').textContent = tekst;
+    if (lagen.wind) tekenWind();
+  }
+  function tekenWind() {
+    lagen.wind.clearLayers();
+    const W = windEffectief(); if (!W) return;
+    for (const p of W.punten) {
+      const w = windOp(W, p.lat, p.lon, tijd), b = knNaarBft(w.kn);
+      const kleur = ['#4a7ea8', '#4a7ea8', '#3b78b0', '#2f8fa8', '#3a9d6a', '#9ccc3c', '#f0c419', '#f08a1c', '#e2491d', '#b3121b', '#7a0b5b', '#4b0a59', '#2b0a3d'][b];
+      L.marker([p.lat, p.lon], { interactive: false, icon: L.divIcon({ className: 'windpijl', iconSize: [34, 34],
+        html: `<span style="transform:rotate(${Math.round(w.dir + 90)}deg);color:${kleur}">➜</span><b>${Math.round(w.kn)}</b>` }) }).addTo(lagen.wind);
+    }
+  }
+
+  function legenda() {
+    const l = $('legenda'); if (!l) return;
+    const blok = (kleur, t) => el('div', {}, el('i', { style: `background:rgb(${kleur.join(',')})` }), ' ' + t);
+    const delen = [];
+    if (S.kaart.lagen.bodem) delen.push(el('b', {}, `Waterdiepte bij ${getal(peil(), 2)} m NAP`),
+      ...DIEPTE_KLEUR.map(([g, k], i) => blok(k, i === DIEPTE_KLEUR.length - 1 ? `≥ ${getal(DIEPTE_KLEUR[i - 1][0], 1)} m` : `< ${getal(g, 1)} m`)));
+    if (S.kaart.lagen.bevaarbaar) delen.push(el('b', {}, SCHIP.actief ? 'Bevaarbaar (incl. kielspeling)' : 'Bevaarbaar: laad eerst een polar in'),
+      blok([240, 200, 60], 'alleen zwaard half of op'), blok([235, 130, 40], 'alleen zwaard op (ruime koersen)'), blok([200, 40, 40], 'romp loopt vast'));
+    l.replaceChildren(...delen);
+  }
+
+  // ---- klik: bodem, diepte en bevaarbaarheid ----
+  function klik(e) {
+    if (!BODEM) return;
+    const { lat, lng } = e.latlng, b = bodemOp(BODEM, lat, lng);
+    let html = `<b>${lat.toFixed(5)}° N, ${lng.toFixed(5)}° O</b><br>`;
+    if (b == null) html += 'Geen water in het vaargebied.';
+    else {
+      const d = peil() - b;
+      html += `Bodem ${getal(b, 1)} m NAP · diepte ${getal(d, 1)} m bij peil ${getal(peil(), 2)}`;
+      const P = SCHIP.actief;
+      if (P) {
+        const ks = rekenOpties().kielspeling, dg = P.schip.diepgang_m;
+        html += '<br>' + [['neer', dg.neer], ['half', Number.isFinite(dg.half) ? dg.half : null], ['op', dg.op]].filter(x => x[1] != null)
+          .map(([n, g]) => `zwaard ${n}: ${d >= g + ks ? '✓' : '✗'}`).join(' · ');
+      }
+      const E = huidigeEditie(), z = E.zones.find(z => z.actief && inPolygoon(naarXY(lat, lng), z.punten.map(p => naarXY(p.lat, p.lon))));
+      if (z) html += `<br><b>Verboden gebied:</b> ${z.naam}`;
+    }
+    L.popup().setLatLng(e.latlng).setContent(html).openOn(kaart);
+  }
+
+  op('tab', t => { if (t === 'kaart') { maak(); setTimeout(() => kaart.invalidateSize(), 0); } });
+  for (const g of ['uitkomst', 'selectie', 'editie', 'polar', 'invoer', 'wind', 'bodem']) op(g, () => teken());
+  op('toonOpKaart', p => { toonTab('kaart'); kaart.setView([p.lat, p.lon], 14); L.popup().setLatLng([p.lat, p.lon]).setContent(`<b>${p.id}</b>`).openOn(kaart); });
+})();

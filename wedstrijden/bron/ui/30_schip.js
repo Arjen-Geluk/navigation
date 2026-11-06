@@ -15,6 +15,7 @@ const SCHIP = (function () {
   }
 
   function toon() {
+    tabStatus('schip', actief ? 'klaar' : 'let', actief ? '' : 'nog geen polar');
     const kop = $('kopPolar'), st = $('polarstatus'), det = $('polardetails');
     if (!actief) {
       kop.textContent = 'Geen polar'; kop.className = 'chip let';
@@ -54,7 +55,7 @@ const SCHIP = (function () {
     else if (vorig && vorig.versie !== actief.versie) tekst += ` Was versie ${vorig.versie}.`;
     melding('ok', tekst);
     toon();
-    luisteraars.forEach(f => f(actief));
+    meld('polar', actief);
     return null;
   }
 
@@ -85,7 +86,7 @@ const SCHIP = (function () {
   $('polarvergeten').addEventListener('click', () => {
     actief = null;
     try { localStorage.removeItem(OPSLAG); } catch (e) { /* niets */ }
-    melding('', ''); toon(); luisteraars.forEach(f => f(null));
+    melding('', ''); toon(); meld('polar', null);
   });
   toon();
 
@@ -109,3 +110,35 @@ const SCHIP = (function () {
 
   return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f) };
 })();
+
+// Instellingen per berekening (horen bij de pagina, niet in het polarbestand)
+(function () {
+  const s = S.schip;
+  function vul() {
+    const P = SCHIP.actief, p = P ? P.schip : {};
+    $('kielspeling').value = s.kielspeling ?? ''; $('kielspeling').placeholder = p.kielspeling_m ?? '';
+    $('metOverstag').checked = s.metOverstag; $('overstagS').value = s.overstag_s ?? ''; $('overstagS').placeholder = p.overstagverlies_s ?? '';
+    $('metGijp').checked = s.metGijp; $('gijpS').value = s.gijp_s ?? ''; $('gijpS').placeholder = p.gijpverlies_s ?? '';
+    $('factor').value = s.factor;
+  }
+  const getalOfNull = v => v === '' ? null : +v;
+  $('kielspeling').onchange = () => { s.kielspeling = getalOfNull($('kielspeling').value); bewaar(); meld('invoer'); };
+  $('metOverstag').onchange = () => { s.metOverstag = $('metOverstag').checked; bewaar(); meld('invoer'); };
+  $('overstagS').onchange = () => { s.overstag_s = getalOfNull($('overstagS').value); bewaar(); meld('invoer'); };
+  $('metGijp').onchange = () => { s.metGijp = $('metGijp').checked; bewaar(); meld('invoer'); };
+  $('gijpS').onchange = () => { s.gijp_s = getalOfNull($('gijpS').value); bewaar(); meld('invoer'); };
+  $('factor').onchange = () => { s.factor = Math.max(50, Math.min(150, +$('factor').value || 100)); bewaar(); vul(); meld('invoer'); };
+  op('polar', vul);
+  vul();
+})();
+
+// Rekeninstellingen voor de kern, uit polar en invoer
+function rekenOpties() {
+  const P = SCHIP.actief, s = S.schip;
+  return {
+    kielspeling: s.kielspeling ?? P.schip.kielspeling_m ?? 0.3,
+    overstag_s: s.metOverstag ? (s.overstag_s ?? P.schip.overstagverlies_s ?? 0) : null,
+    gijp_s: s.metGijp ? (s.gijp_s ?? P.schip.gijpverlies_s ?? 0) : null,
+    snelheidsfactor: (s.factor || 100) / 100
+  };
+}

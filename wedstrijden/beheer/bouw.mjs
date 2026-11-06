@@ -52,9 +52,19 @@ const leafletCss = readFileSync(join(leafletMap, 'leaflet.css'), 'utf8').replace
   (_, f) => `url(data:image/png;base64,${readFileSync(join(leafletMap, 'images', f)).toString('base64')})`);
 const leafletJs = readFileSync(join(leafletMap, 'leaflet.js'), 'utf8').replace(/\/\/# sourceMappingURL=.*$/m, '');
 const veiligJs = s => s.replace(/<\/script/gi, '<\\/script');
-const gegevensJson = JSON.stringify({ bouw, vaargebied, edities }).replace(/<\//g, '<\\/');
+// Betonning compact voor de kaart: per markering [naam, lat, lon, kleur, vorm, licht, drijvend]
+let betonning = null;
+if (vaargebied.betonning?.bestand) {
+  const b = JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand));
+  const licht = l => l ? [l.karakter, l.groep && l.groep !== '(1)' ? l.groep : '', ' ', (l.kleur || '').slice(0, 1), l.periode_s ? ' ' + l.periode_s + 's' : ''].join('').trim() : '';
+  betonning = { opgehaald: b.opgehaald, velden: ['naam', 'lat', 'lon', 'kleur', 'vorm', 'licht', 'drijvend'],
+    rijen: b.markeringen.map(m => [m.naam, m.lat, m.lon, m.kleur || '', m.vorm || '', licht(m.licht), m.drijvend ? 1 : 0]) };
+}
+const gegevensJson = JSON.stringify({ bouw, vaargebied, edities, betonning }).replace(/<\//g, '<\\/');
+// Bodemraster: het gzip-bestand als base64; de pagina pakt het uit met DecompressionStream
+const bodemB64 = vaargebied.bodem ? readFileSync(join(MAP, 'gegevens', vaargebied.bodem.bestand)).toString('base64') : '';
 
-const vervang = { LEAFLET_CSS: leafletCss, STIJL: lees('bron/stijl.css'), GEGEVENS: gegevensJson,
+const vervang = { LEAFLET_CSS: leafletCss, STIJL: lees('bron/stijl.css'), GEGEVENS: gegevensJson, BODEM: bodemB64,
   LEAFLET_JS: veiligJs(leafletJs), SCRIPTS: scripts.map(f => `// ---- ${f} ----\n` + veiligJs(lees(f))).join('\n') };
 let html = lees('bron/pagina.html');
 for (const [k, v] of Object.entries(vervang)) {

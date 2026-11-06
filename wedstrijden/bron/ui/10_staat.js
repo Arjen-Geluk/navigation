@@ -1,0 +1,101 @@
+// Gedeelde basis van de schermen: gegevens uit de pagina, opgeslagen invoer, tabbladen, gebeurtenissen en opmaak.
+const $ = id => document.getElementById(id);
+const G = JSON.parse($('gegevens').textContent);
+const TZ = 'Europe/Amsterdam';
+const STANDAARD_PEIL = -0.25;           // m NAP, voorlopig (streefpeilen per meer volgen in het vaargebied)
+
+// ---- element maken: el('td', { class: 'x', onclick: f }, 'tekst', kind) ----
+function el(tag, attr, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attr || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k.nodeType ? k : String(k));
+  return e;
+}
+
+// ---- opmaak ----
+const getal = (x, d = 1) => x == null || !Number.isFinite(x) ? '–' : x.toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+const kloktijd = ms => ms == null ? '–' : new Date(ms).toLocaleTimeString('nl-NL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+const dagEnTijd = ms => new Date(ms).toLocaleString('nl-NL', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const duur = ms => { if (ms == null) return '–'; const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} u ${String(m % 60).padStart(2, '0')}`; };
+const afstand = m => S.eenheden === 'km' ? `${getal(m / 1000)} km` : `${getal(m / 1852)} NM`;
+const koersTekst = k => k == null ? '–' : String(Math.round(k) % 360).padStart(3, '0') + '°';
+
+// ---- edities ----
+const EDITIES = Object.fromEntries(G.edities.map((e, i) => [G.bouw.edities[i].bestand.replace('.json', ''), e]));
+const editieSleutels = Object.keys(EDITIES).sort((a, b) => EDITIES[b].jaar - EDITIES[a].jaar || a.localeCompare(b));
+
+// ---- opgeslagen invoer (alleen in deze browser) ----
+const OPSLAG = 'wedstrijden.invoer.v1';
+function standaardStaat() {
+  return { v: 1, editie: editieSleutels[0], per: {}, eenheden: 'nm',
+    schip: { kielspeling: null, metOverstag: false, overstag_s: null, metGijp: false, gijp_s: null, factor: 100 },
+    wind: { model: 'knmi_seamless', W: null, aanpassingen: {}, verschuiving_min: 0 },
+    peil: null,
+    kaart: { ondergrond: 'vast', lagen: { bodem: false, bevaarbaar: false, betonning: true, zones: true, route: true, andere: false, wind: false } },
+    selectie: { baan: null, route: null } };
+}
+let S = standaardStaat();
+try { const o = JSON.parse(localStorage.getItem(OPSLAG) || 'null'); if (o && o.v === 1) S = { ...S, ...o, kaart: { ...S.kaart, ...o.kaart, lagen: { ...S.kaart.lagen, ...(o.kaart || {}).lagen } } }; } catch (e) { /* geen opslag */ }
+if (!EDITIES[S.editie]) S.editie = editieSleutels[0];
+function bewaar() { try { localStorage.setItem(OPSLAG, JSON.stringify(S)); } catch (e) { /* vol of geen opslag: werkt gewoon door */ } }
+
+// invoer per editie (datum, tijden, baan van de wedstrijdleiding, afwijkingen van de schipper)
+function invoer() {
+  const e = EDITIES[S.editie];
+  return S.per[S.editie] ||= { datum: e.datum, start: e.start, limiet: e.finishlimiet, baanWL: '', afwijkingen: { punten: {}, zones: {} } };
+}
+// De editie zoals de schipper hem gebruikt: met verlegde punten en aan/uit gezette zones.
+function huidigeEditie() {
+  const e = EDITIES[S.editie], a = invoer().afwijkingen;
+  return { ...e, datum: invoer().datum, start: invoer().start, finishlimiet: invoer().limiet,
+    punten: e.punten.map(p => a.punten[p.id] ? { ...p, ...a.punten[p.id] } : p),
+    zones: e.zones.map(z => z.id in a.zones ? { ...z, actief: a.zones[z.id] } : z) };
+}
+const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length > 0; };
+const startMs = () => lokaleTijdNaarMs(invoer().datum, invoer().start, EDITIES[S.editie].tijdzone);
+const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone); return l > s ? l : l + 864e5; };
+const peil = () => S.peil ?? STANDAARD_PEIL;
+
+// ---- gebeurtenissen tussen de schermen ----
+const luisteraars = {};
+const op = (naam, f) => (luisteraars[naam] ||= []).push(f);
+const meld = (naam, x) => (luisteraars[naam] || []).forEach(f => f(x));
+
+// ---- bodem (uit de pagina, uitpakken met DecompressionStream) ----
+let BODEM = null;
+const bodemKlaar = (async () => {
+  const b64 = $('bodem').textContent.trim();
+  if (!b64 || !G.vaargebied.bodem) return null;
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stroom = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  BODEM = maakBodem(G.vaargebied.bodem, new Uint8Array(await new Response(stroom).arrayBuffer()));
+  meld('bodem', BODEM);
+  return BODEM;
+})();
+
+// ---- tabbladen ----
+let huidigTab = null;
+function toonTab(naam) {
+  huidigTab = naam;
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === naam));
+  document.querySelectorAll('section.tab').forEach(s => { s.hidden = s.id !== 'tab-' + naam; });
+  try { sessionStorage.setItem('wedstrijden.tab', naam); } catch (e) { /* niets */ }
+  meld('tab', naam);
+}
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => toonTab(b.dataset.tab)));
+// status per tabblad: 'klaar', 'let' of leeg
+function tabStatus(naam, status, titel) {
+  const b = document.querySelector(`#tabs button[data-tab="${naam}"] .bol`);
+  if (b) { b.className = 'bol ' + (status || ''); b.title = titel || ''; }
+}
+function melding(id, soort, tekst) {
+  const m = $(id); if (!m) return;
+  m.className = 'melding ' + (soort || ''); m.textContent = tekst || ''; m.hidden = !tekst;
+}
+
+$('toolversie').textContent = `versie ${TOOL.versie} · ${TOOL.datum}`;
