@@ -52,7 +52,7 @@ test('bodemraster past bij de beschrijving in het vaargebied', async () => {
   const codes = gunzipSync(readFileSync(pad));
   assert.equal(codes.length, vg.bodem.nx * vg.bodem.ny);
   assert.equal(createHash('sha256').update(codes).digest('hex'), vg.bodem.sha256);
-  assert.ok(codes.every(c => c <= 250 || c === 255), 'alleen codes 0..250 en 255');
+  assert.ok(codes.every(c => c <= 250 || c === 254 || c === 255), 'alleen codes 0..250, 254 (verboden) en 255');
 });
 
 // ---- polar (bron/kern/20_polar.js) met het verzonnen voorbeeldschip ----

@@ -98,7 +98,14 @@ const bodemKlaar = (async () => {
   if (!b64 || !G.vaargebied.bodem) return null;
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const stroom = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  BODEM = maakBodem(G.vaargebied.bodem, new Uint8Array(await new Response(stroom).arrayBuffer()));
+  let uitsneden = [];
+  const h64 = $('havens').textContent.trim();
+  if (h64 && G.uitsneden.length) {
+    const hb = Uint8Array.from(atob(h64), c => c.charCodeAt(0));
+    const alles = new Uint8Array(await new Response(new Blob([hb]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    uitsneden = G.uitsneden.map(u => ({ ...u, water: alles.subarray(u.offset, u.offset + u.nx * u.ny) }));
+  }
+  BODEM = maakBodem(G.vaargebied.bodem, new Uint8Array(await new Response(stroom).arrayBuffer()), uitsneden);
   meld('bodem', BODEM);
   return BODEM;
 })();

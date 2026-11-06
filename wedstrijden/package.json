@@ -8,10 +8,14 @@
     "bouw": "node beheer/bouw.mjs",
     "ververs": "node beheer/ververs.mjs",
     "test": "node --test test/",
-    "toon": "node beheer/toon.mjs"
+    "toon": "node beheer/toon.mjs",
+    "top10nl": "node beheer/top10nl.mjs"
   },
   "dependencies": {
     "geotiff": "3.0.5",
     "leaflet": "1.9.4"
+  },
+  "devDependencies": {
+    "pngjs": "7.0.0"
   }
 }

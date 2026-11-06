@@ -9,6 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');      // wedstrijden/
 const LOKAAL = join(MAP, '..', 'lokaal');                               // echte data, niet in git
@@ -63,6 +64,10 @@ const leafletCss = readFileSync(join(leafletMap, 'leaflet.css'), 'utf8').replace
   (_, f) => `url(data:image/png;base64,${readFileSync(join(leafletMap, 'images', f)).toString('base64')})`);
 const leafletJs = readFileSync(join(leafletMap, 'leaflet.js'), 'utf8').replace(/\/\/# sourceMappingURL=.*$/m, '');
 const veiligJs = s => s.replace(/<\/script/gi, '<\\/script');
+// TOP10NL: fijne uitsneden rond havens (10 m) en de watergrens op 50 m voor de vaste ondergrond van de kaart
+const w10 = existsSync(join(MAP, 'gegevens', 'water_top10nl.json')) ? JSON.parse(lees('gegevens/water_top10nl.json')) : null;
+const havensB64 = w10?.havens ? readFileSync(join(MAP, 'gegevens', w10.havens.bestand)).toString('base64') : '';
+const ondergrondB64 = w10 ? ondergrondBits(w10) : '';
 // Betonning compact voor de kaart: per markering [naam, lat, lon, kleur, vorm, licht, drijvend]
 let betonning = null;
 if (vaargebied.betonning?.bestand) {
@@ -71,11 +76,11 @@ if (vaargebied.betonning?.bestand) {
   betonning = { opgehaald: b.opgehaald, velden: ['naam', 'lat', 'lon', 'kleur', 'vorm', 'licht', 'drijvend'],
     rijen: b.markeringen.map(m => [m.naam, m.lat, m.lon, m.kleur || '', m.vorm || '', licht(m.licht), m.drijvend ? 1 : 0]) };
 }
-const gegevensJson = JSON.stringify({ bouw, vaargebied, edities, betonning }).replace(/<\//g, '<\\/');
+const gegevensJson = JSON.stringify({ bouw, vaargebied, edities, betonning, uitsneden: (w10?.havens?.uitsneden || []).filter(u => (w10.havens.actief || []).includes(u.id)), top10nl: w10 ? { raster: w10.raster, opgehaald: w10.opgehaald, monsterpunten: w10.monsterpunten } : null }).replace(/<\//g, '<\\/');
 // Bodemraster: het gzip-bestand als base64; de pagina pakt het uit met DecompressionStream
 const bodemB64 = vaargebied.bodem ? readFileSync(join(MAP, 'gegevens', vaargebied.bodem.bestand)).toString('base64') : '';
 
-const vervang = { LEAFLET_CSS: leafletCss, STIJL: lees('bron/stijl.css'), GEGEVENS: gegevensJson, BODEM: bodemB64,
+const vervang = { LEAFLET_CSS: leafletCss, STIJL: lees('bron/stijl.css'), GEGEVENS: gegevensJson, BODEM: bodemB64, HAVENS: havensB64, ONDERGROND: ondergrondB64,
   LEAFLET_JS: veiligJs(leafletJs), SCRIPTS: scripts.map(f => `// ---- ${f} ----\n` + veiligJs(lees(f))).join('\n') };
 let html = lees('bron/pagina.html');
 for (const [k, v] of Object.entries(vervang)) {
@@ -113,3 +118,13 @@ if (controle) {
 }
 console.log(`  tool ${bouw.tool} · vaargebied v${bouw.vaargebied.versie} (${bouw.vaargebied.datum}) · edities: ${bouw.edities.map(e => `${e.wedstrijd} ${e.jaar} v${e.versie}`).join(', ')}`);
 console.log(`  privacycontrole: ${verboden.size} namen uit lokaal/ gezocht, niets gevonden`);
+
+// Vaste ondergrond van de kaart uit TOP10NL: 1 bit per cel van 50 m (1 = minstens de helft water), rij voor rij van noord
+// naar zuid, gzip. Ca. 60 kB; de pagina tekent het op een canvas en de browser maakt de randen bij het vergroten vloeiend.
+function ondergrondBits(w10) {
+  const tel = gunzipSync(readFileSync(join(MAP, 'gegevens', 'water_top10nl_50m.bin'))), { nx, ny } = w10.raster, helft = w10.monsterpunten / 2;
+  const rij = Math.ceil(nx / 8), bits = Buffer.alloc(rij * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (tel[j * nx + i] >= helft) bits[j * rij + (i >> 3)] |= 0x80 >> (i & 7);
+  const gz = gzipSync(bits, { level: 9 }); gz[4] = gz[5] = gz[6] = gz[7] = 0;
+  return gz.toString('base64');
+}

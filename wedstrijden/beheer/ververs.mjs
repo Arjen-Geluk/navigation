@@ -15,6 +15,7 @@ import { fromArrayBuffer } from 'geotiff';
 import { leesJson, schrijfJson } from './lib/json.mjs';
 import { wgsNaarRd, afstandM } from './lib/rd.mjs';
 import { maakPng } from './lib/png.mjs';
+import { haalOsm, verbodenGebieden, OVERPASS } from './lib/verboden.mjs';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(MAP, '..', 'lokaal', 'ververs');
@@ -42,6 +43,7 @@ const URLS = [
   ['Ondergrond Esri grijs', 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/10/337/525'],
   ['Ondergrond Esri luchtfoto', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/337/525'],
   ['Ondergrond Esri topografisch', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/10/337/525'],
+  ['OpenStreetMap (Overpass): windturbines, Marker Wadden', 'https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode(1)%3Bout%3B'],
   ['Ondergrond OpenTopoMap', 'https://a.tile.opentopomap.org/10/525/337.png']
 ];
 
@@ -74,6 +76,7 @@ async function controleerUrls() {
 //   0..250 = bodemhoogte −25,0 .. 0,0 m NAP in stappen van 0,1 m (dieper/hoger wordt afgekapt)
 //   255    = geen water (land, dijk of geen meting)
 const GEEN_WATER = 255;
+const WATER_ZONDER_METING = 250;          // water volgens TOP10NL maar zonder RWS-meting (havens): als 0,0 m NAP, dus onbevaarbaar
 const codeer = v => Math.max(0, Math.min(250, Math.round((v + 25) * 10)));
 const decodeer = c => c === GEEN_WATER ? null : c / 10 - 25;
 
@@ -133,22 +136,27 @@ async function haalBodemRd(laag, gebied) {
 }
 
 // Van het RD-raster (20 m) naar een raster in graden; per cel k x k monsterpunten, gemiddelde van de waterpunten.
-function herbemonster(rdr, gebied, celM) {
+// Een cel is land zodra een kwart van de monsterpunten land is (geen meting of boven NAP): zo blijven smalle dammen
+// en strekdammen (20 à 30 m breed) in het raster staan; langs de kust is dat iets voorzichtiger.
+function herbemonster(rdr, gebied, celM, water = null) {
   const dlat = +(celM / 111200).toFixed(6), dlon = +(celM / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(6);
   const nx = Math.round((gebied.oost - gebied.west) / dlon), ny = Math.round((gebied.noord - gebied.zuid) / dlat);
-  const k = Math.max(2, Math.round(celM / 10)), helft = Math.ceil(k * k / 2);
+  const k = Math.max(2, Math.round(celM / 10)), kwart = Math.ceil(k * k / 4);
   const codes = new Uint8Array(nx * ny).fill(GEEN_WATER);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    let som = 0, n = 0;
+    let som = 0, n = 0, land = 0;
     for (let b = 0; b < k; b++) for (let a = 0; a < k; a++) {
       const lon = gebied.west + (i + (a + 0.5) / k) * dlon, lat = gebied.noord - (j + (b + 0.5) / k) * dlat;
       const [X, Y] = wgsNaarRd(lon, lat);
       const ci = Math.floor((X - rdr.x0) / rdr.cel), cj = Math.floor((rdr.y1 - Y) / rdr.cel);
-      if (ci < 0 || cj < 0 || ci >= rdr.nx || cj >= rdr.ny) continue;
+      if (ci < 0 || cj < 0 || ci >= rdr.nx || cj >= rdr.ny) { land++; continue; }
       const v = rdr.z[cj * rdr.nx + ci];
-      if (v === v) { som += v; n++; }
+      if (v === v && v <= 0) { som += v; n++; } else land++;
     }
-    if (n >= helft) codes[j * nx + i] = codeer(som / n);
+    if (water) {
+      // land of water volgens TOP10NL (eenmalig ingebouwd, beheer/top10nl.mjs); diepte uit RWS
+      if (water.telling[j * nx + i] >= water.drempel) codes[j * nx + i] = n ? codeer(som / n) : WATER_ZONDER_METING;
+    } else if (land < kwart && n) codes[j * nx + i] = codeer(som / n);
   }
   return { cel_m: celM, west: gebied.west, noord: gebied.noord, dlon, dlat, nx, ny, codes };
 }
@@ -197,12 +205,12 @@ function bodemStatistiek(r, vorige) {
     const c = r.codes[j * r.nx + i];
     const lat = r.noord - (j + 0.5) * r.dlat, lon = r.west + (i + 0.5) * r.dlon;
     const g = per[deelgebied(lat, lon)] ||= { water: 0, diep: [], verschil: 0, nVerschil: 0, groot: 0, nieuwWater: 0, wegWater: 0 };
-    if (c !== GEEN_WATER) { g.water++; if ((i + j) % 7 === 0) g.diep.push(decodeer(c)); }
+    if (c <= 250) { g.water++; if ((i + j) % 7 === 0) g.diep.push(decodeer(c)); }
     if (vorige) {
       const p = vorige[j * r.nx + i];
-      if (c !== GEEN_WATER && p !== GEEN_WATER) { const d = Math.abs(c - p) / 10; g.verschil += d; g.nVerschil++; if (d >= 0.3) g.groot++; }
-      else if (c !== GEEN_WATER) g.nieuwWater++;
-      else if (p !== GEEN_WATER) g.wegWater++;
+      if (c <= 250 && p <= 250) { const d = Math.abs(c - p) / 10; g.verschil += d; g.nVerschil++; if (d >= 0.3) g.groot++; }
+      else if (c <= 250) g.nieuwWater++;
+      else if (p <= 250) g.wegWater++;
     }
   }
   for (const g of Object.values(per)) { g.diep.sort((x, y) => x - y); }
@@ -213,6 +221,7 @@ function bodemStatistiek(r, vorige) {
 const KLEUR = [[0.0, [200, 70, 60]], [1.0, [230, 140, 60]], [1.5, [240, 200, 90]], [2.0, [200, 225, 170]], [3.0, [150, 200, 230]], [4.0, [90, 150, 210]], [99, [40, 90, 160]]];
 function kleurBij(c) {
   if (c === GEEN_WATER) return [235, 232, 225];
+  if (c === 254) return [190, 60, 140];
   const d = -0.2 - decodeer(c);
   return KLEUR.find(([g]) => d < g)[1];
 }
@@ -327,7 +336,7 @@ function schrijfVerslag(v) {
     r.push(`- Opname: **${b.jaar}** (laag \`${b.laag}\`); beschikbaar bij RWS: ${b.alle.join(', ')}.` + (b.vorigJaar && b.jaar > b.vorigJaar ? ` **Nieuwer dan de vorige versie (${b.vorigJaar}).**` : ''));
     r.push(`- RWS-origineel: ${nl(b.rd.nx)} × ${nl(b.rd.ny)} cellen van ${b.rd.cel} m (RD); waterpunten: ${nl(b.rd.water)}.`);
     r.push(`- Raster in de pagina: cellen van ${b.r.cel_m} m (${b.r.dlon}° × ${b.r.dlat}°), ${nl(b.r.nx)} × ${nl(b.r.ny)} = ${nl(b.r.nx * b.r.ny)} cellen, `
-      + `waarvan ${nl(b.water)} water. Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; minder dan de helft water = geen water.`);
+      + `waarvan ${nl(b.water)} water. ${b.top10 ? `Land en water uit TOP10NL (${b.top10}): een cel is water als minstens driekwart van 10 × 10 monsterpunten water is; diepte = gemiddelde van de RWS-metingen in de cel. Water zonder RWS-meting (havens): ${nl(b.zonderMeting)} cellen, behandeld als 0,0 m NAP.` : `Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; een kwart of meer land (geen meting of boven NAP) = land.`}`);
     r.push(`- Afgebakend: ${nl(b.buitenGebied)} watercellen buiten het vaargebied weggelaten (niet bereikbaar zonder ${(b.afsluitingen || []).map(a => a.naam).join(' of ')} te kruisen).`);
     r.push(`- Bestand \`${b.bestand}\`: ${kB(b.gzip)} (gzip); in de pagina als base64 ca. ${kB(b.gzip * 4 / 3)}.`);
     if (b.meting) r.push(`- Ter vergelijking ${b.meting.cel_m} m: ${nl(b.meting.water)} watercellen, ${kB(b.meting.gzip)} (gzip), als base64 ca. ${kB(b.meting.gzip * 4 / 3)}.`);
@@ -339,6 +348,17 @@ function schrijfVerslag(v) {
     }
     r.push('', b.vorig ? '' : 'Geen vorige bodem om mee te vergelijken (eerste verversing).', '');
     r.push(`Controleplaatjes (lokaal, niet in git): ${b.plaatjes.map(p => '`' + p + '`').join(', ')}.`, '');
+  }
+  if (v.verboden) {
+    r.push('## Verboden gebieden', '');
+    r.push('Water dat in de pagina onbevaarbaar is (code 254 in het bodemraster), voor alle wedstrijden. Op het controleplaatje paars-rood.', '');
+    r.push('- **A1-boeien**: gele boeien met topteken A1 (rood-wit-rood, verboden toegang). Per groep zijn de boeien in volgorde verbonden en de uiteinden naar het land doorgetrokken; het water achter de lijn is verboden. De Kreupel (NK-OW) staat al in de editie.');
+    r.push('- **Windparken**: windturbines in het water uit OpenStreetMap, per groep de omtrek plus 150 m.');
+    r.push('- **Marker Wadden**: omtrek uit OpenStreetMap plus 50 m (de eilanden staan niet in de bodemopname).', '');
+    if (v.osmFout) r.push(`**OpenStreetMap was niet bereikbaar** (${v.osmFout}): windparken en Marker Wadden ontbreken.`, '');
+    r.push('| Soort | Gebied | Boeien / turbines | Oppervlak | Opmerking |', '|---|---|---|---|---|');
+    for (const x of v.verboden.overzicht.filter(x => x.cellen > 0 || x.opmerking)) r.push(`| ${x.soort} | ${x.id}${x.vaarwater ? ' (' + x.vaarwater + ')' : ''} | ${x.boeien ?? x.turbines ?? x.ringen ?? ''} | ${x.km2 ? nl(x.km2, 2) + ' km²' : '–'} | ${x.opmerking || ''} |`);
+    r.push('', `Totaal ${nl(v.verboden.cellen)} cellen (${nl(v.verboden.cellen * 0.0025, 1)} km²).`, '');
   }
   if (v.betonning) {
     const t = v.betonning;
@@ -400,36 +420,30 @@ if (!arg('alleen-urls')) {
   const { nieuwste, alle } = await nieuwsteOpname();
   const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
   rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
-  const r = herbemonster(rd, vg.gebied, celM);
-  const buitenGebied = afbakenen(r, vg.gebied);
-  const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
-  const binPad = join(MAP, 'gegevens', bestand);
-  const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
-  const gz = gzipSync(r.codes, { level: 9 });
-  gz[4] = gz[5] = gz[6] = gz[7] = 0;     // tijdstempel in de gzip-kop leeg: zelfde inhoud = zelfde bestand
-  writeFileSync(binPad, gz);
-  const water = r.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0);
-  const plaatjes = [`bodem_${vandaag}_${celM}m.png`, `bodem_${vandaag}_${celM}m_krabbersgat.png`];
-  writeFileSync(join(CACHE, plaatjes[0]), plaatje(r, { schaal: celM >= 50 ? 0.5 : 0.25 }));
-  const KRAB = { west: 5.25, oost: 5.36, noord: 52.76, zuid: 52.68 };
-  writeFileSync(join(CACHE, plaatjes[1]), plaatje(r, { ...KRAB, schaal: 250 / celM }));
-  let meting = null;
-  if (arg('meet')) {
-    const ander = celM === 50 ? 25 : 50;
-    const m = herbemonster(rd, vg.gebied, ander);
-    meting = { cel_m: ander, water: m.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0), gzip: gzipSync(m.codes, { level: 9 }).length };
-    plaatjes.push(`bodem_${vandaag}_${ander}m_krabbersgat.png`);
-    writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
+  // land en water uit TOP10NL als dat bestand bij dit raster past (anders alleen RWS)
+  const W10 = join(MAP, 'gegevens', 'water_top10nl.json');
+  let top10 = null;
+  if (existsSync(W10)) {
+    const m = leesJson(W10), dl = +(celM / 111200).toFixed(6);
+    if (m.raster.cel_m === celM && Math.abs(m.raster.dlat - dl) < 1e-9) {
+      top10 = { telling: gunzipSync(readFileSync(join(MAP, 'gegevens', 'water_top10nl_50m.bin'))), drempel: Math.ceil(0.75 * m.monsterpunten), bron: m.bron, opgehaald: m.opgehaald };
+      log(`  land en water uit TOP10NL (${m.opgehaald})`);
+    } else log('  TOP10NL-bestand past niet bij dit raster: land en water alleen uit RWS (draai npm run top10nl)');
   }
-  verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
-    stat: bodemStatistiek(r, vorig), vorig: !!vorig, buitenGebied, afsluitingen: vg.gebied.afsluitingen, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
-  vg.bodem = {
-    bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
-    cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
-    codering: '1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water',
-    sha256: createHash('sha256').update(r.codes).digest('hex')
-  };
-  log(`  ${r.nx} x ${r.ny} cellen van ${celM} m, ${water} water, ${(gz.length / 1024).toFixed(0)} kB gzip`);
+  const r = herbemonster(rd, vg.gebied, celM, top10);
+  if (top10) {
+    const afstand = new Uint8Array(r.codes.length).fill(255), rij = [];
+    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] < WATER_ZONDER_METING) { afstand[k] = 0; rij.push(k); }
+    for (let q = 0; q < rij.length; q++) {
+      const k = rij[q], i = k % r.nx, d = afstand[k];
+      if (d >= 6) continue;
+      for (const m of [i > 0 ? k - 1 : -1, i < r.nx - 1 ? k + 1 : -1, k - r.nx, k + r.nx])
+        if (m >= 0 && m < r.codes.length && r.codes[m] === WATER_ZONDER_METING && afstand[m] === 255) { afstand[m] = d + 1; rij.push(m); }
+    }
+    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] === WATER_ZONDER_METING && afstand[k] === 255) r.codes[k] = GEEN_WATER;
+  }
+  const zonderMeting = top10 ? r.codes.reduce((t, c) => t + (c === WATER_ZONDER_METING), 0) : 0;
+  const buitenGebied = afbakenen(r, vg.gebied);   // (na TOP10NL en het inkorten van water zonder meting)
 
   // ---- betonning ----
   log('Betonning…');
@@ -452,9 +466,53 @@ if (!arg('alleen-urls')) {
     verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst, oud) };
   log(`  ${lijst.length} markeringen in het vaargebied`);
 
+  // ---- verboden gebieden (A1-boeien, windparken, Marker Wadden) in het raster: code 254 ----
+  log('Verboden gebieden…');
+  let osm = [];
+  try {
+    const o = await haalOsm(vg.gebied, join(CACHE, 'cache', 'osm_verboden.json'));
+    osm = o.elementen;
+    if (o.uitCache) { verslag.osmFout = `${o.fout}; gebruikt: de versie uit de cache van ${o.uitCache}`; log('  OpenStreetMap niet bereikbaar, cache van ' + o.uitCache); }
+  } catch (e) { log('  OpenStreetMap niet bereikbaar: ' + e.message); verslag.osmFout = e.message; }
+  const verboden = verbodenGebieden(r, lijst, osm, vg.gebied, { uitsluiten: ['NK-OW'] });
+  verslag.verboden = verboden;
+  vg.verboden = verboden.overzicht.filter(x => x.cellen > 0).map(x => ({ soort: x.soort, id: x.id, km2: +x.km2.toFixed(2), boeien: x.boeien, turbines: x.turbines }));
+  log(`  ${verboden.cellen} cellen verboden in ${vg.verboden.length} gebieden`);
+
+  const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
+  const binPad = join(MAP, 'gegevens', bestand);
+  const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
+  const gz = gzipSync(r.codes, { level: 9 });
+  gz[4] = gz[5] = gz[6] = gz[7] = 0;     // tijdstempel in de gzip-kop leeg: zelfde inhoud = zelfde bestand
+  writeFileSync(binPad, gz);
+  const water = r.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0);
+  const plaatjes = [`bodem_${vandaag}_${celM}m.png`, `bodem_${vandaag}_${celM}m_krabbersgat.png`];
+  writeFileSync(join(CACHE, plaatjes[0]), plaatje(r, { schaal: celM >= 50 ? 0.5 : 0.25 }));
+  const KRAB = { west: 5.25, oost: 5.36, noord: 52.76, zuid: 52.68 };
+  writeFileSync(join(CACHE, plaatjes[1]), plaatje(r, { ...KRAB, schaal: 250 / celM }));
+  let meting = null;
+  if (arg('meet')) {
+    const ander = celM === 50 ? 25 : 50;
+    const m = herbemonster(rd, vg.gebied, ander);
+    meting = { cel_m: ander, water: m.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0), gzip: gzipSync(m.codes, { level: 9 }).length };
+    plaatjes.push(`bodem_${vandaag}_${ander}m_krabbersgat.png`);
+    writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
+  }
+  verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
+    stat: bodemStatistiek(r, vorig), vorig: !!vorig, top10: top10 ? top10.opgehaald : null, zonderMeting, buitenGebied, afsluitingen: vg.gebied.afsluitingen, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
+  vg.bodem = {
+    bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
+    cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
+    codering: '1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 254 = verboden gebied (water); 255 = geen water',
+    sha256: createHash('sha256').update(r.codes).digest('hex')
+  };
+  log(`  ${r.nx} x ${r.ny} cellen van ${celM} m, ${water} water, ${(gz.length / 1024).toFixed(0)} kB gzip`);
+
   vg.bronnen = [
     { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
-    { onderdeel: 'betonning', url: WFS, opgehaald: vandaag }
+    { onderdeel: 'betonning', url: WFS, opgehaald: vandaag },
+    ...(top10 ? [{ onderdeel: 'land en water (TOP10NL, eenmalig)', url: top10.bron, opgehaald: top10.opgehaald }] : []),
+    { onderdeel: 'windturbines en Marker Wadden (OpenStreetMap)', url: OVERPASS, opgehaald: vandaag }
   ];
   // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md
   verslag.naam = `ververs_${vandaag}`;

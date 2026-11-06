@@ -1,101 +1,101 @@
 {
  "240/12 K Medemblik – Stavoren": {
-  "s": 12218,
-  "overstag": 6,
+  "s": 12226,
+  "overstag": 5,
   "gijp": 2
  },
  "240/12 K Stavoren – Medemblik": {
-  "s": 12855,
-  "overstag": 25,
-  "gijp": 1
+  "s": 12825,
+  "overstag": 28,
+  "gijp": 0
  },
  "240/12 K Urk – Stavoren": {
-  "s": 13173,
+  "s": 13178,
   "overstag": 9,
   "gijp": 2
  },
  "240/12 K Stavoren – Urk": {
-  "s": 14185,
+  "s": 14180,
   "overstag": 23,
   "gijp": 1
  },
  "240/12 K Urk – Medemblik": {
-  "s": 15126,
+  "s": 15132,
   "overstag": 8,
   "gijp": 1
  },
  "240/12 K Medemblik – Urk": {
-  "s": 15786,
+  "s": 15781,
   "overstag": 15,
   "gijp": 1
  },
  "240/12 M Medemblik – Stavoren": {
-  "s": 15222,
+  "s": 15282,
   "overstag": 9,
-  "gijp": 3
+  "gijp": 4
  },
  "240/12 M Urk – Stavoren": {
-  "s": 15551,
-  "overstag": 7,
-  "gijp": 1
+  "s": 15588,
+  "overstag": 8,
+  "gijp": 2
  },
  "240/12 M Stavoren – Medemblik": {
-  "s": 16409,
+  "s": 16365,
   "overstag": 40,
-  "gijp": 3
+  "gijp": 2
  },
  "240/12 M Stavoren – Urk": {
-  "s": 16762,
+  "s": 16745,
   "overstag": 24,
   "gijp": 0
  },
  "240/12 M Urk – Medemblik": {
-  "s": 17929,
+  "s": 17895,
   "overstag": 8,
-  "gijp": 2
+  "gijp": 1
  },
  "240/12 M Medemblik – Urk": {
-  "s": 19191,
-  "overstag": 26,
-  "gijp": 0
+  "s": 19244,
+  "overstag": 27,
+  "gijp": 1
  },
  "240/12 L Urk – Stavoren": {
-  "s": 18772,
-  "overstag": 8,
-  "gijp": 0
+  "s": 18810,
+  "overstag": 9,
+  "gijp": 1
  },
  "240/12 L Stavoren – Urk": {
-  "s": 19547,
+  "s": 19529,
   "overstag": 15,
   "gijp": 1
  },
  "240/12 L Medemblik – Stavoren": {
-  "s": 19616,
-  "overstag": 9,
-  "gijp": 0
- },
- "240/12 L Urk – Medemblik": {
-  "s": 21238,
-  "overstag": 8,
-  "gijp": 2
- },
- "240/12 L Stavoren – Medemblik": {
-  "s": 21786,
-  "overstag": 33,
-  "gijp": 2
- },
- "240/12 L Medemblik – Urk": {
-  "s": 22186,
-  "overstag": 18,
-  "gijp": 0
- },
- "30/8 K Medemblik – Stavoren": {
-  "s": 16578,
-  "overstag": 28,
+  "s": 19683,
+  "overstag": 11,
   "gijp": 1
  },
+ "240/12 L Urk – Medemblik": {
+  "s": 21203,
+  "overstag": 8,
+  "gijp": 1
+ },
+ "240/12 L Stavoren – Medemblik": {
+  "s": 21738,
+  "overstag": 33,
+  "gijp": 1
+ },
+ "240/12 L Medemblik – Urk": {
+  "s": 22239,
+  "overstag": 19,
+  "gijp": 1
+ },
+ "30/8 K Medemblik – Stavoren": {
+  "s": 16575,
+  "overstag": 29,
+  "gijp": 2
+ },
  "30/8 K Urk – Stavoren": {
-  "s": 16681,
+  "s": 16678,
   "overstag": 19,
   "gijp": 2
  },
@@ -105,78 +105,78 @@
   "gijp": 1
  },
  "30/8 K Stavoren – Medemblik": {
-  "s": 17476,
-  "overstag": 24,
+  "s": 17467,
+  "overstag": 26,
   "gijp": 3
  },
  "30/8 K Urk – Medemblik": {
-  "s": 18387,
+  "s": 18384,
   "overstag": 1,
   "gijp": 2
  },
  "30/8 K Medemblik – Urk": {
   "s": 19529,
-  "overstag": 23,
-  "gijp": 2
+  "overstag": 24,
+  "gijp": 1
  },
  "30/8 M Medemblik – Stavoren": {
-  "s": 19578,
-  "overstag": 26,
+  "s": 19629,
+  "overstag": 28,
   "gijp": 1
  },
  "30/8 M Urk – Stavoren": {
-  "s": 20321,
+  "s": 20320,
   "overstag": 1,
   "gijp": 2
  },
  "30/8 M Stavoren – Medemblik": {
-  "s": 20539,
-  "overstag": 24,
+  "s": 20536,
+  "overstag": 26,
   "gijp": 5
  },
  "30/8 M Urk – Medemblik": {
-  "s": 20975,
+  "s": 20974,
   "overstag": 0,
   "gijp": 3
  },
  "30/8 M Medemblik – Urk": {
-  "s": 21775,
-  "overstag": 18,
+  "s": 21830,
+  "overstag": 20,
   "gijp": 1
  },
  "30/8 M Stavoren – Urk": {
   "s": 22994,
-  "overstag": 31,
+  "overstag": 33,
   "gijp": 2
  },
  "30/8 L Urk – Stavoren": {
-  "s": 24084,
+  "s": 24083,
   "overstag": 1,
   "gijp": 2
  },
  "30/8 L Urk – Medemblik": {
-  "s": 24881,
+  "s": 24879,
   "overstag": 0,
   "gijp": 3
  },
  "30/8 L Medemblik – Urk": {
-  "s": 25639,
-  "overstag": 18,
+  "s": 25695,
+  "overstag": 20,
   "gijp": 1
  },
  "30/8 L Medemblik – Stavoren": {
-  "s": 26684,
-  "overstag": 38,
+  "s": 26739,
+  "overstag": 40,
   "gijp": 1
  },
  "30/8 L Stavoren – Urk": {
   "s": 26782,
-  "overstag": 31,
+  "overstag": 33,
   "gijp": 2
  },
  "30/8 L Stavoren – Medemblik": {
-  "s": 27374,
-  "overstag": 33,
-  "gijp": 2
+  "s": 27403,
+  "overstag": 36,
+  "gijp": 3
  }
 }

@@ -36,7 +36,8 @@
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const lat = noord - y / schaal, lon = west + x / (kx * schaal), b = bodemOp(B, lat, lon), i = 4 * (y * W + x);
       let g = 255;
-      if (b == null) g = 205;                                                     // land
+      if (inVerbodenVaargebied(B, lat, lon)) g = (x + y) % 8 < 2 || (x - y + 8000) % 8 < 2 ? 40 : 235;   // verboden gebied: kruisarcering
+      else if (b == null) g = 205;                                                // land
       else {
         const diep = p - b - ks;
         if (diep < dg.op) g = (x + y) % 6 < 2 ? 70 : 225;                          // romp loopt vast: dichte arcering
@@ -141,7 +142,7 @@
             el('td', {}, windTekst(k.wind)), el('td', {}, k.overstag ? String(k.overstag + 1) : '1'), el('td', { class: 'db-klein' }, opm(k)))), 'rakken'),
           r.res.waarschuwingen.length ? el('ul', { class: 'db-klein' }, r.res.waarschuwingen.map(w => el('li', {}, w))) : '',
           metKaart && B ? [el('img', { class: 'db-kaart', src: routeKaart(r, P, B), alt: `Kaart ${r.naam}` }),
-            el('p', { class: 'db-klein' }, 'Kaart: zwarte lijn = berekende route met kruisslagen; grijs = land; stippels = te ondiep voor zwaard neer; dichte arcering = romp loopt vast; streeplijn = verboden gebied. Tijden = verwachte rondingstijd.')] : ''));
+            el('p', { class: 'db-klein' }, 'Kaart: zwarte lijn = berekende route met kruisslagen; grijs = land; stippels = te ondiep voor zwaard neer; dichte arcering = romp loopt vast; kruisarcering of streeplijn = verboden gebied. Tijden = verwachte rondingstijd.')] : ''));
       }
     }
 

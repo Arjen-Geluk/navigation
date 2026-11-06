@@ -15,21 +15,41 @@ const hoekVerschil = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180
 
 // ---- bodem ----
 // meta = vaargebied.bodem (west, noord, dlon, dlat, nx, ny), codes = Uint8Array (zie vaargebied.bodem.codering)
-function maakBodem(meta, codes) {
+// uitsneden (optioneel): fijne rasters van 10 m rond havens en sluizen, 1 = water volgens TOP10NL
+//   [{ id, west, noord, dlon, dlat, nx, ny, water: Uint8Array }]
+// Binnen een uitsnede bepaalt de uitsnede wat water is; de diepte komt uit het grove raster, of is (zonder RWS-meting)
+// de aangenomen havenbodem.
+const HAVENBODEM_AANNAME = -3.0;          // m NAP; aanname voor havens zonder RWS-meting
+function maakBodem(meta, codes, uitsneden = []) {
   if (codes.length !== meta.nx * meta.ny) throw new Error('bodemraster heeft de verkeerde grootte');
-  return { ...meta, codes, cw: meta.dlon * M_LON, ch: meta.dlat * M_LAT };
+  return { ...meta, codes, cw: meta.dlon * M_LON, ch: meta.dlat * M_LAT, uitsneden };
+}
+function uitsnedeOp(B, lat, lon) {
+  for (const u of B.uitsneden || []) {
+    const i = Math.floor((lon - u.west) / u.dlon), j = Math.floor((u.noord - lat) / u.dlat);
+    if (i >= 0 && j >= 0 && i < u.nx && j < u.ny) return { u, k: j * u.nx + i };
+  }
+  return null;
 }
 const celVan = (B, lat, lon) => {
   const i = Math.floor((lon - B.west) / B.dlon), j = Math.floor((B.noord - lat) / B.dlat);
   return i < 0 || j < 0 || i >= B.nx || j >= B.ny ? -1 : j * B.nx + i;
 };
+// verboden gebied van het vaargebied (gele A1-boeien, windparken, Marker Wadden): code 254 in het raster
+const VERBODEN_CODE = 254;
+const inVerbodenVaargebied = (B, lat, lon) => { const k = celVan(B, lat, lon); return k >= 0 && B.codes[k] === VERBODEN_CODE; };
 const celMidden = (B, k) => ({ lat: B.noord - (Math.floor(k / B.nx) + 0.5) * B.dlat, lon: B.west + (k % B.nx + 0.5) * B.dlon });
 // bodemhoogte in m NAP, of null (land, dijk of buiten het vaargebied)
 function bodemOp(B, lat, lon) {
   const k = celVan(B, lat, lon);
   if (k < 0) return null;
   const c = B.codes[k];
-  return c === 255 ? null : c / 10 - 25;
+  const f = uitsnedeOp(B, lat, lon);
+  if (f) {
+    if (!f.u.water[f.k] || c === 254) return null;                       // land volgens TOP10NL, of verboden gebied
+    return c < 250 ? c / 10 - 25 : HAVENBODEM_AANNAME;                   // RWS-diepte, of de aanname in de haven
+  }
+  return c > 250 ? null : c / 10 - 25;      // 254 = verboden gebied, 255 = geen water
 }
 
 // ---- zones ----
@@ -66,13 +86,25 @@ function maakVaarwater(B, P, instellingen) {
   const zones = (s.zones || []).filter(z => z.actief && z.regel === 'verboden').map(z => maakZone(z, s.marge_verboden_m ?? 50));
   const V = { B, P, peil: s.peil, kielspeling: s.kielspeling, zones, maskers: {}, paden: new Map() };
   V.romp = diepgangBij(P, 'op');
+  V.grens = s.peil - V.romp - s.kielspeling;          // bodem moet dieper liggen dan dit (romp, zwaard op)
   V.masker = maakMasker(V, V.romp);           // harde grens: de romp (zwaard op) en de verboden gebieden
   return V;
 }
 // 1 = bevaarbaar voor deze diepgang en buiten de verboden gebieden
 function maakMasker(V, diepgang) {
   const B = V.B, m = new Uint8Array(B.nx * B.ny), grens = V.peil - diepgang - V.kielspeling;   // bodem moet dieper liggen dan dit
-  for (let k = 0; k < m.length; k++) { const c = B.codes[k]; m[k] = c !== 255 && c / 10 - 25 <= grens + 1e-9 ? 1 : 0; }
+  for (let k = 0; k < m.length; k++) { const c = B.codes[k]; m[k] = c <= 250 && c / 10 - 25 <= grens + 1e-9 ? 1 : 0; }
+  for (const u of B.uitsneden || []) {
+    const open = new Map();
+    for (let j = 0; j < u.ny; j++) for (let i = 0; i < u.nx; i++) {
+      const lat = u.noord - (j + 0.5) * u.dlat, lon = u.west + (i + 0.5) * u.dlon, k = celVan(B, lat, lon);
+      if (k < 0) continue;
+      if (!open.has(k)) open.set(k, 0);
+      const b = u.water[j * u.nx + i] ? bodemOp(B, lat, lon) : null;
+      if (b != null && b <= grens + 1e-9) open.set(k, 1);
+    }
+    for (const [k, v] of open) m[k] = v;
+  }
   for (const z of V.zones) {
     const a = naarLL(z.min.x - z.marge, z.max.y + z.marge), b = naarLL(z.max.x + z.marge, z.min.y - z.marge);
     const i0 = Math.max(0, Math.floor((a.lon - B.west) / B.dlon)), i1 = Math.min(B.nx - 1, Math.ceil((b.lon - B.west) / B.dlon));
@@ -99,8 +131,15 @@ const inVerbodenZone = (V, lat, lon) => { const p = naarXY(lat, lon); return V.z
 // Vrij zicht: de rechte lijn van a naar b gaat alleen door open cellen van het masker.
 function vrijZicht(V, a, b, m = V.masker) {
   const d = afstandM(a, b), n = Math.max(1, Math.ceil(d / 20));
-  for (let s = 0; s <= n; s++) {
-    const k = celVan(V.B, a.lat + (b.lat - a.lat) * s / n, a.lon + (b.lon - a.lon) * s / n);
+  const fijn = m === V.masker && (V.B.uitsneden || []).length, stap = fijn ? Math.max(n, Math.ceil(d / 5)) : n;
+  for (let s = 0; s <= stap; s++) {
+    const lat = a.lat + (b.lat - a.lat) * s / stap, lon = a.lon + (b.lon - a.lon) * s / stap;
+    if (fijn && uitsnedeOp(V.B, lat, lon)) {
+      const bo = bodemOp(V.B, lat, lon);
+      if (bo == null || bo > V.grens + 1e-9 || inVerbodenZone(V, lat, lon)) return false;
+      continue;
+    }
+    const k = celVan(V.B, lat, lon);
     if (k < 0 || !m[k]) return false;
   }
   return true;

@@ -3,7 +3,7 @@
   let kaart = null, tijd = null;
   const lagen = {};             // naam → Leaflet-laag
   const ONDERGRONDEN = {
-    vast: { naam: 'Vast (ingebakken, ook offline)' },
+    vast: { naam: 'Vast (TOP10NL, ingebakken, ook offline)' },
     topo: { naam: 'Topografisch', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
     foto: { naam: 'Luchtfoto', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, Maxar, Earthstar Geographics' }
   };
@@ -62,13 +62,45 @@
     ctx.putImageData(img, 0, 0);
     return L.imageOverlay(c.toDataURL(), [[B.noord - B.ny * B.dlat, B.west], [B.noord, B.west + B.nx * B.dlon]], { className: 'raster', interactive: false });
   }
-  const vastRaster = () => rasterLaag(c => c === 255 ? [233, 230, 222] : [196, 220, 238]);
-  const diepteRaster = () => { const p = peil(); return rasterLaag(c => { if (c === 255) return null; const d = p - (c / 10 - 25); return [...diepteKleur(d), 210]; }); };
+  const LAND = [233, 230, 222], WATER = [196, 220, 238];
+  // TOP10NL-ondergrond: één keer uitpakken en als canvas bewaren
+  let top10 = null;
+  const top10Klaar = (async () => {
+    const b64 = $('ondergrond').textContent.trim(), r = G.top10nl && G.top10nl.raster;
+    if (!b64 || !r) return null;
+    const gz = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const bits = new Uint8Array(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    const c = document.createElement('canvas'); c.width = r.nx; c.height = r.ny;
+    const ctx = c.getContext('2d'), img = ctx.createImageData(r.nx, r.ny), d = img.data, rij = Math.ceil(r.nx / 8);
+    for (let j = 0; j < r.ny; j++) for (let i = 0; i < r.nx; i++) {
+      const k = 4 * (j * r.nx + i), w = bits[j * rij + (i >> 3)] & (0x80 >> (i & 7));
+      d.set(w ? WATER : LAND, k); d[k + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    top10 = { url: c.toDataURL(), grenzen: [[r.noord - r.ny * r.dlat, r.west], [r.noord, r.west + r.nx * r.dlon]] };
+    return top10;
+  })();
+  function uitsnedeLaag(u) {
+    const c = document.createElement('canvas'); c.width = u.nx; c.height = u.ny;
+    const ctx = c.getContext('2d'), img = ctx.createImageData(u.nx, u.ny), d = img.data;
+    for (let k = 0; k < u.nx * u.ny; k++) { d.set(u.water[k] ? WATER : LAND, 4 * k); d[4 * k + 3] = 255; }
+    ctx.putImageData(img, 0, 0);
+    return L.imageOverlay(c.toDataURL(), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { interactive: false });
+  }
+  function vastRaster() {
+    if (!top10) return rasterLaag(c => c === 255 ? LAND : c === 254 ? [226, 190, 214] : WATER);   // terugval: bodemraster
+    const g = L.layerGroup([L.imageOverlay(top10.url, top10.grenzen, { interactive: false, className: 'vloeiend' })]);
+    for (const u of (BODEM && BODEM.uitsneden) || []) g.addLayer(uitsnedeLaag(u));
+    return g;
+  }
+  top10Klaar.then(() => { if (kaart && S.kaart.ondergrond === 'vast') tekenOndergrond(); });
+  const verbodenRaster = () => rasterLaag(c => c === 254 ? [180, 40, 120, 150] : null);
+  const diepteRaster = () => { const p = peil(); return rasterLaag(c => { if (c > 250) return null; const d = p - (c / 10 - 25); return [...diepteKleur(d), 210]; }); };
   function bevaarRaster() {
     const P = SCHIP.actief; if (!P) return null;
     const p = peil(), ks = rekenOpties().kielspeling, dg = P.schip.diepgang_m, half = Number.isFinite(dg.half) ? dg.half : dg.neer;
     return rasterLaag(c => {
-      if (c === 255) return null;
+      if (c > 250) return null;
       const d = p - (c / 10 - 25) - ks;
       return d >= dg.neer ? null : d >= half ? [240, 200, 60, 150] : d >= dg.op ? [235, 130, 40, 170] : [200, 40, 40, 190];
     });
@@ -79,7 +111,7 @@
     const o = ONDERGRONDEN[S.kaart.ondergrond];
     if (o.url) lagen.ondergrond = L.tileLayer(o.url, { maxZoom: 17, attribution: o.attr }).on('tileerror', () => { $('kaartinfo').textContent = 'De online ondergrond antwoordt niet; kies Vast.'; });
     else if (S.kaart.ondergrond === 'vast' && BODEM) lagen.ondergrond = vastRaster();
-    if (lagen.ondergrond) lagen.ondergrond.addTo(kaart).bringToBack();
+    if (lagen.ondergrond) { lagen.ondergrond.addTo(kaart); if (lagen.ondergrond.bringToBack) lagen.ondergrond.bringToBack(); else { const ls = lagen.ondergrond.getLayers(); [...ls.slice(1), ls[0]].forEach(l => l.bringToBack()); } }   // uitsneden boven de grote ondergrond
   }
 
   // ---- alle lagen opnieuw tekenen ----
@@ -97,6 +129,8 @@
     }
     for (const k of ['betonning', 'zones', 'route', 'wind']) if (lagen[k]) { kaart.removeLayer(lagen[k]); lagen[k] = null; }
     if (S.kaart.lagen.betonning && G.betonning) lagen.betonning = betonningLaag().addTo(kaart);
+    if (lagen.verbodenRaster) { kaart.removeLayer(lagen.verbodenRaster); lagen.verbodenRaster = null; }
+    if (S.kaart.lagen.zones && BODEM) lagen.verbodenRaster = verbodenRaster().addTo(kaart);
     if (S.kaart.lagen.zones) lagen.zones = zonesLaag().addTo(kaart);
     lagen.boot = null;
     if (S.kaart.lagen.route) lagen.route = routeLaag().addTo(kaart);
@@ -226,7 +260,8 @@
     if (!BODEM) return;
     const { lat, lng } = e.latlng, b = bodemOp(BODEM, lat, lng);
     let html = `<b>${lat.toFixed(5)}° N, ${lng.toFixed(5)}° O</b><br>`;
-    if (b == null) html += 'Geen water in het vaargebied.';
+    if (inVerbodenVaargebied(BODEM, lat, lng)) html += '<b>Verboden gebied</b> (gele boeien A1, windpark of Marker Wadden).';
+    else if (b == null) html += 'Geen water in het vaargebied.';
     else {
       const d = peil() - b;
       html += `Bodem ${getal(b, 1)} m NAP · diepte ${getal(d, 1)} m bij peil ${getal(peil(), 2)}`;

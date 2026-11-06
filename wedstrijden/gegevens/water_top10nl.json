@@ -1,0 +1,32 @@
+{
+  "formaat": "watermasker/1",
+  "bron": "TOP10NL (Kadaster) via PDOK, laag waterdeel: https://service.pdok.nl/brt/top10nl/wms/v1_0",
+  "licentie": "CC BY 4.0 (Kadaster)",
+  "opgehaald": "2026-11-06",
+  "raster": { "west": 4.9, "noord": 53.1, "dlon": 0.000741, "dlat": 0.00045, "nx": 1417, "ny": 1889, "cel_m": 50 },
+  "codering": "1 byte per cel (zelfde raster als het bodembestand): aantal van de 10 × 10 monsterpunten dat water is (0..100)",
+  "monsterpunten": 100,
+  "sha256": "e30ea456d70fac19ef004b88e670ef5c3cacaef6a6b02205c60e557167500bfb",
+  "havens": {
+    "bestand": "havens_top10nl_10m.bin",
+    "cel_m": 10,
+    "opgehaald": "2026-11-06",
+    "codering": "1 byte per cel van 10 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens TOP10NL, 0 = land",
+    "uitsneden": [
+      { "id": "buiten-ij", "west": 4.96, "noord": 52.4, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 473, "ny": 423, "offset": 0 },
+      { "id": "workum", "west": 5.385, "noord": 52.985, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 439, "ny": 390, "offset": 200079 },
+      { "id": "enkhuizen", "west": 5.265, "noord": 52.712, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 372, "ny": 379, "offset": 371289 },
+      { "id": "lelystad", "west": 5.405, "noord": 52.55, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 338, "ny": 445, "offset": 512277 },
+      { "id": "medemblik", "west": 5.098, "noord": 52.782, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 203, "ny": 223, "offset": 662687 },
+      { "id": "lemmer", "west": 5.685, "noord": 52.852, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 304, "ny": 267, "offset": 707956 },
+      { "id": "stavoren", "west": 5.34, "noord": 52.898, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 216, "ny": 223, "offset": 789124 },
+      { "id": "urk", "west": 5.58, "noord": 52.67, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 237, "ny": 223, "offset": 837292 },
+      { "id": "hoorn", "west": 5.045, "noord": 52.648, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 270, "ny": 256, "offset": 890143 },
+      { "id": "volendam", "west": 5.055, "noord": 52.505, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 203, "ny": 223, "offset": 959263 },
+      { "id": "blocq", "west": 5.21, "noord": 52.432, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 237, "ny": 223, "offset": 1004532 }
+    ],
+    "sha256": "4e1ecabc639ead4b6186ee4f62ef3c9bca9e55362fd25cf93fc292fbd616580e",
+    "actief": ["enkhuizen"],
+    "actief_toelichting": "alleen deze uitsneden gebruikt de rekenkern; de overige volgen na de IENC"
+  }
+}

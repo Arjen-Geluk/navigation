@@ -7,7 +7,7 @@ import { laadKern, laadGegevens, vasteWind } from './kern.mjs';
 const K = laadKern();
 const G = laadGegevens(K);
 const P = K.polarUittreksel(JSON.parse(readFileSync(new URL('../../polartool/voorbeeld/voorbeeldschip_polar_v1_2026-11-05.json', import.meta.url), 'utf8')));
-const B = K.maakBodem(G.vaargebied.bodem, G.codes);
+const B = K.maakBodem(G.vaargebied.bodem, G.codes, G.uitsneden);
 const E = G.edities['3-steden_2026'];
 const V = K.maakVaarwater(B, P, { peil: -0.25, kielspeling: P.schip.kielspeling_m, marge_verboden_m: 50, zones: E.zones });
 const t0 = K.lokaleTijdNaarMs(E.datum, E.start, E.tijdzone);
@@ -93,4 +93,17 @@ test('rekenbestand: controles en bestandsnaam', () => {
   assert.match(K.leesRekenbestand({ formaat: 'wedstrijdberekening/9' }).fout, /onbekende formaatversie/);
   assert.match(K.leesRekenbestand({ formaat: 'wedstrijdberekening/1' }).fout, /onvolledig/);
   assert.equal(K.rekenbestandNaam('3-steden', '2026-10-10', 'Zeeën & Co', Date.parse('2026-10-10T06:15:00Z')), '3-steden_2026-10-10_Zeeen_Co_0815.json');
+});
+
+test('uitsneden: haven Enkhuizen op 10 m', () => {
+  const u = G.uitsneden.find(x => x.id === 'enkhuizen');
+  assert.ok(u, 'uitsnede Enkhuizen aanwezig');
+  // ergens in de uitsnede ligt water dat in het grove raster land is (havens, smalle geulen)
+  let fijnWater = 0;
+  for (let j = 0; j < u.ny; j += 3) for (let i = 0; i < u.nx; i += 3) {
+    const lat = u.noord - (j + 0.5) * u.dlat, lon = u.west + (i + 0.5) * u.dlon, k = K.celVan(B, lat, lon);
+    if (u.water[j * u.nx + i] && B.codes[k] === 255 && K.bodemOp(B, lat, lon) != null) fijnWater++;
+  }
+  assert.ok(fijnWater > 10, `${fijnWater} fijne watercellen waar het grove raster land is`);
+  assert.equal(K.bodemOp(B, 52.705, 5.25), null, 'Enkhuizen (land) blijft land');
 });

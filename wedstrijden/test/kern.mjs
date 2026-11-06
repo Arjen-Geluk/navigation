@@ -21,7 +21,14 @@ export function laadGegevens(K = laadKern()) {
   // edities met de posities van de boeien uit de RWS-betonning, net als in het bouwscript
   const index = K.betonningIndex(JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand)).markeringen);
   const edities = Object.fromEntries(readdirSync(new URL('gegevens/wedstrijden/', MAP)).map(f => [f.replace('.json', ''), K.metPosities(JSON.parse(lees('gegevens/wedstrijden/' + f)), index).editie]));
-  return { vaargebied, codes, edities };
+  // fijne uitsneden van 10 m rond havens en sluizen (TOP10NL)
+  let uitsneden = [];
+  try {
+    const m = JSON.parse(lees('gegevens/water_top10nl.json')).havens;
+    if (m) { const alles = new Uint8Array(gunzipSync(readFileSync(new URL('gegevens/' + m.bestand, MAP))));
+      uitsneden = m.uitsneden.filter(u => (m.actief || []).includes(u.id)).map(u => ({ ...u, water: alles.subarray(u.offset, u.offset + u.nx * u.ny) })); }
+  } catch (e) { /* geen uitsneden */ }
+  return { vaargebied, codes, edities, uitsneden };
 }
 
 // constante wind (richting, kn) over het hele raster, van t0 tot t0 + uren
