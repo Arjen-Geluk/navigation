@@ -2,17 +2,17 @@
   "formaat": "wedstrijdeditie/1",
   "wedstrijd": { "id": "3-steden", "naam": "Klipperrace 3 Steden" },
   "jaar": 2026,
-  "versie": 1,
+  "versie": 2,
   "regeltype": "varianten",
   "status": {
-    "gecontroleerd": false,
-    "tegen": null,
-    "datum_bepalingen": null,
-    "bronbestand": null,
-    "toelichting": "Overgenomen uit de oude 3-stedenrace-tool (rondingszijden 2026). Nog te controleren tegen de wedstrijdbepalingen 2026; datum en tijden ook."
+    "gecontroleerd": true,
+    "tegen": "Wedstrijdbepalingen Klipperrace 2026, V1.1",
+    "datum_bepalingen": "2026-09-15",
+    "bronbestand": "https://klipperrace.nl/public/media/2026/wedstrijdbepalingen_klipperrace_2026.pdf",
+    "toelichting": "Nagelopen op 6-11-2026: datum 10-10-2026, alle 18 routes van art. 12 en finishlimiet 19:00 kloppen; start gecorrigeerd van 09:00 naar 10:00 (eerste attentiesein 09:50). KG-9, De Ven en ET-N1 staan niet in de bepalingen (via-punten uit de oude tool); De Hop wordt in de bepalingen niet genoemd als verboden gebied."
   },
   "datum": "2026-10-10",
-  "start": "09:00",
+  "start": "10:00",
   "finishlimiet": "19:00",
   "tijdzone": "Europe/Amsterdam",
   "punten": [

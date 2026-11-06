@@ -2,14 +2,14 @@
   "formaat": "wedstrijdeditie/1",
   "wedstrijd": { "id": "3-steden", "naam": "Klipperrace 3 Steden" },
   "jaar": 2025,
-  "versie": 1,
+  "versie": 2,
   "regeltype": "varianten",
   "status": {
     "gecontroleerd": true,
-    "tegen": "Wedstrijdbepalingen 3-stedenrace v1.4",
+    "tegen": "Wedstrijdbepalingen 50e Enkhuizer Klipperrace 2025, versie 1.4",
     "datum_bepalingen": "2025-10-10",
-    "bronbestand": "Wedstrijdbepalingen 3-stedenrace 2025 v1.4",
-    "toelichting": "Overgenomen uit de oude 3-stedenrace-tool (jaarset \"2025 (wedstrijdbepalingen v1.4)\")"
+    "bronbestand": "20251010-wedstrijdbepalingen-v14.pdf",
+    "toelichting": "Nagelopen op 6-11-2026: datum, start (attentiesein 09:50), finishlimiet 19:00 en alle 18 routes van art. 12 (boeien, volgorde, rondingszijden) kloppen. KG-9, De Ven en ET-N1 staan niet in de bepalingen (via-punten uit de oude tool); De Hop wordt in de bepalingen niet genoemd als verboden gebied."
   },
   "datum": "2025-10-11",
   "start": "10:00",
