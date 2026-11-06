@@ -120,6 +120,23 @@ window.addEventListener('message', e => {
 if (window.opener) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin);
 ```
 
+### Tweede weg: via de browseropslag (sinds Polartool 0.12)
+
+Niet elke browser geeft het nieuwe tabblad een verbinding terug (`window.opener`); sommige openen de pagina zelfs in
+hetzelfde tabblad. Daarom zet de polartool de polar vóór het openen ook klaar in de browseropslag van de site
+(`localStorage`, alleen voor pagina's van dezelfde site):
+
+- sleutel `polartool:overdracht`, waarde `{ protocol: 1, id, tijd, bestand }` (`tijd` in ms, `id` een willekeurige tekst).
+
+De wedstrijdpagina leest die sleutel bij het laden:
+
+1. Is de waarde jonger dan 2 minuten: controleren en inladen zoals hierboven, en de sleutel **verwijderen**.
+2. Antwoorden onder de sleutel `polartool:overdracht:antwoord` met `{ id, type: 'polartool:ontvangen', schip_id, versie }`
+   of `{ id, type: 'polartool:geweigerd', reden }`. De polartool hoort dat via het `storage`-event (alleen als hij nog openstaat).
+3. Is de polar zo ingeladen, dan stuurt de pagina geen `polartool:klaar` meer; anders gaat het verder via `postMessage`.
+
+Een oudere waarde (> 2 minuten) negeert de pagina en verwijdert ze.
+
 Reageert een wedstrijdpagina niet binnen 15 s, dan meldt de polartool dat de pagina de polar nog niet kan ontvangen en
 dat de gebruiker het bestand daar zelf moet inladen. Elke wedstrijdpagina moet daarom **ook** een polarbestand kunnen
 inladen via een bestandskeuze.

@@ -88,7 +88,24 @@ const SCHIP = (function () {
     melding('', ''); toon(); luisteraars.forEach(f => f(null));
   });
   toon();
-  if (window.opener) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin === 'null' ? '*' : location.origin);
+
+  // "Openen in wedstrijd", tweede weg: de polartool zette de polar klaar in de browseropslag (FORMAAT.md)
+  const OVERDRACHT = 'polartool:overdracht';
+  let overgedragen = false;
+  try {
+    const ruw = localStorage.getItem(OVERDRACHT);
+    if (ruw) {
+      localStorage.removeItem(OVERDRACHT);
+      const d = JSON.parse(ruw);
+      if (d && d.bestand && Date.now() - d.tijd < 120000) {
+        const fout = laad(d.bestand, 'ontvangen van de polartool');
+        overgedragen = !fout;
+        localStorage.setItem(OVERDRACHT + ':antwoord', JSON.stringify(fout ? { id: d.id, type: 'polartool:geweigerd', reden: fout }
+          : { id: d.id, type: 'polartool:ontvangen', schip_id: d.bestand.schip.id, versie: d.bestand.versie }));
+      }
+    }
+  } catch (e) { /* geen opslag: dan alleen postMessage */ }
+  if (window.opener && !overgedragen) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin === 'null' ? '*' : location.origin);
 
   return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f) };
 })();
