@@ -1,0 +1,17 @@
+# Regeleinden: in de repo altijd LF, op schijf volgens de eigen instelling (core.autocrlf).
+# Zo ziet elke omgeving (Windows, WSL, Linux) dezelfde status, los van zijn git-instellingen.
+* text=auto
+
+# Binaire bestanden nooit omzetten
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.bin  binary
+*.tif  binary
+*.tiff binary
+*.gz   binary
+*.zip  binary
