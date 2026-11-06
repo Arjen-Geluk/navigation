@@ -1,14 +1,36 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 0,
+  "versie": 1,
   "datum": "2026-11-06",
   "toelichting": "Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.",
   "gebied": { "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ", "west": 4.9, "zuid": 52.25, "oost": 5.95, "noord": 53.1 },
   "peil": { "eenheid": "m NAP", "ijsselmeer": { "zomer": null, "winter": null }, "markermeer": { "zomer": null, "winter": null }, "bron": null },
-  "bodem": null,
-  "betonning": null,
+  "bodem": {
+    "bestand": "bodem_ijsselmeergebied_50m.bin",
+    "opname": 2022,
+    "bron": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)",
+    "opgehaald": "2026-11-06",
+    "cel_m": 50,
+    "west": 4.9,
+    "noord": 53.1,
+    "dlon": 0.000741,
+    "dlat": 0.00045,
+    "nx": 1417,
+    "ny": 1889,
+    "codering": "1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water",
+    "sha256": "cf5cc85546020743dfbced03e0db56f420de58342ff1e2e15bd6f57e327ecb03"
+  },
+  "betonning": {
+    "bestand": "betonning_ijsselmeergebied.json",
+    "opgehaald": "2026-11-06",
+    "aantal": 1674,
+    "bron": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"
+  },
   "havens": [],
   "doorgangen": [],
-  "bronnen": []
+  "bronnen": [
+    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-06" },
+    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-06" }
+  ]
 }
