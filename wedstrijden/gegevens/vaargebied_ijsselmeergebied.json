@@ -1,0 +1,14 @@
+{
+  "formaat": "vaargebied/1",
+  "naam": "IJsselmeergebied",
+  "versie": 0,
+  "datum": "2026-11-06",
+  "toelichting": "Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.",
+  "gebied": { "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ", "west": 4.9, "zuid": 52.25, "oost": 5.95, "noord": 53.1 },
+  "peil": { "eenheid": "m NAP", "ijsselmeer": { "zomer": null, "winter": null }, "markermeer": { "zomer": null, "winter": null }, "bron": null },
+  "bodem": null,
+  "betonning": null,
+  "havens": [],
+  "doorgangen": [],
+  "bronnen": []
+}
