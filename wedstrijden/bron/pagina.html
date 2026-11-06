@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wedstrijden IJsselmeergebied</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2312263F'/%3E%3Cpath d='M16 2.5 L18.8 11.2 L27.5 14 L18.8 16.8 L16 25.5 L13.2 16.8 L4.5 14 L13.2 11.2 Z' fill='%23C9A24A'/%3E%3Crect x='8' y='27.5' width='16' height='2' rx='1' fill='%23F3EDE0'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#12263F">
+<meta name="description" content="Snelste route voor platbodemwedstrijden in het IJsselmeergebied, uit je eigen polarbestand en de windverwachting. Alles in de browser.">
+<!-- GEBOUWD BESTAND: niet met de hand bewerken. Bron: wedstrijden/bron/, bouwen met: npm run bouw -->
+<style>
+/*@@LEAFLET_CSS@@*/
+</style>
+<style>
+/*@@STIJL@@*/
+</style>
+</head>
+<body>
+<header>
+  <div class="binnen">
+    <h1><span class="anker"></span>Wedstrijden IJsselmeergebied</h1><span class="toolversie" id="toolversie"></span>
+    <div class="sub">Snelste route per wedstrijd en baan, uit je eigen polarbestand en de windverwachting · in opbouw</div>
+  </div>
+</header>
+<main>
+  <section class="paneel">
+    <div class="rij">
+      <label>Editie <select id="editiekeuze"></select></label>
+      <label>Baan <select id="baankeuze"></select></label>
+      <span class="chip" id="editiestatus"></span>
+    </div>
+    <div id="kaart"></div>
+    <p class="sub" id="versies"></p>
+  </section>
+  <section class="paneel">
+    <h2>Routes van deze baan</h2>
+    <ol id="routelijst"></ol>
+  </section>
+</main>
+<footer><p class="sub">Alleen voor de voorbereiding, geen navigatiemiddel: de kaart, de betonning en de wedstrijdleiding gaan altijd voor. Licentie CC BY-NC-ND 4.0.</p></footer>
+<script type="application/json" id="gegevens">/*@@GEGEVENS@@*/</script>
+<script>
+/*@@LEAFLET_JS@@*/
+</script>
+<script>
+/*@@SCRIPTS@@*/
+</script>
+</body>
+</html>

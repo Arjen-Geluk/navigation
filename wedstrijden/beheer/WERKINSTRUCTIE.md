@@ -1,0 +1,71 @@
+# Werkinstructie beheer — Wedstrijden IJsselmeergebied
+
+Voor Arjen: zo ververs je het vaargebied, maak je een nieuwe editie en zet je de pagina live.
+Alles gaat in Claude Code in de map `navigation`. De zin tussen aanhalingstekens kun je zo intypen.
+
+## Eenmalig: voorbereiden
+
+- Node.js LTS staat op deze computer (`node --version`).
+- In `navigation/wedstrijden`: `npm install` (haalt Leaflet en de GeoTIFF-lezer op; komt niet in git).
+
+## Hoe het in elkaar zit
+
+| Wat | Waar | Wie past het aan |
+|---|---|---|
+| Vaargebied (bodem, betonning, havens, doorgangen, peilen) | `gegevens/vaargebied_ijsselmeergebied.json` (+ `gegevens/bodem_*.bin`) | ververs-script, daarna Arjen |
+| Een wedstrijdeditie | `gegevens/wedstrijden/<wedstrijd>_<jaar>.json` | Arjen, met Claude Code |
+| De pagina zelf (opmaak, rekenkern) | `bron/` | Claude Code |
+| De gepubliceerde pagina | `index.html` | **alleen het bouwscript** |
+
+`index.html` is gebouwd: bewerk hem nooit met de hand. Na elke wijziging in `bron/` of `gegevens/` volgt `npm run bouw`.
+
+## Vaargebied verversen
+
+Wanneer: vóór elk wedstrijdseizoen, en als RWS een nieuwe bodemopname of betonning publiceert.
+
+> "ververs het vaargebied"
+
+1. Claude Code draait `npm run ververs`. Het script haalt bodem en betonning opnieuw op bij RWS en controleert alle
+   bron-URL's (RWS, Open-Meteo, kaartondergronden).
+2. Het schrijft een verslag in `beheer/verslagen/`: aantal tonnen, nieuwe, verdwenen en verschoven tonnen
+   (wedstrijdboeien apart), verschil in bodem per deelgebied, nieuwere bodemopname beschikbaar, URL's die niet antwoorden.
+3. **Jij leest het verslag en keurt goed.** Let vooral op verschoven wedstrijdboeien en kapotte URL's.
+4. Na je akkoord: nieuw versienummer van het vaargebied, `npm run bouw`, `npm test`, commit.
+
+## Nieuwe editie maken (nieuw jaar of nieuwe wedstrijd)
+
+Wanneer: als de wedstrijdbepalingen of het reglement van het nieuwe jaar verschijnen.
+
+> "maak editie 2027 van de 3-stedenrace, op basis van 2026; hier zijn de wedstrijdbepalingen: …"
+
+1. Kopieer de editie van vorig jaar naar `gegevens/wedstrijden/<wedstrijd>_<nieuw jaar>.json`; zet `jaar` en `versie: 1`.
+2. Loop de wedstrijdbepalingen na: datum, starttijd, finishlimiet, boeien en via-punten, rondingszijden, banen en routes,
+   verboden gebieden.
+3. Zet de status:
+   - nog niet nagelopen: `"gecontroleerd": false`;
+   - nagelopen: `"gecontroleerd": true`, `"tegen"` (naam en versie van de bepalingen), `"datum_bepalingen"` en `"bronbestand"`.
+4. `npm run bouw` en `npm test`. De bouw weigert een editie met fouten (onbekend punt in een route, datum in een ander jaar…).
+5. Bekijk de pagina lokaal (zie onder) en commit.
+
+Een fout in een gepubliceerde editie herstellen: pas het bestand aan en verhoog `versie` met 1. Een berekening onthoudt met
+welke editieversie ze gemaakt is.
+
+## Bouwen, bekijken en publiceren
+
+```
+npm run bouw              # bouwt index.html uit bron/ en gegevens/
+npm test                  # controleert de bron en of index.html actueel is
+npm run toon              # lokaal bekijken: http://localhost:8642/navigation/wedstrijden/
+```
+
+- De bouw controleert ook de privacy: namen uit de polar- en scheepsbestanden in `lokaal/` (en uit
+  `lokaal/verboden_woorden.txt`, één woord per regel) mogen niet in de pagina staan.
+- Publiceren = pushen naar `main`; GitHub Pages zet het binnen enkele minuten live op
+  https://arjen-geluk.github.io/navigation/wedstrijden/. **Pushen alleen na Arjens akkoord.**
+
+## Afspraken
+
+- Geen scheepsnaam of herleidbare scheepsdata in `bron/`, `gegevens/` of `test/`. Echte data alleen in `lokaal/`.
+- De oude map `3-stedenrace/` blijft ongewijzigd als archief.
+- Versies: de tool (`bron/kern/00_versie.js`), het vaargebied en elke editie hebben elk een eigen versienummer;
+  alle drie komen in het rekenbestand.
