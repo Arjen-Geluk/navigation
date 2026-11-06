@@ -108,7 +108,7 @@ const SCHIP = (function () {
   } catch (e) { /* geen opslag: dan alleen postMessage */ }
   if (window.opener && !overgedragen) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin === 'null' ? '*' : location.origin);
 
-  return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f) };
+  return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f), laad };
 })();
 
 // Instellingen per berekening (horen bij de pagina, niet in het polarbestand)

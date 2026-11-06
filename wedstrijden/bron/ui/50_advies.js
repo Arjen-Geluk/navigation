@@ -38,7 +38,7 @@ function gekozenRoute() {
     setTimeout(() => { balk.hidden = true; }, 300);
     $('bereken').disabled = false;
     UITKOMST = { banen, limiet: limietMs(), gemaakt: Date.now(), verouderd: false, rekentijd_ms: performance.now() - t0,
-      afwijkend: heeftAfwijkingen(), factor: S.schip.factor, polar: polarLabel(P) };
+      afwijkend: heeftAfwijkingen(), factor: S.schip.factor, polar: polarLabel(P), polarId: P.schip.id, polarVersie: P.versie };
     if (!S.selectie.baan || !banen[S.selectie.baan]) S.selectie.baan = wl || volgorde[0];
     S.selectie.route = banen[S.selectie.baan].snelste?.naam || null;
     bewaar();
@@ -49,7 +49,7 @@ function gekozenRoute() {
   op('bereken', bereken);
 
   const verouderd = () => { if (UITKOMST && !UITKOMST.verouderd) { UITKOMST.verouderd = true; toon(); } else toonStatus(); };
-  op('invoer', verouderd); op('wind', verouderd); op('polar', verouderd); op('editie', () => { UITKOMST = null; toon(); meld('uitkomst', null); });
+  op('invoer', verouderd); op('wind', verouderd); op('polar', p => { if (UITKOMST && p && UITKOMST.polarId === p.schip.id && UITKOMST.polarVersie === p.versie) return; verouderd(); }); op('editie', () => { UITKOMST = null; toon(); meld('uitkomst', null); });
 
   function toonStatus() {
     const fout = kanRekenen();
@@ -131,6 +131,15 @@ function gekozenRoute() {
       })));
     $('routewaarschuwingen').replaceChildren(...x.waarschuwingen.map(w => el('div', { class: 'melding let' }, w)));
   }
+  // uitkomst uit een rekenbestand: tonen zoals berekend, zonder opnieuw te rekenen
+  op('rekenbestand', u => {
+    UITKOMST = u;
+    const wl = invoer().baanWL, banen = Object.keys(u.banen);
+    S.selectie.baan = banen.includes(wl) ? wl : banen[0];
+    S.selectie.route = u.banen[S.selectie.baan].snelste?.naam || null;
+    VAARWATER = BODEM && SCHIP.actief ? maakVaarwater(BODEM, SCHIP.actief, { peil: peil(), kielspeling: rekenOpties().kielspeling, marge_verboden_m: huidigeEditie().standaard.marge_verboden_m ?? 50, zones: huidigeEditie().zones }) : null;
+    bewaar(); toon(); meld('uitkomst', u);
+  });
   op('selectie', () => { if (UITKOMST) { toonRoutes(); toonRakken(); } });
   toon();
 })();

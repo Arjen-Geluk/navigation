@@ -150,8 +150,19 @@
 
   <section class="tab" id="tab-uitvoer">
     <div class="paneel">
-      <h2>Draaiboek &amp; uitvoer</h2>
-      <p>Het PDF-draaiboek en het rekenbestand komen in een volgende versie.</p>
+      <h2>Rekenbestand</h2>
+      <p class="sub">Het rekenbestand bevat de hele berekening: invoer, polar, wind en uitkomst. Bewaar het als archief, stuur het door om een
+        berekening te delen, en leg het na de race naast je VDR-log in de analysepagina. Inladen toont precies dezelfde berekening.</p>
+      <div class="rij">
+        <button type="button" class="knop" id="rekenOpslaan">Rekenbestand opslaan</button>
+        <label class="knop stil">Rekenbestand inladen…<input type="file" id="rekenInladen" accept=".json,application/json" hidden></label>
+      </div>
+      <div class="melding" id="uitvoermelding" hidden></div>
+      <div id="uitvoerkeuze"></div>
+    </div>
+    <div class="paneel">
+      <h2>Draaiboek</h2>
+      <p class="sub">Het PDF-draaiboek voor aan boord komt in de volgende versie.</p>
     </div>
   </section>
 

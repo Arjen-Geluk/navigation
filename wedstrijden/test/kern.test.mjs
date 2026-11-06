@@ -72,3 +72,25 @@ test('regressie: voorbeeldschip, vaste wind, alle banen 2026', async () => {
   if (process.argv.includes('--vastleggen') || !existsSync(pad)) { writeFileSync(pad, JSON.stringify(uit, null, 1) + '\n'); return; }
   assert.deepEqual(uit, JSON.parse(readFileSync(pad, 'utf8')));
 });
+
+test('rekenbestand: heen en terug geeft dezelfde uitkomst', () => {
+  const W = vasteWind(K, 240, 12, t0);
+  const uit = { banen: { K: K.rekenBaan(V, W, P, E, 'K', { robuustheid: true }) }, limiet: t0 + 9 * 3600e3, gemaakt: t0 - 3600e3, rekentijd_ms: 123, afwijkend: false };
+  const b = K.maakRekenbestand({ tool: { naam: 'test', versie: '0' }, vaargebied: G.vaargebied, editieSleutel: '3-steden_2026', editie: G.edities['3-steden_2026'], editieGebruikt: E,
+    afwijkingen: {}, invoer: { datum: E.datum, start: E.start, limiet: E.finishlimiet, baan_wl: '', eenheden: 'nm', peil: { keuze: 'auto', waarde_m: -0.4 }, schip: { kielspeling_m: 0.3, overstag_s: null, gijp_s: null, snelheidsfactor: 1 } },
+    wind: { ...W, verschuiving_min: 0, aanpassingen: {} }, polar: P, uitkomst: uit, nu: t0 });
+  const r = K.leesRekenbestand(JSON.parse(JSON.stringify(b)));
+  assert.equal(r.fout, undefined);
+  const a = uit.banen.K.routes, c = r.uitkomst.banen.K.routes;
+  assert.equal(c.length, a.length);
+  a.forEach((x, i) => { assert.equal(c[i].res.zeiltijd_ms, x.res.zeiltijd_ms); assert.equal(c[i].res.track.length, x.res.track.length); assert.deepEqual(JSON.parse(JSON.stringify(c[i].res.track[5])), JSON.parse(JSON.stringify(x.res.track[5]))); assert.equal(c[i].snelst_in, x.snelst_in); });
+  assert.equal(r.uitkomst.polarId, P.schip.id);
+  assert.ok(JSON.stringify(b).length < 2e6, 'bestand blijft onder 2 MB voor één baan');
+});
+
+test('rekenbestand: controles en bestandsnaam', () => {
+  assert.match(K.leesRekenbestand({ formaat: 'polartool/1' }).fout, /geen rekenbestand/);
+  assert.match(K.leesRekenbestand({ formaat: 'wedstrijdberekening/9' }).fout, /onbekende formaatversie/);
+  assert.match(K.leesRekenbestand({ formaat: 'wedstrijdberekening/1' }).fout, /onvolledig/);
+  assert.equal(K.rekenbestandNaam('3-steden', '2026-10-10', 'Zeeën & Co', Date.parse('2026-10-10T06:15:00Z')), '3-steden_2026-10-10_Zeeen_Co_0815.json');
+});
