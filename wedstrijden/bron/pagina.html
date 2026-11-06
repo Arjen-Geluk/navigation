@@ -160,9 +160,18 @@
       <div class="melding" id="uitvoermelding" hidden></div>
       <div id="uitvoerkeuze"></div>
     </div>
-    <div class="paneel">
+    <div class="paneel" id="draaiboekPaneel">
       <h2>Draaiboek</h2>
-      <p class="sub">Het PDF-draaiboek voor aan boord komt in de volgende versie.</p>
+      <p class="sub">Het draaiboek voor aan boord: voorblad, advies per baan, per route de rakken en een kaart, de windtabel en de
+        waarschuwingen. Staand A4, ook zwart-wit leesbaar. Maak er een PDF van met <b>Afdrukken</b> en kies daar "Opslaan als PDF".</p>
+      <div class="velden">
+        <label>Routes <select id="dbBanen"></select></label>
+        <label class="vink"><input type="checkbox" id="dbKaarten" checked> Kaart per route</label>
+        <button type="button" class="knop stil" id="dbVoorbeeld">Voorbeeld tonen</button>
+        <button type="button" class="knop" id="dbAfdrukken">Afdrukken / PDF</button>
+      </div>
+      <div class="melding" id="dbmelding" hidden></div>
+      <div id="draaiboek" class="draaiboek" hidden></div>
     </div>
   </section>
 

@@ -4,7 +4,7 @@ Rekenpagina voor platbodemwedstrijden in het IJsselmeergebied: per wedstrijd en 
 polarbestand ([polartool](../polartool/)) en de windverwachting. Eerst de Klipperrace 3 Steden; de beurtveer en de
 strontrace volgen. Vervangt op termijn [`3-stedenrace/`](../3-stedenrace/), dat als archief blijft staan.
 
-**In opbouw** (bouwstap 6 van 10: rekenbestand; het PDF-draaiboek volgt).
+**In opbouw** (bouwstap 7 van 10: rekenbestand en draaiboek klaar; analysepagina volgt).
 
 Online (na publicatie): https://arjen-geluk.github.io/navigation/wedstrijden/
 

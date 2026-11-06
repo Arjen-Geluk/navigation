@@ -22,6 +22,12 @@ const stop = melding => { console.error('\n✗ ' + melding); process.exit(1); };
 // ---- bronbestanden ----
 const scripts = ['bron/kern', 'bron/ui'].flatMap(m => readdirSync(join(MAP, m)).filter(f => f.endsWith('.js')).sort().map(f => `${m}/${f}`));
 
+// ---- syntaxis van alle scripts (een fout in één bestand stopt anders de hele pagina) ----
+for (const f of scripts) {
+  try { new vm.Script(lees(f), { filename: f }); }
+  catch (e) { stop(`${f}: ${e.message}\n${(e.stack || '').split('\n').slice(0, 3).join('\n')}`); }
+}
+
 // ---- gegevens lezen en controleren ----
 // dezelfde controle als de pagina zelf gebruikt (bron/kern/10_editie.js)
 const kern = { module: { exports: {} } };
