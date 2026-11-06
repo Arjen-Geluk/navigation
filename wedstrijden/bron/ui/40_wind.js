@@ -63,7 +63,7 @@ function windDekt() {
   }
   $('windOphalen').onclick = haal;
 
-  const schuif = d => { S.wind.verschuiving_min = (S.wind.verschuiving_min || 0) + d; bewaar(); meld('wind'); };
+  const schuif = verschuifWind;
   $('windEerder').onclick = () => schuif(30);
   $('windLater').onclick = () => schuif(-30);
   $('windHerstel').onclick = () => { S.wind.aanpassingen = {}; S.wind.verschuiving_min = 0; bewaar(); meld('wind'); };
@@ -131,3 +131,10 @@ function verschuivingTekst() {
   const v = S.wind.verschuiving_min || 0;
   return v === 0 ? 'op tijd' : `${getal(Math.abs(v) / 60, Math.abs(v) % 60 ? 1 : 0)} u ${v > 0 ? 'eerder' : 'later'}`;
 }
+
+// windverandering eerder (+) of later (−), in minuten; gebruikt op Wind & peil, Advies en Kaart
+function verschuifWind(d) { S.wind.verschuiving_min = (S.wind.verschuiving_min || 0) + d; bewaar(); meld('wind'); }
+// knoppen voor de windverandering op Advies en Kaart, en de tekst ernaast
+document.querySelectorAll('[data-schuif]').forEach(b => { b.onclick = () => verschuifWind(+b.dataset.schuif); });
+const toonVerschuiving = () => document.querySelectorAll('.windverschuiving').forEach(x => { x.textContent = verschuivingTekst(); });
+op('wind', toonVerschuiving); toonVerschuiving();

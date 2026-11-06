@@ -44,7 +44,14 @@
   }
 
   // ---- rasters uit de bodem ----
-  const DIEPTE_KLEUR = [[1.0, [200, 70, 60]], [1.5, [230, 140, 60]], [2.0, [240, 200, 90]], [2.5, [200, 225, 170]], [3.0, [170, 210, 225]], [4.0, [120, 175, 220]], [99, [60, 120, 190]]];
+  // vloeiende kleurschaal voor de waterdiepte (m): tussen de ankerpunten lineair gemengd
+  const DIEPTE_SCHAAL = [[0, [190, 40, 45]], [1, [225, 110, 50]], [1.75, [240, 190, 80]], [2.5, [205, 225, 160]], [3.25, [160, 210, 225]], [4.5, [95, 160, 215]], [6, [50, 105, 180]], [9, [25, 60, 130]]];
+  function diepteKleur(d) {
+    const s = DIEPTE_SCHAAL; if (d <= s[0][0]) return s[0][1]; if (d >= s[s.length - 1][0]) return s[s.length - 1][1];
+    let i = 1; while (s[i][0] < d) i++;
+    const [d0, k0] = s[i - 1], [d1, k1] = s[i], f = (d - d0) / (d1 - d0);
+    return k0.map((c, j) => Math.round(c + (k1[j] - c) * f));
+  }
   function rasterLaag(kleur) {
     const B = BODEM, c = document.createElement('canvas'); c.width = B.nx; c.height = B.ny;
     const ctx = c.getContext('2d'), img = ctx.createImageData(B.nx, B.ny), d = img.data;
@@ -56,7 +63,7 @@
     return L.imageOverlay(c.toDataURL(), [[B.noord - B.ny * B.dlat, B.west], [B.noord, B.west + B.nx * B.dlon]], { className: 'raster', interactive: false });
   }
   const vastRaster = () => rasterLaag(c => c === 255 ? [233, 230, 222] : [196, 220, 238]);
-  const diepteRaster = () => { const p = peil(); return rasterLaag(c => { if (c === 255) return null; const d = p - (c / 10 - 25); return [...DIEPTE_KLEUR.find(([g]) => d < g)[1], 200]; }); };
+  const diepteRaster = () => { const p = peil(); return rasterLaag(c => { if (c === 255) return null; const d = p - (c / 10 - 25); return [...diepteKleur(d), 210]; }); };
   function bevaarRaster() {
     const P = SCHIP.actief; if (!P) return null;
     const p = peil(), ks = rekenOpties().kielspeling, dg = P.schip.diepgang_m, half = Number.isFinite(dg.half) ? dg.half : dg.neer;
@@ -186,7 +193,8 @@
     const blok = (kleur, t) => el('div', {}, el('i', { style: `background:rgb(${kleur.join(',')})` }), ' ' + t);
     const delen = [];
     if (S.kaart.lagen.bodem) delen.push(el('b', {}, `Waterdiepte bij ${getal(peil(), 2)} m NAP`),
-      ...DIEPTE_KLEUR.map(([g, k], i) => blok(k, i === DIEPTE_KLEUR.length - 1 ? `≥ ${getal(DIEPTE_KLEUR[i - 1][0], 1)} m` : `< ${getal(g, 1)} m`)));
+      el('div', { class: 'verloop', style: `background:linear-gradient(to right,${DIEPTE_SCHAAL.map(([d, k]) => `rgb(${k.join(',')}) ${(d / 9 * 100).toFixed(0)}%`).join(',')})` }),
+      el('div', { class: 'verloopschaal' }, ...[0, 2, 4, 6, 9].map(d => el('span', { style: `left:${d / 9 * 100}%` }, d === 9 ? '9+ m' : d + ''))));
     if (S.kaart.lagen.bevaarbaar) delen.push(el('b', {}, SCHIP.actief ? 'Bevaarbaar (incl. kielspeling)' : 'Bevaarbaar: laad eerst een polar in'),
       blok([240, 200, 60], 'alleen zwaard half of op'), blok([235, 130, 40], 'alleen zwaard op (ruime koersen)'), blok([200, 40, 40], 'romp loopt vast'));
     l.replaceChildren(...delen);
@@ -205,11 +213,8 @@
   });
   op('invoer', () => { kaartRoute = null; });
   op('polar', () => { kaartRoute = null; });
-  function verschuif(d) { S.wind.verschuiving_min = (S.wind.verschuiving_min || 0) + d; bewaar(); meld('wind'); }
-  $('kaartEerder').onclick = () => verschuif(30);
-  $('kaartLater').onclick = () => verschuif(-30);
+  $('kaartBereken').onclick = () => meld('bereken');
   function kaartBalk() {
-    $('kaartVerschuiving').textContent = verschuivingTekst();
     const r = gekozenRoute();
     $('kaartRouteInfo').textContent = kaartRoute && r
       ? `${r.naam}: zeiltijd ${duur(kaartRoute.res.zeiltijd_ms)}, finish ${kloktijd(kaartRoute.res.finish)} (advies: ${duur(r.res.zeiltijd_ms)}). Klik op Bereken voor een nieuw advies met alle routes.`

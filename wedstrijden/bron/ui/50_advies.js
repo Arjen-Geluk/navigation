@@ -46,6 +46,7 @@ function gekozenRoute() {
     toon(); meld('uitkomst', UITKOMST);
   }
   $('bereken').onclick = bereken;
+  op('bereken', bereken);
 
   const verouderd = () => { if (UITKOMST && !UITKOMST.verouderd) { UITKOMST.verouderd = true; toon(); } else toonStatus(); };
   op('invoer', verouderd); op('wind', verouderd); op('polar', verouderd); op('editie', () => { UITKOMST = null; toon(); meld('uitkomst', null); });

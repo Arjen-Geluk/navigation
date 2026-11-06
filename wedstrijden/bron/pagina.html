@@ -110,7 +110,8 @@
 
   <section class="tab" id="tab-advies">
     <div class="paneel">
-      <div class="rij"><h2>Advies per baan</h2><button type="button" class="knop" id="bereken">Bereken</button></div>
+      <div class="rij"><h2>Advies per baan</h2><button type="button" class="knop" id="bereken">Bereken</button>
+        <span class="stapper">Windverandering <button type="button" class="knop stil klein" data-schuif="-30">− 30 min</button><b class="windverschuiving">op tijd</b><button type="button" class="knop stil klein" data-schuif="30">+ 30 min</button></span></div>
       <div class="voortgang" id="voortgang" hidden><i></i></div>
       <div class="melding" id="adviesmelding" hidden></div>
       <div class="kaartjes" id="baankaartjes"></div>
@@ -127,6 +128,11 @@
   </section>
 
   <section class="tab" id="tab-kaart">
+    <div class="kaartbalk">
+      <button type="button" class="knop" id="kaartBereken">Bereken</button>
+      <span class="stapper">Windverandering <button type="button" class="knop stil klein" data-schuif="-30">− 30 min</button><b class="windverschuiving">op tijd</b><button type="button" class="knop stil klein" data-schuif="30">+ 30 min</button></span>
+      <span id="kaartRouteInfo" class="sub"></span>
+    </div>
     <div class="kaartvak">
       <div id="kaart"></div>
       <div class="lagenknop" id="lagenknop">
@@ -137,10 +143,6 @@
     <div class="tijdschuif" id="tijdschuif" hidden>
       <input type="range" id="schuif" min="0" max="1000" value="0">
       <span id="schuiftijd"></span>
-    </div>
-    <div class="kaartbalk">
-      <span class="stapper">Windverandering <button type="button" class="knop stil klein" id="kaartLater">− 30 min</button><b id="kaartVerschuiving">op tijd</b><button type="button" class="knop stil klein" id="kaartEerder">+ 30 min</button></span>
-      <span id="kaartRouteInfo" class="sub"></span>
     </div>
     <div class="standlegenda" id="standlegenda"></div>
     <p class="sub" id="kaartinfo">Klik op de kaart voor bodemhoogte, waterdiepte en bevaarbaarheid.</p>
