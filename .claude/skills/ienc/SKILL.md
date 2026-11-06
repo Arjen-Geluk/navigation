@@ -14,7 +14,7 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
 |---|---|
 | `scripts/s57.mjs` | de lezer: `leesCel`, `geometrie`, `naarGeoJSON`, `leesCatalogus`, `cellenVoorGebied`, `codes`, `betekenis` |
 | `scripts/iso8211.mjs` | de laag eronder: ISO 8211-records en -velden |
-| `scripts/gebied.mjs` | GeoJSON per thema voor een gebied (CLI én module), met de thema-indeling `THEMA` |
+| `scripts/gebied.mjs` | GeoJSON per thema voor een gebied (CLI én module), met de thema-indeling `THEMA`, en `inDeBuurt` om naamloze vlakken te beschrijven via benoemde objecten eromheen |
 | `scripts/controle.mjs` | controle van een nieuwe release: alles leesbaar, codes bekend, ringen dicht |
 | `scripts/bouw_catalogus.mjs` | bouwt `data/ienc_catalogus.json` opnieuw uit een nieuwe IENC Feature Catalogue (XML) |
 | `data/ienc_catalogus.json` | codes, namen, toegestane waarden (IEHG IENC FC 2.6 corr3 + bIENC FC 1.0) |
@@ -66,6 +66,10 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
 - **IJsselmeergebied heeft geen bathymetrie in de IENC.** `DEPARE` is daar vrijwel overal `DRVAL1 = 0` zonder
   `DRVAL2`: het markeert alleen "water". Alleen de releases "Zeeland met Diepte" en "Waddenzee met Diepte"
   bevatten gemeten dieptes. Gebruik voor diepte in het IJsselmeergebied de RWS-bodemhoogte.
+- **Referentievlak is het plaatselijke peil, niet NAP** (`VDAT`/`SDAT` 33 in alle cellen). Reken om met het
+  streefpeil voordat je IENC-diepten of -hoogten met NAP-gegevens combineert; zie `references/objecten.md` §1.
+- **Verboden gebieden hebben vaak geen naam.** Gebruik `inDeBuurt()` uit `gebied.mjs` om ze te beschrijven
+  ("bij de spuisluizen van de Lorentzsluizen") in plaats van zelf een zoekroutine te schrijven.
 - **Objecten zijn per cel geknipt.** Eén windpark of verboden gebied over een celgrens wordt twee features
   (bijv. Windpark Fryslân op 53°N). Voeg samen op `klasse` + naam/attributen als je één vlak nodig hebt;
   `lnam` is per stuk verschillend.

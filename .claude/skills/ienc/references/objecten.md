@@ -31,8 +31,18 @@ IJsselmeergebied. Aantallen en voorbeelden komen uit de release van 2026-10-05, 
 - **SCAMIN**: kleinste schaal (noemer) waarop het object getoond wordt; handig om te generaliseren
   (bijv. `COALNE` 300000 = altijd, `MORFAC` 4000 = alleen heel ingezoomd).
 - **Hoogten en afstanden**: `VERCLR`, `HORCLR`, `HORLEN`, `HORWID` in meters; `hunits` noemt de eenheid
-  van `wtwdis` (vaarwegkilometer), niet van de doorvaarthoogte. `verdat` geeft het referentievlak
-  (in het IJsselmeergebied vaak 43 "Dutch High Water Reference Level (MHW)" of 32 "Local high water reference level").
+  van `wtwdis` (vaarwegkilometer), niet van de doorvaarthoogte. `VERCCL` = doorvaarthoogte van een
+  beweegbare brug in gesloten stand (dan is `VERCLR` leeg).
+- **Referentievlakken** (zie ook §3):
+  - Diepten: alle 109 cellen van de Nederland-release hebben in `DSPM` `VDAT` en `SDAT` = 33
+    "Local mean water reference level". In het IJsselmeergebied is dat het plaatselijke (streef)peil,
+    niet NAP: `DRVAL1`/`VALSOU` gelden ten opzichte van het water, niet van NAP. Voor het IJmeer/Markermeer
+    staat in `INFORM` van dieptegebieden en sluiskolken in YM017 "Let op zomer en winterpeil (-0.20 - -0.40)".
+    Wie IENC-diepten combineert met de RWS-bodemhoogte (m NAP), rekent dus om met het streefpeil van het seizoen.
+  - Hoogten bij bruggen en kabels: `verdat` per object, in het IJsselmeergebied 43 "Dutch High Water
+    Reference Level (MHW)" of 32 "Local high water reference level". Bruggen hebben vaak `INFORM` "NAP" of
+    een tekst als "Doorvaarthoogte is 3,13 m op streefpeil IJsselmeer (-0,20 NAP) en 3,45 m op streefpeil
+    boezem (-0,52 NAP)": lees die tekst, hij is preciezer dan het getal.
 
 ## 2. Land en oevers (thema `land`)
 
@@ -67,8 +77,10 @@ Strekdammen en kribben (`slcons`) zijn smalle lijnen: buffer ze als je ze als ob
 **In het IJsselmeergebied staat geen bathymetrie in de IENC**: 2457 van de 2525 `DEPARE` hebben
 `DRVAL1 = 0` en geen `DRVAL2`. Ze geven alleen aan dát er water is. Alleen de releases "Zeeland met
 Diepte" en "Waddenzee met Diepte" bevatten gemeten dieptes (contouren 0–7 m per 0,5 m, 8, 9, 10, 15, 20,
-25 m, Spec NL hoofdstuk 4.I). Bruikbaar uit de IENC voor diepte zijn hier alleen `DRGARE` (geulen met
-projectdiepte) en de obstakels met `VALSOU`.
+25 m, Spec NL hoofdstuk 4.I). Bruikbaar uit de IENC voor diepte zijn hier alleen de geulen: `DEPARE` met
+`DRVAL1` > 0 (Markermeer: 2, 3, 5 en 5,6 m, liggen als gaten in de 0-vlakken, dus zonder overlap), `DRGARE`
+(projectdiepte) en obstakels met `VALSOU`. Alle `DEPARE` samen vormen wel een goed water/land-masker,
+inclusief havens en sluiskolken. Referentievlak: plaatselijk peil, niet NAP (zie §1).
 
 ## 4. Verboden, beperkte en waarschuwingsgebieden (thema `beperking`)
 
@@ -103,7 +115,15 @@ projectdiepte) en de obstakels met `VALSOU`.
 
 In het IJsselmeergebied: 99 `resare`, waarvan 22 met `restrn` 7 (invaarverbod) en 72 met 32
 (wachtplaatsen, `CATREA` 19 "waiting area"). Een **verboden gebied voor een wedstrijdbaan** = `resare`/`RESARE`/`MIPARE`
-met `restrn` 7 (en eventueel 8 of 14, na lezen van `INFORM`).
+met `restrn` 7 (en eventueel 8 of 14, na lezen van `INFORM`). De maritieme `RESARE` en het attribuut `RESTRN`
+komen in de Nederland-release van 2026-10-05 nergens voor; filter er toch op, andere releases (Waddenzee,
+Zeeland, Rotterdam) kunnen ze wel gebruiken.
+
+**Vlakken met een invaarverbod hebben vaak geen naam of toelichting.** Boven de Houtribdijk liggen 5 zulke
+vlakken (spuisluizen Kornwerderzand en Den Oever, Makkum, Stavoren, Krabbersgat), alle 5 zonder `OBJNAM` en `INFORM`.
+Beschrijf de ligging met `inDeBuurt(feature, kandidaten)` uit `gebied.mjs`: die geeft de benoemde objecten
+binnen 500 m, dichtstbijzijnde eerst (sluis, `comare`, tonnen, peilschaal). Natuurgebieden (De Kreupel e.d.)
+en Windpark Fryslân staan er níet als invaarverbod in, alleen als `CTNARE`.
 
 **`CTNARE`** wordt voor twee heel verschillende dingen gebruikt: echte waarschuwingen ("Windpark Fryslân",
 "Zandwinning", "Natuurgebied", "Werk in uitvoering, situatie kan afwijken van de kaart",
