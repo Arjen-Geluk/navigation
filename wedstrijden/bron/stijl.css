@@ -142,7 +142,7 @@ input:disabled{opacity:.6}
 .db-tabel th{background:#eee;font-weight:700}
 .db-tabel.wind td,.db-tabel.wind th{font-size:8.5pt;padding:1px 4px;white-space:nowrap}
 .db-klein{font-size:8.5pt;color:#222}
-.db-kaart{width:100%;border:1px solid #000;margin-top:6px;display:block}
+.db-kaart{display:block;max-width:100%;max-height:150mm;width:auto;height:auto;margin:6px auto 0;border:1px solid #000}
 @page{size:A4 portrait;margin:10mm}
 @media print{
   html,body{background:#fff!important;color:#000}
