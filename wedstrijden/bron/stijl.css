@@ -43,3 +43,17 @@ select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6
 #routelijst .volg{color:var(--muted);font-size:13px}
 .punt-label{background:none;border:0;box-shadow:none;font-size:11px;font-weight:600;color:#0b2545;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .punt-label::before{display:none}
+header .chip{background:rgba(255,255,255,.12);color:var(--navy-ink)}
+header .chip.let{background:var(--warn-bg);color:var(--warn)}
+.kopregel{margin-top:8px;font-size:13px}
+.knop{display:inline-block;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer}
+.knop.stil{background:none;color:var(--accent)}
+.melding{border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
+.melding.ok{background:var(--good-bg)}
+.melding.fout{background:var(--bad-bg);color:var(--bad)}
+.melding.let{background:var(--warn-bg);color:var(--warn)}
+#polardetails dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;margin:6px 0 0}
+#polardetails dt{font-weight:600;color:var(--ink)}
+#polardetails dd{margin:0}
+#polardetails a{color:var(--accent)}
+@media (max-width:560px){#polardetails dl{grid-template-columns:1fr}#polardetails dd{margin-bottom:4px}}

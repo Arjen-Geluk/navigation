@@ -721,6 +721,20 @@ select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6
 #routelijst .volg{color:var(--muted);font-size:13px}
 .punt-label{background:none;border:0;box-shadow:none;font-size:11px;font-weight:600;color:#0b2545;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .punt-label::before{display:none}
+header .chip{background:rgba(255,255,255,.12);color:var(--navy-ink)}
+header .chip.let{background:var(--warn-bg);color:var(--warn)}
+.kopregel{margin-top:8px;font-size:13px}
+.knop{display:inline-block;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer}
+.knop.stil{background:none;color:var(--accent)}
+.melding{border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
+.melding.ok{background:var(--good-bg)}
+.melding.fout{background:var(--bad-bg);color:var(--bad)}
+.melding.let{background:var(--warn-bg);color:var(--warn)}
+#polardetails dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;margin:6px 0 0}
+#polardetails dt{font-weight:600;color:var(--ink)}
+#polardetails dd{margin:0}
+#polardetails a{color:var(--accent)}
+@media (max-width:560px){#polardetails dl{grid-template-columns:1fr}#polardetails dd{margin-bottom:4px}}
 
 </style>
 </head>
@@ -729,9 +743,20 @@ select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6
   <div class="binnen">
     <h1><span class="anker"></span>Wedstrijden IJsselmeergebied</h1><span class="toolversie" id="toolversie"></span>
     <div class="sub">Snelste route per wedstrijd en baan, uit je eigen polarbestand en de windverwachting · in opbouw</div>
+    <div class="kopregel"><span class="chip let" id="kopPolar">Geen polar</span></div>
   </div>
 </header>
 <main>
+  <section class="paneel" id="schip">
+    <h2>Schip</h2>
+    <div class="rij">
+      <label class="knop">Polarbestand inladen…<input type="file" id="polarbestand" accept=".json,application/json" hidden></label>
+      <span class="chip let" id="polarstatus">Geen polar ingeladen</span>
+      <button type="button" class="knop stil" id="polarvergeten" title="Polar uit deze browser verwijderen">Vergeten</button>
+    </div>
+    <div class="melding" id="polarmelding" hidden></div>
+    <div class="sub" id="polardetails"></div>
+  </section>
   <section class="paneel">
     <div class="rij">
       <label>Editie <select id="editiekeuze"></select></label>
@@ -747,7 +772,7 @@ select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6
   </section>
 </main>
 <footer><p class="sub">Alleen voor de voorbereiding, geen navigatiemiddel: de kaart, de betonning en de wedstrijdleiding gaan altijd voor. Licentie CC BY-NC-ND 4.0.</p></footer>
-<script type="application/json" id="gegevens">{"bouw":{"tool":"0.1","vaargebied":{"versie":2,"datum":"2026-11-06"},"edities":[{"bestand":"3-steden_2025.json","wedstrijd":"3-steden","jaar":2025,"versie":1},{"bestand":"3-steden_2026.json","wedstrijd":"3-steden","jaar":2026,"versie":1}]},"vaargebied":{"formaat":"vaargebied/1","naam":"IJsselmeergebied","versie":2,"datum":"2026-11-06","toelichting":"Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.","gebied":{"omschrijving":"IJsselmeer en Markermeer tot de lijn Buiten-IJ","west":4.9,"zuid":52.25,"oost":5.95,"noord":53.1,"afsluitingen":[{"naam":"Ketelbrug","toelichting":"scheidt het Ketelmeer (en de randmeren) van het IJsselmeer","van":[52.62,5.741],"tot":[52.57,5.741]},{"naam":"Hollandse Brug","toelichting":"scheidt het Gooimeer (en de randmeren) van het IJmeer","van":[52.322,5.128],"tot":[52.338,5.145]}],"zaden":[{"naam":"IJsselmeer","lat":52.8,"lon":5.35},{"naam":"Markermeer","lat":52.55,"lon":5.25}]},"peil":{"eenheid":"m NAP","ijsselmeer":{"zomer":null,"winter":null},"markermeer":{"zomer":null,"winter":null},"bron":null},"bodem":{"bestand":"bodem_ijsselmeergebied_50m.bin","opname":2022,"bron":"https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)","opgehaald":"2026-11-06","cel_m":50,"west":4.9,"noord":53.1,"dlon":0.000741,"dlat":0.00045,"nx":1417,"ny":1889,"codering":"1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water","sha256":"22d40b29585331d2494652bfbe4d9f6c0ce5c41dfd74cb06996bfb3774aa1cc5"},"betonning":{"bestand":"betonning_ijsselmeergebied.json","opgehaald":"2026-11-06","aantal":1674,"bron":"https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"},"havens":[],"doorgangen":[],"bronnen":[{"onderdeel":"bodem","url":"https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows","opgehaald":"2026-11-06"},{"onderdeel":"betonning","url":"https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0","opgehaald":"2026-11-06"}]},"edities":[{"formaat":"wedstrijdeditie/1","wedstrijd":{"id":"3-steden","naam":"Klipperrace 3 Steden"},"jaar":2025,"versie":1,"regeltype":"varianten","status":{"gecontroleerd":true,"tegen":"Wedstrijdbepalingen 3-stedenrace v1.4","datum_bepalingen":"2025-10-10","bronbestand":"Wedstrijdbepalingen 3-stedenrace 2025 v1.4","toelichting":"Overgenomen uit de oude 3-stedenrace-tool (jaarset \"2025 (wedstrijdbepalingen v1.4)\")"},"datum":"2025-10-11","start":"10:00","finishlimiet":"19:00","tijdzone":"Europe/Amsterdam","punten":[{"id":"Start","soort":"start","lat":52.697,"lon":5.2909,"rws":null,"toelichting":"Ankerplaats Krabbersgat (begin track 2025)"},{"id":"KG-9","soort":"via","lat":52.708153,"lon":5.311558,"rws":"KG 9","toelichting":"Officiële RWS-positie (KG 9)"},{"id":"De Ven","soort":"via","lat":52.74306,"lon":5.28468,"rws":null,"passeerzijde":"noord","toelichting":"Noord-kardinaal, aan de noordzijde passeren. N 52° 44,5836' O 5° 17,0805'"},{"id":"ET-N1","soort":"via","lat":52.709364,"lon":5.339588,"rws":"ET-N 1","passeerzijde":"noord","toelichting":"Officiële RWS-positie (ET-N 1) – noord-kardinaal, noordzijde passeren op routes via Urk"},{"id":"Finish","soort":"finish","lat":52.7022,"lon":5.3008,"rws":null,"toelichting":"Tussen groen licht Compagnieshaven en rood licht Oostdam – controleren"},{"id":"Sport C","soort":"merkteken","lat":52.800019,"lon":5.150019,"rws":"SPORT C","toelichting":"Officiële RWS-positie (SPORT C)"},{"id":"ST1 SB2","soort":"merkteken","lat":52.842814,"lon":5.323021,"rws":"ST 1-SB 2","toelichting":"Officiële RWS-positie (ST 1-SB 2)"},{"id":"ST 11","soort":"merkteken","lat":52.861628,"lon":5.344263,"rws":"ST 11","toelichting":"Officiële RWS-positie (ST 11)"},{"id":"LC 11","soort":"merkteken","lat":52.810319,"lon":5.303263,"rws":"LC 11","toelichting":"Officiële RWS-positie (LC 11)"},{"id":"EZ C","soort":"merkteken","lat":52.70963,"lon":5.436627,"rws":"EZ-C","toelichting":"Officiële RWS-positie (EZ-C)"},{"id":"EZ D","soort":"merkteken","lat":52.67918,"lon":5.498485,"rws":"EZ-D","toelichting":"Officiële RWS-positie (EZ-D)"},{"id":"De Kreupel","soort":"merkteken","lat":52.80105,"lon":5.2136,"rws":null,"toelichting":"Rondingspunt 50 m buiten ton NK-OW 5 (westpunt verboden gebied)"},{"id":"EZ A","soort":"merkteken","lat":52.782108,"lon":5.301627,"rws":"EZ-A","toelichting":"Officiële RWS-positie (EZ-A)"},{"id":"EL-A","soort":"merkteken","lat":52.752919,"lon":5.444141,"rws":"EL A","toelichting":"Officiële RWS-positie (EL A)"}],"zones":[{"id":"kreupel-hop-ruim","naam":"Kreupel + Hop (ruim, via kardinale tonnen)","regel":"verboden","actief":true,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-N","lat":52.79594,"lon":5.24396,"rws":"HOP-N"},{"id":"HOP-E","lat":52.79158,"lon":5.25575,"rws":"HOP-E"},{"id":"HOP-Z","lat":52.7805,"lon":5.25514,"rws":"HOP-Z"},{"id":"HOP-W","lat":52.78697,"lon":5.24261,"rws":"HOP-W"}]},{"id":"kreupel-hop-krap","naam":"Kreupel + Hop (krap, gele tonnen)","regel":"verboden","actief":false,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-B","lat":52.79376,"lon":5.24979,"rws":"HOP-B"},{"id":"HOP-C","lat":52.78598,"lon":5.25543,"rws":"HOP-C"},{"id":"HOP-D","lat":52.78374,"lon":5.24884,"rws":"HOP-D"},{"id":"HOP-A","lat":52.79143,"lon":5.24326,"rws":"HOP-A"}]}],"banen":{"K":{"naam":"Kort","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C sb","EL-A sb","EZ A sb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","EZ A bb","EL-A bb","EZ C bb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","EZ A bb","KG-9 sb","Finish"]}]},"M":{"naam":"Middel","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]},"L":{"naam":"Lang","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","ST 11 bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","ST 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]}},"standaard":{"baan":"K","windmodel":"knmi_seamless","marge_verboden_gebied_m":50}},{"formaat":"wedstrijdeditie/1","wedstrijd":{"id":"3-steden","naam":"Klipperrace 3 Steden"},"jaar":2026,"versie":1,"regeltype":"varianten","status":{"gecontroleerd":false,"tegen":null,"datum_bepalingen":null,"bronbestand":null,"toelichting":"Overgenomen uit de oude 3-stedenrace-tool (rondingszijden 2026). Nog te controleren tegen de wedstrijdbepalingen 2026; datum en tijden ook."},"datum":"2026-10-10","start":"09:00","finishlimiet":"19:00","tijdzone":"Europe/Amsterdam","punten":[{"id":"Start","soort":"start","lat":52.697,"lon":5.2909,"rws":null,"toelichting":"Ankerplaats Krabbersgat (begin track 2025)"},{"id":"KG-9","soort":"via","lat":52.708153,"lon":5.311558,"rws":"KG 9","toelichting":"Officiële RWS-positie (KG 9)"},{"id":"De Ven","soort":"via","lat":52.74306,"lon":5.28468,"rws":null,"passeerzijde":"noord","toelichting":"Noord-kardinaal, aan de noordzijde passeren. N 52° 44,5836' O 5° 17,0805'"},{"id":"ET-N1","soort":"via","lat":52.709364,"lon":5.339588,"rws":"ET-N 1","passeerzijde":"noord","toelichting":"Officiële RWS-positie (ET-N 1) – noord-kardinaal, noordzijde passeren op routes via Urk"},{"id":"Finish","soort":"finish","lat":52.7022,"lon":5.3008,"rws":null,"toelichting":"Tussen groen licht Compagnieshaven en rood licht Oostdam – controleren"},{"id":"Sport C","soort":"merkteken","lat":52.800019,"lon":5.150019,"rws":"SPORT C","toelichting":"Officiële RWS-positie (SPORT C)"},{"id":"ST1 SB2","soort":"merkteken","lat":52.842814,"lon":5.323021,"rws":"ST 1-SB 2","toelichting":"Officiële RWS-positie (ST 1-SB 2)"},{"id":"ST 11","soort":"merkteken","lat":52.861628,"lon":5.344263,"rws":"ST 11","toelichting":"Officiële RWS-positie (ST 11)"},{"id":"LC 11","soort":"merkteken","lat":52.810319,"lon":5.303263,"rws":"LC 11","toelichting":"Officiële RWS-positie (LC 11)"},{"id":"EZ C","soort":"merkteken","lat":52.70963,"lon":5.436627,"rws":"EZ-C","toelichting":"Officiële RWS-positie (EZ-C)"},{"id":"EZ D","soort":"merkteken","lat":52.67918,"lon":5.498485,"rws":"EZ-D","toelichting":"Officiële RWS-positie (EZ-D)"},{"id":"De Kreupel","soort":"merkteken","lat":52.80105,"lon":5.2136,"rws":null,"toelichting":"Rondingspunt 50 m buiten ton NK-OW 5 (westpunt verboden gebied)"},{"id":"EZ A","soort":"merkteken","lat":52.782108,"lon":5.301627,"rws":"EZ-A","toelichting":"Officiële RWS-positie (EZ-A)"},{"id":"EL-A","soort":"merkteken","lat":52.752919,"lon":5.444141,"rws":"EL A","toelichting":"Officiële RWS-positie (EL A)"}],"zones":[{"id":"kreupel-hop-ruim","naam":"Kreupel + Hop (ruim, via kardinale tonnen)","regel":"verboden","actief":true,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-N","lat":52.79594,"lon":5.24396,"rws":"HOP-N"},{"id":"HOP-E","lat":52.79158,"lon":5.25575,"rws":"HOP-E"},{"id":"HOP-Z","lat":52.7805,"lon":5.25514,"rws":"HOP-Z"},{"id":"HOP-W","lat":52.78697,"lon":5.24261,"rws":"HOP-W"}]},{"id":"kreupel-hop-krap","naam":"Kreupel + Hop (krap, gele tonnen)","regel":"verboden","actief":false,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-B","lat":52.79376,"lon":5.24979,"rws":"HOP-B"},{"id":"HOP-C","lat":52.78598,"lon":5.25543,"rws":"HOP-C"},{"id":"HOP-D","lat":52.78374,"lon":5.24884,"rws":"HOP-D"},{"id":"HOP-A","lat":52.79143,"lon":5.24326,"rws":"HOP-A"}]}],"banen":{"K":{"naam":"Kort","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","EL-A bb","EZ A bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EL-A sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","EZ A bb","KG-9 sb","Finish"]}]},"M":{"naam":"Middel","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]},"L":{"naam":"Lang","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","ST 11 bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","ST 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]}},"standaard":{"baan":"K","windmodel":"knmi_seamless","marge_verboden_gebied_m":50}}]}</script>
+<script type="application/json" id="gegevens">{"bouw":{"tool":"0.2","vaargebied":{"versie":2,"datum":"2026-11-06"},"edities":[{"bestand":"3-steden_2025.json","wedstrijd":"3-steden","jaar":2025,"versie":1},{"bestand":"3-steden_2026.json","wedstrijd":"3-steden","jaar":2026,"versie":1}]},"vaargebied":{"formaat":"vaargebied/1","naam":"IJsselmeergebied","versie":2,"datum":"2026-11-06","toelichting":"Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.","gebied":{"omschrijving":"IJsselmeer en Markermeer tot de lijn Buiten-IJ","west":4.9,"zuid":52.25,"oost":5.95,"noord":53.1,"afsluitingen":[{"naam":"Ketelbrug","toelichting":"scheidt het Ketelmeer (en de randmeren) van het IJsselmeer","van":[52.62,5.741],"tot":[52.57,5.741]},{"naam":"Hollandse Brug","toelichting":"scheidt het Gooimeer (en de randmeren) van het IJmeer","van":[52.322,5.128],"tot":[52.338,5.145]}],"zaden":[{"naam":"IJsselmeer","lat":52.8,"lon":5.35},{"naam":"Markermeer","lat":52.55,"lon":5.25}]},"peil":{"eenheid":"m NAP","ijsselmeer":{"zomer":null,"winter":null},"markermeer":{"zomer":null,"winter":null},"bron":null},"bodem":{"bestand":"bodem_ijsselmeergebied_50m.bin","opname":2022,"bron":"https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)","opgehaald":"2026-11-06","cel_m":50,"west":4.9,"noord":53.1,"dlon":0.000741,"dlat":0.00045,"nx":1417,"ny":1889,"codering":"1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water","sha256":"22d40b29585331d2494652bfbe4d9f6c0ce5c41dfd74cb06996bfb3774aa1cc5"},"betonning":{"bestand":"betonning_ijsselmeergebied.json","opgehaald":"2026-11-06","aantal":1674,"bron":"https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"},"havens":[],"doorgangen":[],"bronnen":[{"onderdeel":"bodem","url":"https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows","opgehaald":"2026-11-06"},{"onderdeel":"betonning","url":"https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0","opgehaald":"2026-11-06"}]},"edities":[{"formaat":"wedstrijdeditie/1","wedstrijd":{"id":"3-steden","naam":"Klipperrace 3 Steden"},"jaar":2025,"versie":1,"regeltype":"varianten","status":{"gecontroleerd":true,"tegen":"Wedstrijdbepalingen 3-stedenrace v1.4","datum_bepalingen":"2025-10-10","bronbestand":"Wedstrijdbepalingen 3-stedenrace 2025 v1.4","toelichting":"Overgenomen uit de oude 3-stedenrace-tool (jaarset \"2025 (wedstrijdbepalingen v1.4)\")"},"datum":"2025-10-11","start":"10:00","finishlimiet":"19:00","tijdzone":"Europe/Amsterdam","punten":[{"id":"Start","soort":"start","lat":52.697,"lon":5.2909,"rws":null,"toelichting":"Ankerplaats Krabbersgat (begin track 2025)"},{"id":"KG-9","soort":"via","lat":52.708153,"lon":5.311558,"rws":"KG 9","toelichting":"Officiële RWS-positie (KG 9)"},{"id":"De Ven","soort":"via","lat":52.74306,"lon":5.28468,"rws":null,"passeerzijde":"noord","toelichting":"Noord-kardinaal, aan de noordzijde passeren. N 52° 44,5836' O 5° 17,0805'"},{"id":"ET-N1","soort":"via","lat":52.709364,"lon":5.339588,"rws":"ET-N 1","passeerzijde":"noord","toelichting":"Officiële RWS-positie (ET-N 1) – noord-kardinaal, noordzijde passeren op routes via Urk"},{"id":"Finish","soort":"finish","lat":52.7022,"lon":5.3008,"rws":null,"toelichting":"Tussen groen licht Compagnieshaven en rood licht Oostdam – controleren"},{"id":"Sport C","soort":"merkteken","lat":52.800019,"lon":5.150019,"rws":"SPORT C","toelichting":"Officiële RWS-positie (SPORT C)"},{"id":"ST1 SB2","soort":"merkteken","lat":52.842814,"lon":5.323021,"rws":"ST 1-SB 2","toelichting":"Officiële RWS-positie (ST 1-SB 2)"},{"id":"ST 11","soort":"merkteken","lat":52.861628,"lon":5.344263,"rws":"ST 11","toelichting":"Officiële RWS-positie (ST 11)"},{"id":"LC 11","soort":"merkteken","lat":52.810319,"lon":5.303263,"rws":"LC 11","toelichting":"Officiële RWS-positie (LC 11)"},{"id":"EZ C","soort":"merkteken","lat":52.70963,"lon":5.436627,"rws":"EZ-C","toelichting":"Officiële RWS-positie (EZ-C)"},{"id":"EZ D","soort":"merkteken","lat":52.67918,"lon":5.498485,"rws":"EZ-D","toelichting":"Officiële RWS-positie (EZ-D)"},{"id":"De Kreupel","soort":"merkteken","lat":52.80105,"lon":5.2136,"rws":null,"toelichting":"Rondingspunt 50 m buiten ton NK-OW 5 (westpunt verboden gebied)"},{"id":"EZ A","soort":"merkteken","lat":52.782108,"lon":5.301627,"rws":"EZ-A","toelichting":"Officiële RWS-positie (EZ-A)"},{"id":"EL-A","soort":"merkteken","lat":52.752919,"lon":5.444141,"rws":"EL A","toelichting":"Officiële RWS-positie (EL A)"}],"zones":[{"id":"kreupel-hop-ruim","naam":"Kreupel + Hop (ruim, via kardinale tonnen)","regel":"verboden","actief":true,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-N","lat":52.79594,"lon":5.24396,"rws":"HOP-N"},{"id":"HOP-E","lat":52.79158,"lon":5.25575,"rws":"HOP-E"},{"id":"HOP-Z","lat":52.7805,"lon":5.25514,"rws":"HOP-Z"},{"id":"HOP-W","lat":52.78697,"lon":5.24261,"rws":"HOP-W"}]},{"id":"kreupel-hop-krap","naam":"Kreupel + Hop (krap, gele tonnen)","regel":"verboden","actief":false,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-B","lat":52.79376,"lon":5.24979,"rws":"HOP-B"},{"id":"HOP-C","lat":52.78598,"lon":5.25543,"rws":"HOP-C"},{"id":"HOP-D","lat":52.78374,"lon":5.24884,"rws":"HOP-D"},{"id":"HOP-A","lat":52.79143,"lon":5.24326,"rws":"HOP-A"}]}],"banen":{"K":{"naam":"Kort","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C sb","EL-A sb","EZ A sb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","EZ A bb","EL-A bb","EZ C bb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","EZ A bb","KG-9 sb","Finish"]}]},"M":{"naam":"Middel","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]},"L":{"naam":"Lang","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","ST 11 bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","ST 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]}},"standaard":{"baan":"K","windmodel":"knmi_seamless","marge_verboden_gebied_m":50}},{"formaat":"wedstrijdeditie/1","wedstrijd":{"id":"3-steden","naam":"Klipperrace 3 Steden"},"jaar":2026,"versie":1,"regeltype":"varianten","status":{"gecontroleerd":false,"tegen":null,"datum_bepalingen":null,"bronbestand":null,"toelichting":"Overgenomen uit de oude 3-stedenrace-tool (rondingszijden 2026). Nog te controleren tegen de wedstrijdbepalingen 2026; datum en tijden ook."},"datum":"2026-10-10","start":"09:00","finishlimiet":"19:00","tijdzone":"Europe/Amsterdam","punten":[{"id":"Start","soort":"start","lat":52.697,"lon":5.2909,"rws":null,"toelichting":"Ankerplaats Krabbersgat (begin track 2025)"},{"id":"KG-9","soort":"via","lat":52.708153,"lon":5.311558,"rws":"KG 9","toelichting":"Officiële RWS-positie (KG 9)"},{"id":"De Ven","soort":"via","lat":52.74306,"lon":5.28468,"rws":null,"passeerzijde":"noord","toelichting":"Noord-kardinaal, aan de noordzijde passeren. N 52° 44,5836' O 5° 17,0805'"},{"id":"ET-N1","soort":"via","lat":52.709364,"lon":5.339588,"rws":"ET-N 1","passeerzijde":"noord","toelichting":"Officiële RWS-positie (ET-N 1) – noord-kardinaal, noordzijde passeren op routes via Urk"},{"id":"Finish","soort":"finish","lat":52.7022,"lon":5.3008,"rws":null,"toelichting":"Tussen groen licht Compagnieshaven en rood licht Oostdam – controleren"},{"id":"Sport C","soort":"merkteken","lat":52.800019,"lon":5.150019,"rws":"SPORT C","toelichting":"Officiële RWS-positie (SPORT C)"},{"id":"ST1 SB2","soort":"merkteken","lat":52.842814,"lon":5.323021,"rws":"ST 1-SB 2","toelichting":"Officiële RWS-positie (ST 1-SB 2)"},{"id":"ST 11","soort":"merkteken","lat":52.861628,"lon":5.344263,"rws":"ST 11","toelichting":"Officiële RWS-positie (ST 11)"},{"id":"LC 11","soort":"merkteken","lat":52.810319,"lon":5.303263,"rws":"LC 11","toelichting":"Officiële RWS-positie (LC 11)"},{"id":"EZ C","soort":"merkteken","lat":52.70963,"lon":5.436627,"rws":"EZ-C","toelichting":"Officiële RWS-positie (EZ-C)"},{"id":"EZ D","soort":"merkteken","lat":52.67918,"lon":5.498485,"rws":"EZ-D","toelichting":"Officiële RWS-positie (EZ-D)"},{"id":"De Kreupel","soort":"merkteken","lat":52.80105,"lon":5.2136,"rws":null,"toelichting":"Rondingspunt 50 m buiten ton NK-OW 5 (westpunt verboden gebied)"},{"id":"EZ A","soort":"merkteken","lat":52.782108,"lon":5.301627,"rws":"EZ-A","toelichting":"Officiële RWS-positie (EZ-A)"},{"id":"EL-A","soort":"merkteken","lat":52.752919,"lon":5.444141,"rws":"EL A","toelichting":"Officiële RWS-positie (EL A)"}],"zones":[{"id":"kreupel-hop-ruim","naam":"Kreupel + Hop (ruim, via kardinale tonnen)","regel":"verboden","actief":true,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-N","lat":52.79594,"lon":5.24396,"rws":"HOP-N"},{"id":"HOP-E","lat":52.79158,"lon":5.25575,"rws":"HOP-E"},{"id":"HOP-Z","lat":52.7805,"lon":5.25514,"rws":"HOP-Z"},{"id":"HOP-W","lat":52.78697,"lon":5.24261,"rws":"HOP-W"}]},{"id":"kreupel-hop-krap","naam":"Kreupel + Hop (krap, gele tonnen)","regel":"verboden","actief":false,"punten":[{"id":"NK-OW 1","lat":52.7924,"lon":5.23267,"rws":"NK-OW 1"},{"id":"NK-OW 2","lat":52.79383,"lon":5.22715,"rws":"NK-OW 2"},{"id":"NK-OW 3","lat":52.79554,"lon":5.22189,"rws":"NK-OW 3"},{"id":"NK-OW 4","lat":52.7976,"lon":5.21674,"rws":"NK-OW 4"},{"id":"NK-OW 5","lat":52.80105,"lon":5.21434,"rws":"NK-OW 5"},{"id":"NK-OW 6","lat":52.80446,"lon":5.21704,"rws":"NK-OW 6"},{"id":"NK-OW 7","lat":52.80763,"lon":5.22026,"rws":"NK-OW 7"},{"id":"NK-OW 8","lat":52.80453,"lon":5.22535,"rws":"NK-OW 8"},{"id":"NK-OW 9","lat":52.80149,"lon":5.2304,"rws":"NK-OW 9"},{"id":"NK-OW 10","lat":52.79835,"lon":5.23527,"rws":"NK-OW 10"},{"id":"NK-OW 11","lat":52.79519,"lon":5.24062,"rws":"NK-OW 11"},{"id":"HOP-B","lat":52.79376,"lon":5.24979,"rws":"HOP-B"},{"id":"HOP-C","lat":52.78598,"lon":5.25543,"rws":"HOP-C"},{"id":"HOP-D","lat":52.78374,"lon":5.24884,"rws":"HOP-D"},{"id":"HOP-A","lat":52.79143,"lon":5.24326,"rws":"HOP-A"}]}],"banen":{"K":{"naam":"Kort","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","EL-A bb","EZ A bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EL-A sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","EZ A sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","EZ A bb","KG-9 sb","Finish"]}]},"M":{"naam":"Middel","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","LC 11 bb","De Kreupel bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","De Kreupel sb","LC 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ C sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ C bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]},"L":{"naam":"Lang","routes":[{"naam":"Urk – Stavoren","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","ST1 SB2 bb","KG-9 sb","Finish"]},{"naam":"Stavoren – Urk","volgorde":["Start","KG-9 bb","ST1 SB2 sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Stavoren – Medemblik","volgorde":["Start","KG-9 bb","ST 11 bb","Sport C bb","De Ven","KG-9 sb","Finish"]},{"naam":"Medemblik – Stavoren","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","ST 11 sb","KG-9 sb","Finish"]},{"naam":"Medemblik – Urk","volgorde":["Start","KG-9 bb","De Ven","Sport C sb","EZ D sb","ET-N1","KG-9 sb","Finish"]},{"naam":"Urk – Medemblik","volgorde":["Start","KG-9 bb","ET-N1","EZ D bb","Sport C bb","De Ven","KG-9 sb","Finish"]}]}},"standaard":{"baan":"K","windmodel":"knmi_seamless","marge_verboden_gebied_m":50}}]}</script>
 <script>
 /* @preserve
  * Leaflet 1.9.4, a JS library for interactive maps. https://leafletjs.com
@@ -759,7 +784,7 @@ select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6
 <script>
 // ---- bron/kern/00_versie.js ----
 // Versie van de rekenpagina; ophogen bij elke wijziging die gebruikers merken.
-const TOOL = { naam: 'Wedstrijden IJsselmeergebied', versie: '0.1', datum: '2026-11-06' };
+const TOOL = { naam: 'Wedstrijden IJsselmeergebied', versie: '0.2', datum: '2026-11-06' };
 
 // ---- bron/kern/10_editie.js ----
 // Edities lezen en controleren. Pure functies: draaien in de browser én in het bouwscript (Node).
@@ -794,6 +819,216 @@ function controleerEditie(e) {
 }
 
 if (typeof module !== 'undefined') module.exports = { leesStap, controleerEditie };
+
+// ---- bron/kern/20_polar.js ----
+// Polarbestand lezen en gebruiken, volgens polartool/FORMAAT.md (het contract).
+// Pure functies: draaien in de browser en in de tests (Node).
+
+const POLAR_FORMATEN = ['polartool/1'];
+const MIN_VAART_KN = 0.3;                      // minimumsnelheid in de simulatie (gebruiksregel 5)
+
+// Controles bij het inlezen. Geeft null als het bestand bruikbaar is, anders een korte uitleg voor de gebruiker.
+function controleerPolar(o) {
+  if (!o || typeof o !== 'object') return 'geen geldig polarbestand';
+  if (typeof o.formaat !== 'string' || !o.formaat.startsWith('polartool/')) return 'dit is geen polarbestand van de polartool';
+  if (!POLAR_FORMATEN.includes(o.formaat)) return `onbekende formaatversie ${o.formaat}; werk deze pagina bij of sla de polar op met een oudere polartool`;
+  if (!o.schip || !o.schip.id) return 'scheeps-ID ontbreekt';
+  const p = o.polair;
+  if (!p || !Array.isArray(p.snelheid_kn)) return 'de polartabel (polair.snelheid_kn) ontbreekt';
+  if (!Array.isArray(p.tws_kn) || !Array.isArray(p.twa_graden) || p.snelheid_kn.length !== p.tws_kn.length
+    || p.snelheid_kn.some(r => !Array.isArray(r) || r.length !== p.twa_graden.length || r.some(v => !Number.isFinite(v))))
+    return 'de polartabel is onvolledig (rijen en kolommen kloppen niet met tws_kn en twa_graden)';
+  if (!Number.isFinite(o.schip.kruishoek)) return 'kruishoek ontbreekt';
+  if (!o.schip.diepgang_m || !Number.isFinite(o.schip.diepgang_m.op) || !Number.isFinite(o.schip.diepgang_m.neer)) return 'diepgang (zwaard op en neer) ontbreekt';
+  return null;
+}
+
+// Alleen wat de rekenpagina nodig heeft (FORMAAT: "leest alleen wat het nodig heeft"). Dit deel gaat ook mee
+// in de browseropslag en later in het rekenbestand, zodat een berekening te herhalen is.
+function polarUittreksel(o) {
+  const s = o.schip, p = o.polair;
+  return {
+    formaat: o.formaat, versie: o.versie, gewijzigd: o.gewijzigd || null, gemaakt_met: o.gemaakt_met || null,
+    schip: { id: s.id, naam: s.naam, tuigage: s.tuigage, kruishoek: s.kruishoek, diepgang_m: s.diepgang_m, kielspeling_m: s.kielspeling_m,
+      overstagverlies_s: s.overstagverlies_s ?? null, gijpverlies_s: s.gijpverlies_s ?? null, windhoogtefactor: s.windhoogtefactor ?? null },
+    polair: { tws_kn: p.tws_kn, twa_graden: p.twa_graden, snelheid_kn: p.snelheid_kn, zwaardstand: p.zwaardstand || null,
+      herkomst: p.herkomst || null, zeilstanden: p.zeilstanden || null }
+  };
+}
+
+// "Voorbeeldschip, versie 3 (ID 1a2b3c4d)"
+const polarLabel = o => `${o.schip.naam || 'naamloos schip'}, versie ${o.versie} (ID ${String(o.schip.id).slice(0, 8)})`;
+
+// index en fractie van x in een oplopende lijst (afgekapt op de randen)
+function zoekInterval(lijst, x) {
+  if (x <= lijst[0]) return [0, 0];
+  const n = lijst.length - 1;
+  if (x >= lijst[n]) return [n - 1 < 0 ? 0 : n - 1, n - 1 < 0 ? 0 : 1];
+  let i = 0;
+  while (lijst[i + 1] < x) i++;
+  return [i, (x - lijst[i]) / (lijst[i + 1] - lijst[i])];
+}
+
+// Bootsnelheid (kn) bij ware windsnelheid tws (kn, 10 m) en ware windhoek twa (0–180°, t.o.v. de koers over de grond).
+// Gebruiksregels 1–4: bilineair; onder de eerste rij lineair naar 0; boven de laatste rij de laatste rij;
+// onder de kruishoek null (daar zeilt het schip niet: kruisen, zie besteKruishoek).
+function polarSnelheid(P, tws, twa) {
+  const p = P.polair, a = Math.abs(twa) > 180 ? 360 - Math.abs(twa) % 360 : Math.abs(twa);
+  if (a < p.twa_graden[0] - 1e-9) return null;
+  const [k, fk] = zoekInterval(p.twa_graden, a);
+  const rij = r => p.snelheid_kn[r][k] * (1 - fk) + (fk ? p.snelheid_kn[r][k + 1] * fk : 0);
+  if (tws <= 0) return 0;
+  if (tws < p.tws_kn[0]) return rij(0) * tws / p.tws_kn[0];
+  const [r, fr] = zoekInterval(p.tws_kn, tws);
+  return rij(r) * (1 - fr) + (fr ? rij(r + 1) * fr : 0);
+}
+
+// Beste hoek om te kruisen (gebruiksregel 4): de windhoek met de hoogste VMG = snelheid × cos(twa),
+// gezocht vanaf de kruishoek tot 90° in stappen van 1°. Geeft { twa, vaart, vmg }.
+function besteKruishoek(P, tws) {
+  let best = null;
+  for (let a = Math.ceil(P.polair.twa_graden[0]); a <= 90; a++) {
+    const v = polarSnelheid(P, tws, a), vmg = v * Math.cos(a * Math.PI / 180);
+    if (!best || vmg > best.vmg + 1e-12) best = { twa: a, vaart: v, vmg };
+  }
+  return best;
+}
+
+// Beste hoek voor de wind (VMG van de wind af), van 90° tot 180°. Voor later: kruisen voor de wind (tweemaster).
+function besteVoordewindhoek(P, tws) {
+  let best = null;
+  for (let a = 90; a <= 180; a++) {
+    const v = polarSnelheid(P, tws, a), vmg = -v * Math.cos(a * Math.PI / 180);
+    if (!best || vmg > best.vmg + 1e-12) best = { twa: a, vaart: v, vmg };
+  }
+  return best;
+}
+
+// index van de dichtstbijzijnde kolom
+function naasteKolom(P, twa) {
+  const t = P.polair.twa_graden;
+  let k = 0;
+  for (let i = 1; i < t.length; i++) if (Math.abs(t[i] - twa) < Math.abs(t[k] - twa)) k = i;
+  return k;
+}
+
+// Zwaardstand bij twa (gebruiksregel 6): de waarde van de dichtstbijzijnde kolom; zonder lijst: neer.
+const zwaardBij = (P, twa) => (P.polair.zwaardstand && P.polair.zwaardstand[naasteKolom(P, Math.max(twa, P.polair.twa_graden[0]))]) || 'neer';
+
+// Diepgang bij een zwaardstand; half op null = neer.
+function diepgangBij(P, stand) {
+  const d = P.schip.diepgang_m;
+  return stand === 'op' ? d.op : stand === 'half' && Number.isFinite(d.half) ? d.half : d.neer;
+}
+
+// Herkomst van het dichtstbijzijnde vakje; 'doorgetrokken' = schatting (zacht teken in de rakkentabel).
+function herkomstBij(P, tws, twa) {
+  const h = P.polair.herkomst; if (!h) return null;
+  const t = P.polair.tws_kn;
+  let r = 0;
+  for (let i = 1; i < t.length; i++) if (Math.abs(t[i] - tws) < Math.abs(t[r] - tws)) r = i;
+  return (h[r] || [])[naasteKolom(P, twa)] || null;
+}
+const isSchatting = herkomst => herkomst === 'doorgetrokken';
+
+if (typeof module !== 'undefined') module.exports = { controleerPolar, polarUittreksel, polarLabel, polarSnelheid, besteKruishoek,
+  besteVoordewindhoek, zwaardBij, diepgangBij, herkomstBij, isSchatting, MIN_VAART_KN };
+
+// ---- bron/ui/30_schip.js ----
+// Schip: polarbestand inladen (bestandskeuze of "Openen in wedstrijd" vanuit de polartool), tonen en onthouden.
+const SCHIP = (function () {
+  const $ = id => document.getElementById(id);
+  const OPSLAG = 'wedstrijden.polar.v1';
+  const VOORBEELD = '../polartool/voorbeeld/voorbeeldschip_polar_v1_2026-11-05.json';
+  let actief = null;                       // uittreksel van het polarbestand (zie polarUittreksel)
+  const luisteraars = [];
+
+  const nl = (x, d = 1) => x == null || !Number.isFinite(x) ? '–' : x.toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const datum = iso => iso ? new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : 'onbekend';
+
+  function melding(soort, tekst) {
+    const m = $('polarmelding');
+    m.className = 'melding ' + soort; m.textContent = tekst; m.hidden = !tekst;
+  }
+
+  function toon() {
+    const kop = $('kopPolar'), st = $('polarstatus'), det = $('polardetails');
+    if (!actief) {
+      kop.textContent = 'Geen polar'; kop.className = 'chip let';
+      st.textContent = 'Geen polar ingeladen'; st.className = 'chip let';
+      det.innerHTML = `Zonder polar rekent deze pagina niet. Maak je polar met de <a href="../polartool/">polartool</a> en stuur hem hierheen met
+        <b>Openen in wedstrijd</b>, of laad het opgeslagen bestand hierboven in. Om te proberen: het
+        <a href="${VOORBEELD}" download>voorbeeldbestand</a> van een verzonnen schip.`;
+      return;
+    }
+    const s = actief.schip;
+    kop.textContent = 'Polar: ' + polarLabel(actief); kop.className = 'chip';
+    st.textContent = `${polarLabel(actief)} · opgeslagen ${datum(actief.gewijzigd)}`; st.className = 'chip';
+    const voorbeeld = [8, 12, 16].map(w => { const b = besteKruishoek(actief, w); return `${w} kn: ${b.twa}° met ${nl(b.vaart)} kn`; }).join(' · ');
+    det.innerHTML = '';
+    const regels = [
+      ['Kruishoek', `${s.kruishoek}°`],
+      ['Diepgang', `zwaard op ${nl(s.diepgang_m.op, 2)} m · half ${s.diepgang_m.half == null ? '(niet gebruikt)' : nl(s.diepgang_m.half, 2) + ' m'} · neer ${nl(s.diepgang_m.neer, 2)} m`],
+      ['Kielspeling', s.kielspeling_m == null ? 'niet ingevuld' : nl(s.kielspeling_m, 2) + ' m'],
+      ['Tijdverlies', `overstag ${s.overstagverlies_s == null ? '–' : s.overstagverlies_s + ' s'} · gijp ${s.gijpverlies_s == null ? '–' : s.gijpverlies_s + ' s'}`],
+      ['Kruisen (beste VMG)', voorbeeld],
+      ['Bestand', `${actief.formaat}, ${actief.gemaakt_met || 'polartool'}`]
+    ];
+    const dl = document.createElement('dl');
+    for (const [k, v] of regels) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); }
+    det.append(dl);
+  }
+
+  // Eén weg voor bestand én postMessage: zelfde controles, zelfde gevolg. Geeft null of de reden van weigeren.
+  function laad(o, bron) {
+    const fout = controleerPolar(o);
+    if (fout) { melding('fout', `Polar niet ingeladen: ${fout}.`); return fout; }
+    const vorig = actief;
+    actief = polarUittreksel(o);
+    try { localStorage.setItem(OPSLAG, JSON.stringify(actief)); } catch (e) { /* opslag niet beschikbaar: werkt gewoon zonder */ }
+    let tekst = `Polar ${bron}: ${polarLabel(actief)}.`;
+    if (vorig && vorig.schip.id !== actief.schip.id) tekst += ` Dit is een ander schip dan de vorige polar (${polarLabel(vorig)}).`;
+    else if (vorig && vorig.versie !== actief.versie) tekst += ` Was versie ${vorig.versie}.`;
+    melding('ok', tekst);
+    toon();
+    luisteraars.forEach(f => f(actief));
+    return null;
+  }
+
+  $('polarbestand').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    let o;
+    try { o = JSON.parse(await f.text()); } catch (err) { melding('fout', `“${f.name}” is geen leesbaar JSON-bestand.`); return; }
+    laad(o, `ingeladen uit “${f.name}”`);
+  });
+
+  // "Openen in wedstrijd" (FORMAAT.md, protocol 1)
+  window.addEventListener('message', e => {
+    if (!window.opener || e.source !== window.opener) return;
+    if (e.origin !== location.origin && !(e.origin === 'null' && location.origin === 'null')) return;
+    if (!e.data || e.data.type !== 'polartool:polar') return;
+    const antwoord = e.origin === 'null' ? '*' : e.origin;
+    const o = e.data.bestand, fout = laad(o, 'ontvangen van de polartool');
+    if (fout) e.source.postMessage({ type: 'polartool:geweigerd', reden: fout }, antwoord);
+    else e.source.postMessage({ type: 'polartool:ontvangen', schip_id: o.schip.id, versie: o.versie }, antwoord);
+  });
+
+  // vorige polar uit deze browser
+  try {
+    const o = JSON.parse(localStorage.getItem(OPSLAG) || 'null');
+    if (o && !controleerPolar(o)) actief = o;
+  } catch (e) { /* geen of onleesbare opslag */ }
+  $('polarvergeten').addEventListener('click', () => {
+    actief = null;
+    try { localStorage.removeItem(OPSLAG); } catch (e) { /* niets */ }
+    melding('', ''); toon(); luisteraars.forEach(f => f(null));
+  });
+  toon();
+  if (window.opener) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin === 'null' ? '*' : location.origin);
+
+  return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f) };
+})();
 
 // ---- bron/ui/50_kaart.js ----
 // Minimale pagina (bouwstap 1): edities en banen op de kaart, als controle van bouwscript en bronbestanden.

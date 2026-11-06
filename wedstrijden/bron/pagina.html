@@ -23,9 +23,20 @@
   <div class="binnen">
     <h1><span class="anker"></span>Wedstrijden IJsselmeergebied</h1><span class="toolversie" id="toolversie"></span>
     <div class="sub">Snelste route per wedstrijd en baan, uit je eigen polarbestand en de windverwachting · in opbouw</div>
+    <div class="kopregel"><span class="chip let" id="kopPolar">Geen polar</span></div>
   </div>
 </header>
 <main>
+  <section class="paneel" id="schip">
+    <h2>Schip</h2>
+    <div class="rij">
+      <label class="knop">Polarbestand inladen…<input type="file" id="polarbestand" accept=".json,application/json" hidden></label>
+      <span class="chip let" id="polarstatus">Geen polar ingeladen</span>
+      <button type="button" class="knop stil" id="polarvergeten" title="Polar uit deze browser verwijderen">Vergeten</button>
+    </div>
+    <div class="melding" id="polarmelding" hidden></div>
+    <div class="sub" id="polardetails"></div>
+  </section>
   <section class="paneel">
     <div class="rij">
       <label>Editie <select id="editiekeuze"></select></label>
