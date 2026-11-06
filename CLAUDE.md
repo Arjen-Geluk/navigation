@@ -10,7 +10,7 @@ Elk project/deliverable binnen dit onderwerp krijgt een eigen submap met
 een eigen zelfstandige `index.html` (geen externe assets, alles inline):
 
 - `getijkaart/` — Getijkaart Waddenzee (bodemhoogte, waterstand, tijdschuif)
-- `3-stedenrace/` — Klipperrace 3 Steden (wedstrijdanalyse Willem Jacob)
+- `3-stedenrace/` — Klipperrace 3 Steden (wedstrijdanalyse en route)
 - `polartool/` — Polartool: polar voor een platbodem uit handmatige waarden en VDR-logs
 
 ## Polar en routemodellen
