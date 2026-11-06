@@ -1,10 +1,31 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 1,
+  "versie": 2,
   "datum": "2026-11-06",
   "toelichting": "Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.",
-  "gebied": { "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ", "west": 4.9, "zuid": 52.25, "oost": 5.95, "noord": 53.1 },
+  "gebied": {
+    "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
+    "west": 4.9,
+    "zuid": 52.25,
+    "oost": 5.95,
+    "noord": 53.1,
+    "afsluitingen": [
+      {
+        "naam": "Ketelbrug",
+        "toelichting": "scheidt het Ketelmeer (en de randmeren) van het IJsselmeer",
+        "van": [52.62, 5.741],
+        "tot": [52.57, 5.741]
+      },
+      {
+        "naam": "Hollandse Brug",
+        "toelichting": "scheidt het Gooimeer (en de randmeren) van het IJmeer",
+        "van": [52.322, 5.128],
+        "tot": [52.338, 5.145]
+      }
+    ],
+    "zaden": [{ "naam": "IJsselmeer", "lat": 52.8, "lon": 5.35 }, { "naam": "Markermeer", "lat": 52.55, "lon": 5.25 }]
+  },
   "peil": { "eenheid": "m NAP", "ijsselmeer": { "zomer": null, "winter": null }, "markermeer": { "zomer": null, "winter": null }, "bron": null },
   "bodem": {
     "bestand": "bodem_ijsselmeergebied_50m.bin",
@@ -19,7 +40,7 @@
     "nx": 1417,
     "ny": 1889,
     "codering": "1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water",
-    "sha256": "cf5cc85546020743dfbced03e0db56f420de58342ff1e2e15bd6f57e327ecb03"
+    "sha256": "22d40b29585331d2494652bfbe4d9f6c0ce5c41dfd74cb06996bfb3774aa1cc5"
   },
   "betonning": {
     "bestand": "betonning_ijsselmeergebied.json",

@@ -153,6 +153,36 @@ function herbemonster(rdr, gebied, celM) {
   return { cel_m: celM, west: gebied.west, noord: gebied.noord, dlon, dlat, nx, ny, codes };
 }
 
+// Alleen het water dat vanuit de startpunten (gebied.zaden) bereikbaar is, zonder een afsluitlijn
+// (gebied.afsluitingen) te kruisen. Zo vallen de randmeren en het Ketelmeer eruit.
+function afbakenen(r, gebied) {
+  const dicht = new Uint8Array(r.nx * r.ny);
+  const cel = (lat, lon) => [Math.floor((lon - r.west) / r.dlon), Math.floor((r.noord - lat) / r.dlat)];
+  for (const a of gebied.afsluitingen || []) {
+    const [i0, j0] = cel(...a.van), [i1, j1] = cel(...a.tot), n = 2 * Math.max(Math.abs(i1 - i0), Math.abs(j1 - j0), 1);
+    for (let s = 0; s <= n; s++) {
+      const i = Math.round(i0 + (i1 - i0) * s / n), j = Math.round(j0 + (j1 - j0) * s / n);
+      for (const [di, dj] of [[0, 0], [1, 0], [0, 1]]) if (i + di < r.nx && j + dj < r.ny) dicht[(j + dj) * r.nx + i + di] = 1;   // dik genoeg tegen lekken
+    }
+  }
+  const bereikt = new Uint8Array(r.nx * r.ny), rij = [];
+  for (const z of gebied.zaden || []) {
+    const [i, j] = cel(z.lat, z.lon), k = j * r.nx + i;
+    if (r.codes[k] === GEEN_WATER) throw new Error(`startpunt ${z.naam} ligt niet in het water`);
+    bereikt[k] = 1; rij.push(k);
+  }
+  while (rij.length) {
+    const k = rij.pop(), i = k % r.nx;
+    for (const m of [i > 0 ? k - 1 : -1, i < r.nx - 1 ? k + 1 : -1, k - r.nx, k + r.nx]) {
+      if (m < 0 || m >= bereikt.length || bereikt[m] || dicht[m] || r.codes[m] === GEEN_WATER) continue;
+      bereikt[m] = 1; rij.push(m);
+    }
+  }
+  let weg = 0;
+  for (let k = 0; k < bereikt.length; k++) if (!bereikt[k] && r.codes[k] !== GEEN_WATER) { r.codes[k] = GEEN_WATER; weg++; }
+  return weg;
+}
+
 // deelgebieden voor de vergelijking: Houtribdijk (Enkhuizen–Lelystad) scheidt IJsselmeer en Markermeer
 function deelgebied(lat, lon) {
   const [a, b] = [[52.705, 5.29], [52.52, 5.44]];
@@ -294,6 +324,7 @@ function schrijfVerslag(v) {
     r.push(`- RWS-origineel: ${nl(b.rd.nx)} × ${nl(b.rd.ny)} cellen van ${b.rd.cel} m (RD); waterpunten: ${nl(b.rd.water)}.`);
     r.push(`- Raster in de pagina: cellen van ${b.r.cel_m} m (${b.r.dlon}° × ${b.r.dlat}°), ${nl(b.r.nx)} × ${nl(b.r.ny)} = ${nl(b.r.nx * b.r.ny)} cellen, `
       + `waarvan ${nl(b.water)} water. Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; minder dan de helft water = geen water.`);
+    r.push(`- Afgebakend: ${nl(b.buitenGebied)} watercellen buiten het vaargebied weggelaten (niet bereikbaar zonder ${(b.afsluitingen || []).map(a => a.naam).join(' of ')} te kruisen).`);
     r.push(`- Bestand \`${b.bestand}\`: ${kB(b.gzip)} (gzip); in de pagina als base64 ca. ${kB(b.gzip * 4 / 3)}.`);
     if (b.meting) r.push(`- Ter vergelijking ${b.meting.cel_m} m: ${nl(b.meting.water)} watercellen, ${kB(b.meting.gzip)} (gzip), als base64 ca. ${kB(b.meting.gzip * 4 / 3)}.`);
     r.push('', '| Deelgebied | Watercellen | Bodem p10 / mediaan / p90 (m NAP) |' + (b.vorig ? ' Gem. verschil | Cellen ≥ 0,3 m anders | Water erbij / weg |' : ''),
@@ -332,7 +363,8 @@ function schrijfVerslag(v) {
     r.push('');
     r.push('');
   }
-  const pad = join(MAP, 'beheer', 'verslagen', `${arg('alleen-urls') ? 'urls' : 'ververs'}_${vandaag}.md`);
+  // nooit een eerder verslag overschrijven: tweede run op dezelfde dag wordt ververs_<datum>_2.md
+  const pad = join(MAP, 'beheer', 'verslagen', (v.naam || `urls_${vandaag}`) + '.md');
   writeFileSync(pad, r.join('\n'));
   return pad;
 }
@@ -342,7 +374,7 @@ const vg = leesJson(VG_PAD);
 
 if (arg('goedkeuren')) {
   if (!vg.concept) { console.error('Er is geen ververste versie die op goedkeuring wacht.'); process.exit(1); }
-  const verslag = join(MAP, 'beheer', 'verslagen', `ververs_${vg.concept.verslag}.md`);
+  const verslag = join(MAP, 'beheer', 'verslagen', `${vg.concept.verslag}.md`);
   vg.versie += 1; vg.datum = vandaag; delete vg.concept;
   schrijfJson(VG_PAD, vg);
   writeFileSync(verslag, readFileSync(verslag, 'utf8').replace(/\*\*Status: wacht op goedkeuring\.\*\*[^\n]*/, `**Status: goedgekeurd op ${vandaag}; vaargebied versie ${vg.versie}.**`));
@@ -365,6 +397,7 @@ if (!arg('alleen-urls')) {
   const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
   rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
   const r = herbemonster(rd, vg.gebied, celM);
+  const buitenGebied = afbakenen(r, vg.gebied);
   const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
   const binPad = join(MAP, 'gegevens', bestand);
   const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
@@ -385,7 +418,7 @@ if (!arg('alleen-urls')) {
     writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
   }
   verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
-    stat: bodemStatistiek(r, vorig), vorig: !!vorig, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
+    stat: bodemStatistiek(r, vorig), vorig: !!vorig, buitenGebied, afsluitingen: vg.gebied.afsluitingen, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
   vg.bodem = {
     bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
     cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
@@ -419,7 +452,10 @@ if (!arg('alleen-urls')) {
     { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
     { onderdeel: 'betonning', url: WFS, opgehaald: vandaag }
   ];
-  vg.concept = { verslag: vandaag, toelichting: 'Ververst, wacht op goedkeuring (npm run ververs -- --goedkeuren)' };
+  // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md
+  verslag.naam = `ververs_${vandaag}`;
+  for (let n = 2; existsSync(join(MAP, 'beheer', 'verslagen', verslag.naam + '.md')); n++) verslag.naam = `ververs_${vandaag}_${n}`;
+  vg.concept = { verslag: verslag.naam, toelichting: 'Ververst, wacht op goedkeuring (npm run ververs -- --goedkeuren)' };
   schrijfJson(VG_PAD, vg);
 }
 
