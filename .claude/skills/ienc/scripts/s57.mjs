@@ -67,7 +67,7 @@ export function betekenis(attrAcr, waarde) {
   const c = codes(), a = c.attrOpAcr.get(attrAcr);
   if (!a) return undefined;
   const tabel = c.waarden.get(a.code);
-  if (!tabel) return undefined;
+  if (!tabel || typeof waarde === 'string') return undefined;
   if (Array.isArray(waarde)) return waarde.map(w => tabel.get(w) ?? String(w));
   return tabel.get(waarde);
 }
@@ -77,11 +77,17 @@ export function betekenis(attrAcr, waarde) {
 const naamSleutel = b => `${b[0]}:${b.readUInt32LE(1)}`; // NAME B(40): RCNM (1 byte) + RCID (4 bytes)
 const lnamSleutel = b => `${b.readUInt16LE(0)}:${b.readUInt32LE(2)}:${b.readUInt16LE(6)}`; // AGEN:FIDN:FIDS
 
+// Zet ATVL om naar een getal of lijst. Klopt de waarde niet met het type (komt voor in RWS-data:
+// "RECORDING_GAUGE_WITH_REMOTE_ACCESS" of "swinging area" waar een code hoort), dan blijft de tekst staan.
 function attribuutWaarde(type, ruw) {
-  if (ruw === '' || ruw == null) return null;
-  if (type === 'E' || type === 'I') { const n = parseInt(ruw, 10); return Number.isNaN(n) ? ruw : n; }
-  if (type === 'F') { const n = parseFloat(ruw); return Number.isNaN(n) ? ruw : n; }
-  if (type === 'L') return ruw.split(',').filter(Boolean).map(x => parseInt(x, 10));
+  if (ruw == null || ruw.trim() === '') return null;
+  const getal = /^\s*-?\d+(\.\d+)?\s*$/;
+  if (type === 'E' || type === 'I') return getal.test(ruw) ? parseInt(ruw, 10) : ruw.trim();
+  if (type === 'F') return getal.test(ruw) ? parseFloat(ruw) : ruw.trim();
+  if (type === 'L') {
+    const delen = ruw.split(',').map(x => x.trim()).filter(Boolean);
+    return delen.every(x => getal.test(x)) ? delen.map(x => parseInt(x, 10)) : ruw.trim();
+  }
   return ruw;
 }
 
