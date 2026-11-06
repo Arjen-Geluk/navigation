@@ -113,3 +113,8 @@ details{margin:4px 0}summary{cursor:pointer;font-weight:600}
   #kaart{height:calc(100vh - 230px)}
   .paneel{padding:10px}
 }
+.kaartbalk{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:13px;margin:6px 0}
+.standlegenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:4px 0}
+.standlegenda i{display:inline-block;width:18px;height:4px;vertical-align:3px;border-radius:2px}
+input.mini{width:52px;padding:2px 4px;font-size:13px}
+#windtabel td{white-space:nowrap}

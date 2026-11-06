@@ -4,11 +4,17 @@
   const lagen = {};             // naam → Leaflet-laag
   const ONDERGRONDEN = {
     vast: { naam: 'Vast (ingebakken, ook offline)' },
-    grijs: { naam: 'Grijs', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
     topo: { naam: 'Topografisch', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
-    foto: { naam: 'Luchtfoto', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, Maxar, Earthstar Geographics' },
-    geen: { naam: 'Geen' }
+    foto: { naam: 'Luchtfoto', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, Maxar, Earthstar Geographics' }
   };
+  // kleur per zeilstand (namen uit het polarbestand), plus kruisen
+  const STAND_KLEUR = { 'kruisen': '#e0245e', 'aan de wind': '#f08a1c', 'knik in de schoot': '#d4b106', 'halve wind': '#1f9e89', 'ruime wind': '#2f6fd6', 'voor de wind': '#7b3fc4' };
+  const standKleur = s => STAND_KLEUR[s] || '#555';
+  // Route op de kaart: na een verschuiving van de windverandering direct opnieuw nagevaren (alleen de gekozen route)
+  let kaartRoute = null;
+  const toonRoute = () => kaartRoute || gekozenRoute();
+  op('uitkomst', () => { kaartRoute = null; });
+  op('selectie', () => { kaartRoute = null; });
   const LAGEN = [
     ['Vaargebied', [['bodem', 'Diepte bij het peil'], ['bevaarbaar', 'Bevaarbaar voor dit schip'], ['betonning', 'Betonning'], ['zones', 'Verboden gebieden']]],
     ['Wedstrijd', [['route', 'Gekozen route'], ['andere', 'Boeien van de andere banen']]],
@@ -90,6 +96,7 @@
     if (S.kaart.lagen.wind) lagen.wind = L.layerGroup().addTo(kaart);
     legenda();
     tijdschuif();
+    kaartBalk();
   }
 
   const KLEUREN = { Rood: '#d22', Groen: '#1a8a3a', Geel: '#e8c21a', Zwart: '#222', Wit: '#fff', Oranje: '#f08a1c' };
@@ -109,11 +116,21 @@
     return g;
   }
   function routeLaag() {
-    const g = L.layerGroup(), E = huidigeEditie(), r = gekozenRoute();
+    const g = L.layerGroup(), E = huidigeEditie(), r = toonRoute();
     const inRoute = new Set(r ? r.punten.map(p => p.id) : E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan].routes.flatMap(x => x.volgorde.map(s => leesStap(s).punt)));
     const ronding = {};
     if (r) {
-      L.polyline(r.res.track.map(p => [p.lat, p.lon]), { color: '#0b4f8a', weight: 3, opacity: 0.85 }).addTo(g);
+      // track in stukken per zeilstand
+      const t = r.res.track;
+      let stuk = [t[0]], stand = t[1] && t[1].stand;
+      for (let i = 1; i < t.length; i++) {
+        stuk.push(t[i]);
+        const volgende = t[i + 1] && t[i + 1].stand;
+        if (volgende !== stand || i === t.length - 1) {
+          L.polyline(stuk.map(p => [p.lat, p.lon]), { color: standKleur(stand), weight: 4, opacity: 0.9 }).bindTooltip(stand || '', { sticky: true }).addTo(g);
+          stuk = [t[i]]; stand = volgende;
+        }
+      }
       r.res.rakken.forEach(k => { ronding[k.naar] = k.eind; });
     } else {
       const baan = E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan];
@@ -134,7 +151,7 @@
 
   // ---- tijdschuif: boot op de berekende positie, wind op dat moment ----
   function tijdschuif() {
-    const r = gekozenRoute(), vak = $('tijdschuif'), s = $('schuif');
+    const r = toonRoute(), vak = $('tijdschuif'), s = $('schuif');
     const van = r ? r.res.start : startMs(), tot = r ? r.res.finish : limietMs();
     vak.hidden = !(r || S.kaart.lagen.wind);
     if (tijd == null || tijd < van || tijd > tot) tijd = van;
@@ -143,7 +160,7 @@
     zetTijd();
   }
   function zetTijd() {
-    const r = gekozenRoute();
+    const r = toonRoute();
     let tekst = kloktijd(tijd);
     if (r && lagen.boot) {
       const t = r.res.track; let i = t.findIndex(p => p.t >= tijd); if (i < 0) i = t.length - 1;
@@ -173,6 +190,30 @@
     if (S.kaart.lagen.bevaarbaar) delen.push(el('b', {}, SCHIP.actief ? 'Bevaarbaar (incl. kielspeling)' : 'Bevaarbaar: laad eerst een polar in'),
       blok([240, 200, 60], 'alleen zwaard half of op'), blok([235, 130, 40], 'alleen zwaard op (ruime koersen)'), blok([200, 40, 40], 'romp loopt vast'));
     l.replaceChildren(...delen);
+    // zeilstanden onder de kaart, alleen die in de getoonde route voorkomen
+    const r = toonRoute(), standen = r && S.kaart.lagen.route ? [...new Set(r.res.track.map(p => p.stand).filter(Boolean))] : [];
+    $('standlegenda').replaceChildren(...standen.map(s => el('span', {}, el('i', { style: `background:${standKleur(s)}` }), ' ' + s)));
+  }
+
+  // ---- windverandering op de kaart: de gekozen route direct opnieuw navaren ----
+  // Na elke windwijziging (verschuiving hier of op Wind & peil, of een aanpassing in de windtabel) de gekozen route
+  // opnieuw navaren met de nieuwe wind; het advies zelf wordt pas bij Bereken vernieuwd.
+  op('wind', () => {
+    const r = gekozenRoute();
+    kaartRoute = r && VAARWATER && SCHIP.actief && S.wind.W
+      ? { ...r, res: vaarRoute(VAARWATER, windEffectief(), SCHIP.actief, r.punten, startMs(), rekenOpties()), herrekend: true } : null;
+  });
+  op('invoer', () => { kaartRoute = null; });
+  op('polar', () => { kaartRoute = null; });
+  function verschuif(d) { S.wind.verschuiving_min = (S.wind.verschuiving_min || 0) + d; bewaar(); meld('wind'); }
+  $('kaartEerder').onclick = () => verschuif(30);
+  $('kaartLater').onclick = () => verschuif(-30);
+  function kaartBalk() {
+    $('kaartVerschuiving').textContent = verschuivingTekst();
+    const r = gekozenRoute();
+    $('kaartRouteInfo').textContent = kaartRoute && r
+      ? `${r.naam}: zeiltijd ${duur(kaartRoute.res.zeiltijd_ms)}, finish ${kloktijd(kaartRoute.res.finish)} (advies: ${duur(r.res.zeiltijd_ms)}). Klik op Bereken voor een nieuw advies met alle routes.`
+      : r ? `${r.naam}: zeiltijd ${duur(r.res.zeiltijd_ms)}, finish ${kloktijd(r.res.finish)}.` : '';
   }
 
   // ---- klik: bodem, diepte en bevaarbaarheid ----

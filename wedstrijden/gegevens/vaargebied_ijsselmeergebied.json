@@ -1,9 +1,9 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 2,
+  "versie": 3,
   "datum": "2026-11-06",
-  "toelichting": "Eerste opzet: alleen de grenzen. Bodem en betonning komen uit het ververs-script (beheer/ververs.mjs); havens, doorgangen en peilen volgen.",
+  "toelichting": "Bodem en betonning uit het ververs-script (beheer/ververs.mjs); streefpeilen met de hand (versie 3). Havens en doorgangen volgen.",
   "gebied": {
     "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
     "west": 4.9,
@@ -26,7 +26,19 @@
     ],
     "zaden": [{ "naam": "IJsselmeer", "lat": 52.8, "lon": 5.35 }, { "naam": "Markermeer", "lat": 52.55, "lon": 5.25 }]
   },
-  "peil": { "eenheid": "m NAP", "ijsselmeer": { "zomer": null, "winter": null }, "markermeer": { "zomer": null, "winter": null }, "bron": null },
+  "peil": {
+    "eenheid": "m NAP",
+    "zomer": {
+      "waarde": -0.2,
+      "van": "04-01",
+      "tot": "09-30",
+      "toelichting": "midden van de zomerband NAP -0,10 tot -0,30 m (peilbesluit 2018); geldt voor IJsselmeer, Markermeer en IJmeer"
+    },
+    "winter": { "waarde": -0.4, "van": "10-01", "tot": "03-31", "toelichting": "winterpeil NAP -0,40 m" },
+    "bron": "https://www.rijkswaterstaat.nl/water/vaarwegenoverzicht/ijsselmeer/waterbeheer-ijsselmeer-markermeer",
+    "bron_peilbesluit": "https://open.rws.nl/publish/pages/39568/peilbesluit_ijsselmeergebied_b_factsheet_oktober_2018.pdf",
+    "opgehaald": "2026-11-06"
+  },
   "bodem": {
     "bestand": "bodem_ijsselmeergebied_50m.bin",
     "opname": 2022,

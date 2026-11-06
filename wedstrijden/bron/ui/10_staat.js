@@ -2,7 +2,6 @@
 const $ = id => document.getElementById(id);
 const G = JSON.parse($('gegevens').textContent);
 const TZ = 'Europe/Amsterdam';
-const STANDAARD_PEIL = -0.25;           // m NAP, voorlopig (streefpeilen per meer volgen in het vaargebied)
 
 // ---- element maken: el('td', { class: 'x', onclick: f }, 'tekst', kind) ----
 function el(tag, attr, ...kids) {
@@ -35,13 +34,16 @@ function standaardStaat() {
   return { v: 1, editie: editieSleutels[0], per: {}, eenheden: 'nm',
     schip: { kielspeling: null, metOverstag: false, overstag_s: null, metGijp: false, gijp_s: null, factor: 100 },
     wind: { model: 'knmi_seamless', W: null, aanpassingen: {}, verschuiving_min: 0 },
-    peil: null,
+    peilKeuze: 'auto', peilHand: null,
     kaart: { ondergrond: 'vast', lagen: { bodem: false, bevaarbaar: false, betonning: true, zones: true, route: true, andere: false, wind: false } },
     selectie: { baan: null, route: null } };
 }
 let S = standaardStaat();
 try { const o = JSON.parse(localStorage.getItem(OPSLAG) || 'null'); if (o && o.v === 1) S = { ...S, ...o, kaart: { ...S.kaart, ...o.kaart, lagen: { ...S.kaart.lagen, ...(o.kaart || {}).lagen } } }; } catch (e) { /* geen opslag */ }
 if (!EDITIES[S.editie]) S.editie = editieSleutels[0];
+if (typeof S.peil === 'number') { S.peilKeuze = 'hand'; S.peilHand = S.peil; } delete S.peil;          // oud formaat (0.5)
+if (!['vast', 'topo', 'foto'].includes(S.kaart.ondergrond)) S.kaart.ondergrond = 'vast';
+if (S.wind.aanpassingen && Object.values(S.wind.aanpassingen).some(a => 'draai' in a)) S.wind.aanpassingen = {};   // oud formaat: per uur, nu per uur en plaats
 function bewaar() { try { localStorage.setItem(OPSLAG, JSON.stringify(S)); } catch (e) { /* vol of geen opslag: werkt gewoon door */ } }
 
 // invoer per editie (datum, tijden, baan van de wedstrijdleiding, afwijkingen van de schipper)
@@ -59,7 +61,11 @@ function huidigeEditie() {
 const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length > 0; };
 const startMs = () => lokaleTijdNaarMs(invoer().datum, invoer().start, EDITIES[S.editie].tijdzone);
 const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone); return l > s ? l : l + 864e5; };
-const peil = () => S.peil ?? STANDAARD_PEIL;
+// Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), of een eigen waarde
+const PEIL = G.vaargebied.peil;
+const seizoenBij = datum => { const md = datum.slice(5); return md >= PEIL.zomer.van && md <= PEIL.zomer.tot ? 'zomer' : 'winter'; };
+const peilKeuze = () => S.peilKeuze === 'auto' || !S.peilKeuze ? seizoenBij(invoer().datum) : S.peilKeuze;
+const peil = () => peilKeuze() === 'hand' ? (S.peilHand ?? PEIL.winter.waarde) : PEIL[peilKeuze()].waarde;
 
 // ---- gebeurtenissen tussen de schermen ----
 const luisteraars = {};

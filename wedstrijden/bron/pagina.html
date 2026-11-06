@@ -94,14 +94,15 @@
       <div class="melding" id="windmelding" hidden></div>
       <p class="sub" id="windbron"></p>
       <div class="tabelvak"><table class="tabel" id="windtabel"></table></div>
-      <p class="sub">Per uur het gemiddelde over het hele gebied (63 windpunten). Pas je richting of kracht aan, dan draait of schaalt de wind op dat uur overal mee.
-        <button type="button" class="knop stil klein" id="windHerstel">Aanpassingen wissen</button></p>
+      <p class="sub">De berekening gebruikt alle 63 windpunten over IJsselmeer en Markermeer, met de wind per plek en per moment.
+        De tabel toont die wind op zes plaatsen. Pas je daar richting of kracht aan, dan verandert de wind in de omgeving van die plaats mee
+        (hoe dichterbij, hoe sterker). <button type="button" class="knop stil klein" id="windHerstel">Aanpassingen wissen</button></p>
     </div>
     <div class="paneel">
       <h2>Peil</h2>
       <div class="velden">
-        <label>Waterpeil (m NAP) <input type="number" id="peil" step="0.01" min="-1.5" max="1"></label>
-        <button type="button" class="knop stil klein" id="peilStandaard">Standaardpeil</button>
+        <label>Peil <select id="peilkeuze"></select></label>
+        <label id="peilHandVak">Eigen waarde (m NAP) <input type="number" id="peil" step="0.01" min="-1.5" max="1"></label>
       </div>
       <p class="sub" id="peiluitleg"></p>
     </div>
@@ -137,6 +138,11 @@
       <input type="range" id="schuif" min="0" max="1000" value="0">
       <span id="schuiftijd"></span>
     </div>
+    <div class="kaartbalk">
+      <span class="stapper">Windverandering <button type="button" class="knop stil klein" id="kaartLater">− 30 min</button><b id="kaartVerschuiving">op tijd</b><button type="button" class="knop stil klein" id="kaartEerder">+ 30 min</button></span>
+      <span id="kaartRouteInfo" class="sub"></span>
+    </div>
+    <div class="standlegenda" id="standlegenda"></div>
     <p class="sub" id="kaartinfo">Klik op de kaart voor bodemhoogte, waterdiepte en bevaarbaarheid.</p>
   </section>
 
