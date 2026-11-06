@@ -26,17 +26,22 @@ const scripts = ['bron/kern', 'bron/ui'].flatMap(m => readdirSync(join(MAP, m)).
 // dezelfde controle als de pagina zelf gebruikt (bron/kern/10_editie.js)
 const kern = { module: { exports: {} } };
 vm.runInNewContext(lees('bron/kern/10_editie.js'), kern);
-const { controleerEditie } = kern.module.exports;
+const { controleerEditie, betonningIndex, metPosities } = kern.module.exports;
 
 const vaargebied = JSON.parse(lees('gegevens/vaargebied_ijsselmeergebied.json'));
 if (vaargebied.formaat !== 'vaargebied/1') stop('vaargebied: onbekend formaat ' + vaargebied.formaat);
+const betonningBron = vaargebied.betonning?.bestand ? JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand)) : { markeringen: [] };
+const index = betonningIndex(betonningBron.markeringen);
 
+// Edities: controleren en de posities van de boeien invullen uit de RWS-betonning van het vaargebied
 const editieBestanden = readdirSync(join(MAP, 'gegevens/wedstrijden')).filter(f => f.endsWith('.json')).sort();
 const edities = editieBestanden.map(f => {
   const e = JSON.parse(lees('gegevens/wedstrijden/' + f));
   const fouten = controleerEditie(e);
   if (fouten.length) stop(`editie ${f}:\n  - ` + fouten.join('\n  - '));
-  return e;
+  const r = metPosities(e, index);
+  if (r.fouten.length) stop(`editie ${f}: posities uit de RWS-betonning:\n  - ` + r.fouten.join('\n  - '));
+  return r.editie;
 });
 
 const tool = vm.runInNewContext(lees('bron/kern/00_versie.js') + ';TOOL');
@@ -55,7 +60,7 @@ const veiligJs = s => s.replace(/<\/script/gi, '<\\/script');
 // Betonning compact voor de kaart: per markering [naam, lat, lon, kleur, vorm, licht, drijvend]
 let betonning = null;
 if (vaargebied.betonning?.bestand) {
-  const b = JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand));
+  const b = betonningBron;
   const licht = l => l ? [l.karakter, l.groep && l.groep !== '(1)' ? l.groep : '', ' ', (l.kleur || '').slice(0, 1), l.periode_s ? ' ' + l.periode_s + 's' : ''].join('').trim() : '';
   betonning = { opgehaald: b.opgehaald, velden: ['naam', 'lat', 'lon', 'kleur', 'vorm', 'licht', 'drijvend'],
     rijen: b.markeringen.map(m => [m.naam, m.lat, m.lon, m.kleur || '', m.vorm || '', licht(m.licht), m.drijvend ? 1 : 0]) };

@@ -10,6 +10,8 @@ function gekozenRoute() {
 
 (function () {
   function kanRekenen() {
+    const ef = huidigeEditie().fouten;
+    if (ef.length) return 'Een aangepaste route verwijst naar een onbekende boei (tabblad Wedstrijd): ' + ef.join(' ');
     if (!SCHIP.actief) return 'Laad eerst een polar in (tabblad Schip).';
     if (!S.wind.W) return 'Haal eerst de wind op (tabblad Wind & peil).';
     if (!windDekt()) return 'De wind dekt de wedstrijd niet; haal de wind opnieuw op.';

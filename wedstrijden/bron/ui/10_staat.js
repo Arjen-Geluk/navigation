@@ -49,16 +49,35 @@ function bewaar() { try { localStorage.setItem(OPSLAG, JSON.stringify(S)); } cat
 // invoer per editie (datum, tijden, baan van de wedstrijdleiding, afwijkingen van de schipper)
 function invoer() {
   const e = EDITIES[S.editie];
-  return S.per[S.editie] ||= { datum: e.datum, start: e.start, limiet: e.finishlimiet, baanWL: '', afwijkingen: { punten: {}, zones: {} } };
+  const inv = S.per[S.editie] ||= { datum: e.datum, start: e.start, limiet: e.finishlimiet, baanWL: '' };
+  inv.afwijkingen = { punten: {}, zones: {}, routes: {}, tonnen: [], ...(inv.afwijkingen || {}) };
+  return inv;
 }
-// De editie zoals de schipper hem gebruikt: met verlegde punten en aan/uit gezette zones.
+// RWS-betonning (ingebakken) om boeien op naam te vinden, bijvoorbeeld een andere boei als referentie in een route
+const BETONNING = betonningIndex((G.betonning ? G.betonning.rijen : []).map(([naam, lat, lon]) => ({ naam, lat, lon })));
+const routeSleutel = (baan, naam) => baan + '|' + naam;
+
+// De editie zoals de schipper hem gebruikt: met aangepaste routes, wedstrijdtonnen, verlegde punten en aan/uit gezette zones.
+// Boeien die alleen in een aangepaste route staan, komen uit de RWS-betonning. Onvindbare punten staan in .fouten.
 function huidigeEditie() {
-  const e = EDITIES[S.editie], a = invoer().afwijkingen;
-  return { ...e, datum: invoer().datum, start: invoer().start, finishlimiet: invoer().limiet,
-    punten: e.punten.map(p => a.punten[p.id] ? { ...p, ...a.punten[p.id] } : p),
+  const e = EDITIES[S.editie], a = invoer().afwijkingen, fouten = [];
+  const punten = e.punten.map(p => a.punten[p.id] ? { ...p, ...a.punten[p.id], positie: 'verlegd' } : p);
+  for (const t of a.tonnen) punten.push({ id: t.id, soort: 'wedstrijdton', lat: t.lat, lon: t.lon, positie: 'wedstrijdton', toelichting: 'wedstrijdton (eigen positie)' });
+  const banen = {};
+  for (const [b, baan] of Object.entries(e.banen)) banen[b] = { ...baan, routes: baan.routes.map(r => {
+    const eigen = a.routes[routeSleutel(b, r.naam)];
+    if (!eigen) return r;
+    for (const s of eigen.map(leesStap)) if (!punten.some(p => p.id === s.punt)) {
+      const z = zoekBoei(BETONNING, s.punt);
+      if (z.fout) fouten.push(`${baan.naam}, ${r.naam}: ${z.fout}`);
+      else punten.push({ id: s.punt, soort: 'merkteken', rws: z.boei.naam, lat: z.boei.lat, lon: z.boei.lon, positie: 'RWS', toelichting: 'andere RWS-boei (afwijking)' });
+    }
+    return { ...r, volgorde: eigen, aangepast: true };
+  }) };
+  return { ...e, datum: invoer().datum, start: invoer().start, finishlimiet: invoer().limiet, punten, banen, fouten,
     zones: e.zones.map(z => z.id in a.zones ? { ...z, actief: a.zones[z.id] } : z) };
 }
-const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length > 0; };
+const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length + Object.keys(a.routes).length + a.tonnen.length > 0; };
 const startMs = () => lokaleTijdNaarMs(invoer().datum, invoer().start, EDITIES[S.editie].tijdzone);
 const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone); return l > s ? l : l + 864e5; };
 // Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), of een eigen waarde

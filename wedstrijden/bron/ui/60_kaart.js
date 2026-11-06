@@ -135,7 +135,7 @@
     } else {
       const baan = E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan];
       const pt = Object.fromEntries(E.punten.map(p => [p.id, p]));
-      baan.routes.forEach(x => L.polyline(x.volgorde.map(leesStap).map(s => [pt[s.punt].lat, pt[s.punt].lon]), { color: '#0b4f8a', weight: 1.5, opacity: 0.5, dashArray: '5 5' }).bindTooltip(x.naam, { sticky: true }).addTo(g));
+      baan.routes.forEach(x => L.polyline(x.volgorde.map(leesStap).filter(s => pt[s.punt]).map(s => [pt[s.punt].lat, pt[s.punt].lon]), { color: '#0b4f8a', weight: 1.5, opacity: 0.5, dashArray: '5 5' }).bindTooltip(x.naam, { sticky: true }).addTo(g));
     }
     const kleur = { start: '#2a9d4b', finish: '#b42318', via: '#0b4f8a', merkteken: '#e8831e' };
     for (const p of E.punten) {

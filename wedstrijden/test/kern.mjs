@@ -15,10 +15,12 @@ export function laadKern() {
   return ctx.__kern;
 }
 
-export function laadGegevens() {
+export function laadGegevens(K = laadKern()) {
   const vaargebied = JSON.parse(lees('gegevens/vaargebied_ijsselmeergebied.json'));
   const codes = new Uint8Array(gunzipSync(readFileSync(new URL('gegevens/' + vaargebied.bodem.bestand, MAP))));
-  const edities = Object.fromEntries(readdirSync(new URL('gegevens/wedstrijden/', MAP)).map(f => [f.replace('.json', ''), JSON.parse(lees('gegevens/wedstrijden/' + f))]));
+  // edities met de posities van de boeien uit de RWS-betonning, net als in het bouwscript
+  const index = K.betonningIndex(JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand)).markeringen);
+  const edities = Object.fromEntries(readdirSync(new URL('gegevens/wedstrijden/', MAP)).map(f => [f.replace('.json', ''), K.metPosities(JSON.parse(lees('gegevens/wedstrijden/' + f)), index).editie]));
   return { vaargebied, codes, edities };
 }
 

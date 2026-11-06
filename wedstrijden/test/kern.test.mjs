@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { laadKern, laadGegevens, vasteWind } from './kern.mjs';
 
 const K = laadKern();
-const G = laadGegevens();
+const G = laadGegevens(K);
 const P = K.polarUittreksel(JSON.parse(readFileSync(new URL('../../polartool/voorbeeld/voorbeeldschip_polar_v1_2026-11-05.json', import.meta.url), 'utf8')));
 const B = K.maakBodem(G.vaargebied.bodem, G.codes);
 const E = G.edities['3-steden_2026'];

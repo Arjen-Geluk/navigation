@@ -276,18 +276,22 @@ function vergelijkBetonning(nieuw, oud) {
   return { erbij, weg, verschoven, anders };
 }
 
-function controleerEdities(betonning) {
+function controleerEdities(betonning, oud) {
+  const oudPerId = oud ? new Map(oud.map(m => [m.id, m])) : null;
   const perNaam = new Map();
   betonning.forEach(m => { const k = normNaam(m.naam); (perNaam.get(k) || perNaam.set(k, []).get(k)).push(m); });
   const regels = [];
   for (const f of readdirSync(join(MAP, 'gegevens', 'wedstrijden')).filter(f => f.endsWith('.json')).sort()) {
     const e = leesJson(join(MAP, 'gegevens', 'wedstrijden', f));
     const punten = [...e.punten, ...e.zones.flatMap(z => z.punten)].filter(p => p.rws);
+    // De editie neemt de positie van deze boeien uit de betonning (bouwscript): de naam moet er precies één keer in staan.
+    // Verschuiving = afstand tot de positie in de vorige betonning.
     for (const p of punten) {
       const kand = perNaam.get(normNaam(p.rws)) || [];
-      if (!kand.length) { regels.push({ editie: f, punt: p.id, rws: p.rws, melding: 'niet gevonden in de RWS-betonning' }); continue; }
-      const best = kand.map(m => ({ m, d: afstandM(p, m) })).sort((a, b) => a.d - b.d)[0];
-      regels.push({ editie: f, punt: p.id, rws: p.rws, d: best.d, melding: best.d > 10 ? `ligt ${best.d.toFixed(0)} m van de RWS-positie` : null });
+      if (!kand.length) { regels.push({ editie: f, punt: p.id, rws: p.rws, melding: 'niet gevonden in de RWS-betonning: de bouw zal weigeren' }); continue; }
+      if (kand.length > 1) { regels.push({ editie: f, punt: p.id, rws: p.rws, melding: `${kand.length} RWS-boeien met deze naam: de bouw zal weigeren` }); continue; }
+      const vorig = oudPerId?.get(kand[0].id), d = vorig ? afstandM(kand[0], vorig) : null;
+      regels.push({ editie: f, punt: p.id, rws: p.rws, d, melding: d != null && d > 10 ? `RWS heeft deze boei ${d.toFixed(0)} m verlegd sinds de vorige versie` : null });
     }
     // punten zonder RWS-naam: is er een RWS-markering met dezelfde naam?
     for (const p of [...e.punten, ...e.zones.flatMap(z => z.punten)].filter(p => !p.rws)) {
@@ -355,9 +359,9 @@ function schrijfVerslag(v) {
     } else r.push('Geen vorige betonning om mee te vergelijken (eerste verversing).', '');
     const fout = t.edities.filter(x => x.melding), goed = t.edities.filter(x => !x.melding);
     r.push('### Wedstrijdboeien en via-punten in de edities', '');
-    r.push(`${goed.length} punten liggen binnen 10 m van hun RWS-positie: ${goed.map(x => x.punt).join(', ')}.`, '');
+    r.push(`${goed.length} RWS-boeien uit de edities gevonden en niet (meer dan 10 m) verlegd: ${goed.map(x => x.punt).join(', ')}.`, '');
     if (fout.length) {
-      r.push('**Let op:**', '', '| Punt | RWS-naam | Afstand | Melding | Edities |', '|---|---|---|---|---|');
+      r.push('**Let op:**', '', '| Punt | RWS-naam | Verlegd | Melding | Edities |', '|---|---|---|---|---|');
       for (const x of fout) r.push(`| ${x.punt} | ${x.rws || '–'} | ${x.d == null ? '–' : nl(x.d) + ' m'} | ${x.melding} | ${x.edities.join(', ')} |`);
     } else r.push('Geen afwijkingen.');
     r.push('');
@@ -445,7 +449,7 @@ if (!arg('alleen-urls')) {
   schrijfJson(BET_PAD, { formaat: 'betonning/1', bron: `${WFS} (lagen drijvend en vast)`, opgehaald: vandaag, markeringen: lijst });
   vg.betonning = { bestand: 'betonning_ijsselmeergebied.json', opgehaald: vandaag, aantal: lijst.length, bron: `${WFS}` };
   verslag.betonning = { totaal: ruw.drijvend.length + ruw.vast.length, perLaag: { drijvend: ruw.drijvend.length, vast: ruw.vast.length }, lijst, buiten, opgeheven, zonderPositie,
-    verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst) };
+    verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst, oud) };
   log(`  ${lijst.length} markeringen in het vaargebied`);
 
   vg.bronnen = [
