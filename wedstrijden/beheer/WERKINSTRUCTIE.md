@@ -29,8 +29,15 @@ Wanneer: vóór elk wedstrijdseizoen, en als RWS een nieuwe bodemopname of beton
    bron-URL's (RWS, Open-Meteo, kaartondergronden).
 2. Het schrijft een verslag in `beheer/verslagen/`: aantal tonnen, nieuwe, verdwenen en verschoven tonnen
    (wedstrijdboeien apart), verschil in bodem per deelgebied, nieuwere bodemopname beschikbaar, URL's die niet antwoorden.
-3. **Jij leest het verslag en keurt goed.** Let vooral op verschoven wedstrijdboeien en kapotte URL's.
-4. Na je akkoord: nieuw versienummer van het vaargebied, `npm run bouw`, `npm test`, commit.
+   Controleplaatjes van de bodem (heel het gebied en het Krabbersgat) komen in `lokaal/ververs/` (niet in git).
+3. **Jij leest het verslag en keurt goed.** Let vooral op verschoven wedstrijdboeien, een nieuwere bodemopname en
+   kapotte URL's. Niet akkoord: `git checkout` op de gegevens zet alles terug.
+4. Na je akkoord: `npm run ververs -- --goedkeuren` (versie van het vaargebied +1, verslag gemarkeerd als goedgekeurd),
+   `npm run bouw`, `npm test`, commit van gegevens én verslag.
+
+Opties: `--meet` meet ook de grootte van het andere raster (25 of 50 m), `--resolutie 25` kiest 25 m,
+`--vers` downloadt de bodemtegels opnieuw (anders uit de cache in `lokaal/ververs/cache/`), `--alleen-urls` doet alleen
+de URL-controle. Het bodemraster: 1 byte per cel, zie `codering` in het vaargebiedbestand.
 
 ## Nieuwe editie maken (nieuw jaar of nieuwe wedstrijd)
 

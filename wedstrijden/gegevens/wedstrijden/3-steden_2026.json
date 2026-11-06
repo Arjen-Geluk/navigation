@@ -86,10 +86,10 @@
         { "id": "NK-OW 9", "lat": 52.80149, "lon": 5.2304, "rws": "NK-OW 9" },
         { "id": "NK-OW 10", "lat": 52.79835, "lon": 5.23527, "rws": "NK-OW 10" },
         { "id": "NK-OW 11", "lat": 52.79519, "lon": 5.24062, "rws": "NK-OW 11" },
-        { "id": "HOP-N", "lat": 52.79594, "lon": 5.24396, "rws": null },
-        { "id": "HOP-E", "lat": 52.79158, "lon": 5.25575, "rws": null },
-        { "id": "HOP-Z", "lat": 52.7805, "lon": 5.25514, "rws": null },
-        { "id": "HOP-W", "lat": 52.78697, "lon": 5.24261, "rws": null }
+        { "id": "HOP-N", "lat": 52.79594, "lon": 5.24396, "rws": "HOP-N" },
+        { "id": "HOP-E", "lat": 52.79158, "lon": 5.25575, "rws": "HOP-E" },
+        { "id": "HOP-Z", "lat": 52.7805, "lon": 5.25514, "rws": "HOP-Z" },
+        { "id": "HOP-W", "lat": 52.78697, "lon": 5.24261, "rws": "HOP-W" }
       ]
     },
     {
@@ -109,10 +109,10 @@
         { "id": "NK-OW 9", "lat": 52.80149, "lon": 5.2304, "rws": "NK-OW 9" },
         { "id": "NK-OW 10", "lat": 52.79835, "lon": 5.23527, "rws": "NK-OW 10" },
         { "id": "NK-OW 11", "lat": 52.79519, "lon": 5.24062, "rws": "NK-OW 11" },
-        { "id": "HOP-B", "lat": 52.79376, "lon": 5.24979, "rws": null },
-        { "id": "HOP-C", "lat": 52.78598, "lon": 5.25543, "rws": null },
-        { "id": "HOP-D", "lat": 52.78374, "lon": 5.24884, "rws": null },
-        { "id": "HOP-A", "lat": 52.79143, "lon": 5.24326, "rws": null }
+        { "id": "HOP-B", "lat": 52.79376, "lon": 5.24979, "rws": "HOP-B" },
+        { "id": "HOP-C", "lat": 52.78598, "lon": 5.25543, "rws": "HOP-C" },
+        { "id": "HOP-D", "lat": 52.78374, "lon": 5.24884, "rws": "HOP-D" },
+        { "id": "HOP-A", "lat": 52.79143, "lon": 5.24326, "rws": "HOP-A" }
       ]
     }
   ],

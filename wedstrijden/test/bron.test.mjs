@@ -40,3 +40,17 @@ test('controleerEditie vindt fouten', () => {
 test('index.html past bij de bron (npm run bouw gedraaid)', () => {
   execFileSync(process.execPath, [new URL('beheer/bouw.mjs', MAP).pathname.replace(/^\/(\w:)/, '$1'), '--controle'], { stdio: 'pipe' });
 });
+
+test('bodemraster past bij de beschrijving in het vaargebied', async () => {
+  const { existsSync } = await import('node:fs');
+  const { gunzipSync } = await import('node:zlib');
+  const { createHash } = await import('node:crypto');
+  const vg = JSON.parse(lees('gegevens/vaargebied_ijsselmeergebied.json'));
+  if (!vg.bodem) return;                                   // nog niet ververst
+  const pad = new URL('gegevens/' + vg.bodem.bestand, MAP);
+  assert.ok(existsSync(pad), 'bodembestand ontbreekt');
+  const codes = gunzipSync(readFileSync(pad));
+  assert.equal(codes.length, vg.bodem.nx * vg.bodem.ny);
+  assert.equal(createHash('sha256').update(codes).digest('hex'), vg.bodem.sha256);
+  assert.ok(codes.every(c => c <= 250 || c === 255), 'alleen codes 0..250 en 255');
+});

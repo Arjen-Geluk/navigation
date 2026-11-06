@@ -1,0 +1,427 @@
+// Ververs-script: haalt bodem en betonning opnieuw op bij RWS, vergelijkt met de vorige versie,
+// controleert alle bron-URL's en schrijft een verslag. Zie beheer/WERKINSTRUCTIE.md.
+//
+//   npm run ververs                     alles verversen (bodem, betonning, URL's) en verslag schrijven
+//   npm run ververs -- --meet           idem, en ook de grootte van het andere raster (25 of 50 m) meten
+//   npm run ververs -- --alleen-urls    alleen de URL-controle
+//   npm run ververs -- --vers           tegels opnieuw downloaden (anders uit de cache in lokaal/ververs/)
+//   npm run ververs -- --goedkeuren     na akkoord: versie van het vaargebied ophogen en verslag afsluiten
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gzipSync, gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
+import { fromArrayBuffer } from 'geotiff';
+import { leesJson, schrijfJson } from './lib/json.mjs';
+import { wgsNaarRd, afstandM } from './lib/rd.mjs';
+import { maakPng } from './lib/png.mjs';
+
+const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
+const CACHE = join(MAP, '..', 'lokaal', 'ververs');
+const VG_PAD = join(MAP, 'gegevens', 'vaargebied_ijsselmeergebied.json');
+const BET_PAD = join(MAP, 'gegevens', 'betonning_ijsselmeergebied.json');
+const arg = n => process.argv.includes('--' + n);
+const argWaarde = (n, std) => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : std; };
+const vandaag = new Date().toISOString().slice(0, 10);
+const log = (...x) => console.log(...x);
+
+const WCS = 'https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows';
+const WFS = 'https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0';
+const LAGEN = { drijvend: 'vaarwegmarkeringennld:vaarweg_markeringen_drijvend_rd', vast: 'vaarwegmarkeringennld:vaarweg_markeringen_vast_rd' };
+// vaarwateren die bij het vaargebied horen; de rest (randmeren, Waddenzee, rivieren) valt erbuiten
+const IN_GEBIED = /\((IJSSELMEER|MARKERMEER|IJSSELM\.)\)|^HET IJ \(AMSTERDAM\)$|^VAARWATER LANGS DE AFSLUITDIJK$/;
+
+// Alle URL's waar de pagina of dit script van afhangt. Een URL "antwoordt" als er een HTTP-antwoord onder de 500 komt.
+const URLS = [
+  ['RWS bodemhoogte (WCS)', `${WCS}?service=WCS&version=1.0.0&request=GetCapabilities`],
+  ['PDOK vaarwegmarkeringen (WFS)', `${WFS}?service=WFS&request=GetCapabilities`],
+  ['PDOK vaarwegmarkeringen (WMS, kaartlaag)', 'https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wms/v1_0?service=WMS&request=GetCapabilities'],
+  ['Open-Meteo verwachting', 'https://api.open-meteo.com/v1/forecast?latitude=52.8&longitude=5.3&hourly=wind_speed_10m&forecast_days=1&models=knmi_seamless'],
+  ['Open-Meteo historische verwachting', 'https://historical-forecast-api.open-meteo.com/v1/forecast?latitude=52.8&longitude=5.3&hourly=wind_speed_10m&start_date=2025-10-11&end_date=2025-10-11'],
+  ['RWS waterstanden (actueel peil)', 'https://rwsos.rws.nl/wb-api/dd/2.0/timeseries'],
+  ['Ondergrond Esri grijs', 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/10/337/525'],
+  ['Ondergrond Esri luchtfoto', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/337/525'],
+  ['Ondergrond Esri topografisch', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/10/337/525'],
+  ['Ondergrond OpenTopoMap', 'https://a.tile.opentopomap.org/10/525/337.png']
+];
+
+async function haal(url, { tekst = false, pogingen = 3 } = {}) {
+  for (let p = 1; ; p++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(180000), headers: { 'user-agent': 'navigation-wedstrijden-ververs/1' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return tekst ? await r.text() : Buffer.from(await r.arrayBuffer());
+    } catch (e) {
+      if (p >= pogingen) throw new Error(`${e.message} bij ${url}`);
+      await new Promise(z => setTimeout(z, 2000 * p));
+    }
+  }
+}
+
+// ======================= URL-controle =======================
+async function controleerUrls() {
+  return Promise.all(URLS.map(async ([naam, url]) => {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(30000), headers: { 'user-agent': 'navigation-wedstrijden-ververs/1' } });
+      return { naam, url, status: r.status, ok: r.status < 500, ms: Date.now() - t0 };
+    } catch (e) { return { naam, url, status: e.name === 'TimeoutError' ? 'time-out' : e.message, ok: false, ms: Date.now() - t0 }; }
+  }));
+}
+
+// ======================= Bodem =======================
+// Codering in het .bin-bestand: 1 byte per cel, rij voor rij van noord naar zuid, west naar oost.
+//   0..250 = bodemhoogte −25,0 .. 0,0 m NAP in stappen van 0,1 m (dieper/hoger wordt afgekapt)
+//   255    = geen water (land, dijk of geen meting)
+const GEEN_WATER = 255;
+const codeer = v => Math.max(0, Math.min(250, Math.round((v + 25) * 10)));
+const decodeer = c => c === GEEN_WATER ? null : c / 10 - 25;
+
+async function nieuwsteOpname() {
+  const caps = await haal(`${WCS}?service=WCS&version=1.0.0&request=GetCapabilities`, { tekst: true });
+  const lagen = [...caps.matchAll(/<wcs:name>(bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_(\d{4}))<\/wcs:name>/g)].map(m => ({ laag: m[1], jaar: +m[2] }));
+  if (!lagen.length) throw new Error('geen bodemopnames gevonden in GetCapabilities');
+  return { nieuwste: lagen.sort((a, b) => b.jaar - a.jaar)[0], alle: lagen.map(l => l.jaar).sort() };
+}
+
+async function haalBodemRd(laag, gebied) {
+  const desc = await haal(`${WCS}?service=WCS&version=1.0.0&request=DescribeCoverage&coverage=${laag}`, { tekst: true });
+  const env = desc.match(/<gml:Envelope srsName="EPSG:28992">\s*<gml:pos>([\d.]+) ([\d.]+)<\/gml:pos>\s*<gml:pos>([\d.]+) ([\d.]+)<\/gml:pos>/);
+  const cel = +desc.match(/<gml:offsetVector>([\d.]+) 0\.0<\/gml:offsetVector>/)[1];
+  if (!env || !cel) throw new Error('DescribeCoverage niet te lezen');
+  const [cx0, cy0, cx1, cy1] = env.slice(1).map(Number);
+  // benodigde RD-grenzen: rand van het gebied in WGS84 omgerekend
+  const rand = [];
+  for (let f = 0; f <= 1; f += 0.05) rand.push([gebied.west + f * (gebied.oost - gebied.west), gebied.zuid], [gebied.west + f * (gebied.oost - gebied.west), gebied.noord],
+    [gebied.west, gebied.zuid + f * (gebied.noord - gebied.zuid)], [gebied.oost, gebied.zuid + f * (gebied.noord - gebied.zuid)]);
+  const rd = rand.map(([lo, la]) => wgsNaarRd(lo, la));
+  const x0 = Math.max(cx0, cx0 + Math.floor((Math.min(...rd.map(p => p[0])) - cx0) / cel) * cel);
+  const x1 = Math.min(cx1, cx0 + Math.ceil((Math.max(...rd.map(p => p[0])) - cx0) / cel) * cel);
+  const y0 = Math.max(cy0, cy0 + Math.floor((Math.min(...rd.map(p => p[1])) - cy0) / cel) * cel);
+  const y1 = Math.min(cy1, cy0 + Math.ceil((Math.max(...rd.map(p => p[1])) - cy0) / cel) * cel);
+  const nx = Math.round((x1 - x0) / cel), ny = Math.round((y1 - y0) / cel);
+  const z = new Float32Array(nx * ny).fill(NaN);
+  const T = 1024, tegels = [];
+  for (let ty = 0; ty < ny; ty += T) for (let tx = 0; tx < nx; tx += T) tegels.push([tx, ty, Math.min(T, nx - tx), Math.min(T, ny - ty)]);
+  const cacheMap = join(CACHE, 'cache', laag.split(':')[1]);
+  mkdirSync(cacheMap, { recursive: true });
+  let klaar = 0;
+  const werk = async ([tx, ty, w, h]) => {
+    // ty telt vanaf het noorden
+    const bx0 = x0 + tx * cel, bx1 = bx0 + w * cel, by1 = y1 - ty * cel, by0 = by1 - h * cel;
+    const cachePad = join(cacheMap, `${bx0}_${by0}_${w}x${h}.tif`);
+    let buf;
+    if (!arg('vers') && existsSync(cachePad)) buf = readFileSync(cachePad);
+    else {
+      buf = await haal(`${WCS}?service=WCS&version=1.0.0&request=GetCoverage&coverage=${laag}&crs=EPSG:28992&bbox=${bx0},${by0},${bx1},${by1}&width=${w}&height=${h}&format=GeoTIFF`);
+      writeFileSync(cachePad, buf);
+    }
+    const tif = await fromArrayBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    const im = await tif.getImage();
+    if (im.getWidth() !== w || im.getHeight() !== h) throw new Error(`tegel ${w}x${h} kwam terug als ${im.getWidth()}x${im.getHeight()}`);
+    const nodata = im.getGDALNoData();
+    const [d] = await im.readRasters();
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const v = d[j * w + i];
+      if (v !== nodata && Math.abs(v) < 1000) z[(ty + j) * nx + tx + i] = v;
+    }
+    process.stdout.write(`\r  bodem: tegel ${++klaar}/${tegels.length}   `);
+  };
+  for (let i = 0; i < tegels.length; i += 4) await Promise.all(tegels.slice(i, i + 4).map(werk));
+  process.stdout.write('\n');
+  return { x0, y1, cel, nx, ny, z };
+}
+
+// Van het RD-raster (20 m) naar een raster in graden; per cel k x k monsterpunten, gemiddelde van de waterpunten.
+function herbemonster(rdr, gebied, celM) {
+  const dlat = +(celM / 111200).toFixed(6), dlon = +(celM / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(6);
+  const nx = Math.round((gebied.oost - gebied.west) / dlon), ny = Math.round((gebied.noord - gebied.zuid) / dlat);
+  const k = Math.max(2, Math.round(celM / 10)), helft = Math.ceil(k * k / 2);
+  const codes = new Uint8Array(nx * ny).fill(GEEN_WATER);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    let som = 0, n = 0;
+    for (let b = 0; b < k; b++) for (let a = 0; a < k; a++) {
+      const lon = gebied.west + (i + (a + 0.5) / k) * dlon, lat = gebied.noord - (j + (b + 0.5) / k) * dlat;
+      const [X, Y] = wgsNaarRd(lon, lat);
+      const ci = Math.floor((X - rdr.x0) / rdr.cel), cj = Math.floor((rdr.y1 - Y) / rdr.cel);
+      if (ci < 0 || cj < 0 || ci >= rdr.nx || cj >= rdr.ny) continue;
+      const v = rdr.z[cj * rdr.nx + ci];
+      if (v === v) { som += v; n++; }
+    }
+    if (n >= helft) codes[j * nx + i] = codeer(som / n);
+  }
+  return { cel_m: celM, west: gebied.west, noord: gebied.noord, dlon, dlat, nx, ny, codes };
+}
+
+// deelgebieden voor de vergelijking: Houtribdijk (Enkhuizen–Lelystad) scheidt IJsselmeer en Markermeer
+function deelgebied(lat, lon) {
+  const [a, b] = [[52.705, 5.29], [52.52, 5.44]];
+  const kant = (b[1] - a[1]) * (lat - a[0]) - (b[0] - a[0]) * (lon - a[1]);
+  if (kant < 0) return 'Markermeer en IJmeer';
+  return lat >= 52.8 ? 'IJsselmeer noord' : 'IJsselmeer zuid';
+}
+
+function bodemStatistiek(r, vorige) {
+  const per = {};
+  for (let j = 0; j < r.ny; j++) for (let i = 0; i < r.nx; i++) {
+    const c = r.codes[j * r.nx + i];
+    const lat = r.noord - (j + 0.5) * r.dlat, lon = r.west + (i + 0.5) * r.dlon;
+    const g = per[deelgebied(lat, lon)] ||= { water: 0, diep: [], verschil: 0, nVerschil: 0, groot: 0, nieuwWater: 0, wegWater: 0 };
+    if (c !== GEEN_WATER) { g.water++; if ((i + j) % 7 === 0) g.diep.push(decodeer(c)); }
+    if (vorige) {
+      const p = vorige[j * r.nx + i];
+      if (c !== GEEN_WATER && p !== GEEN_WATER) { const d = Math.abs(c - p) / 10; g.verschil += d; g.nVerschil++; if (d >= 0.3) g.groot++; }
+      else if (c !== GEEN_WATER) g.nieuwWater++;
+      else if (p !== GEEN_WATER) g.wegWater++;
+    }
+  }
+  for (const g of Object.values(per)) { g.diep.sort((x, y) => x - y); }
+  return per;
+}
+
+// controleplaatje: diepte bij een peil van −0,20 m NAP
+const KLEUR = [[0.0, [200, 70, 60]], [1.0, [230, 140, 60]], [1.5, [240, 200, 90]], [2.0, [200, 225, 170]], [3.0, [150, 200, 230]], [4.0, [90, 150, 210]], [99, [40, 90, 160]]];
+function kleurBij(c) {
+  if (c === GEEN_WATER) return [235, 232, 225];
+  const d = -0.2 - decodeer(c);
+  return KLEUR.find(([g]) => d < g)[1];
+}
+function plaatje(r, { west = r.west, oost = r.west + r.nx * r.dlon, noord = r.noord, zuid = r.noord - r.ny * r.dlat, schaal = 1 } = {}) {
+  const i0 = Math.floor((west - r.west) / r.dlon), i1 = Math.ceil((oost - r.west) / r.dlon);
+  const j0 = Math.floor((r.noord - noord) / r.dlat), j1 = Math.ceil((r.noord - zuid) / r.dlat);
+  const w = Math.round((i1 - i0) * schaal), h = Math.round((j1 - j0) * schaal), rgb = new Uint8Array(w * h * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = Math.min(r.nx - 1, i0 + Math.floor(x / schaal)), j = Math.min(r.ny - 1, j0 + Math.floor(y / schaal));
+    rgb.set(kleurBij(r.codes[j * r.nx + i]), (y * w + x) * 3);
+  }
+  return maakPng(w, h, rgb);
+}
+
+// ======================= Betonning =======================
+async function haalLaag(laag) {
+  const alle = [];
+  for (let start = 0; ; start += 1000) {
+    const gml = await haal(`${WFS}?service=WFS&version=2.0.0&request=GetFeature&typeNames=${LAGEN[laag]}&count=1000&startIndex=${start}`
+      + `&bbox=52.2,4.85,53.15,6.0,urn:ogc:def:crs:EPSG::4326`, { tekst: true });
+    const leden = gml.split('<wfs:member>').slice(1);
+    for (const lid of leden) {
+      const v = {};
+      for (const m of lid.matchAll(/<vaarwegmarkeringennld:(\w+)>([^<]*)<\/vaarwegmarkeringennld:\1>/g)) (v[m[1]] ||= []).push(m[2].trim());
+      v.rd = lid.match(/<gml:pos>([\d.]+) ([\d.]+)<\/gml:pos>/)?.slice(1).map(Number);
+      alle.push(v);
+    }
+    process.stdout.write(`\r  betonning ${laag}: ${alle.length}   `);
+    if (leden.length < 1000) break;
+  }
+  process.stdout.write('\n');
+  return alle;
+}
+
+const LEEG = new Set(['#', 'L', 'X', '', 'Niet toegewezen']);
+// laatste betekenisvolle waarde van een of meer velden (RWS geeft vaak eerst een code en dan de tekst)
+const veld = (v, ...namen) => { for (const n of namen) { const w = (v[n] || []).filter(x => !LEEG.has(x)); if (w.length) return w[w.length - 1]; } return null; };
+const graden = s => { const m = String(s || '').match(/^(\d+)\.(\d+\.\d+)$/); return m ? +m[1] + +m[2] / 60 : null; };
+
+function maakMarkering(v, laag) {
+  const lat = graden(veld(v, 'nWgsGm')), lon = graden(veld(v, 'eWgsGm'));
+  const lichtKleur = veld(v, 'lichtKlr', 'lichtKl');
+  const kar = veld(v, 'signKar');
+  return {
+    id: veld(v, 'benamCod'), naam: veld(v, 'benaming'), vaarwater: veld(v, 'vaarwater'), drijvend: laag === 'drijvend',
+    lat: lat && +lat.toFixed(6), lon: lon && +lon.toFixed(6),
+    vorm: veld(v, 'objVorm', 'objectVormO'), kleur: veld(v, 'objKleur'), kleurpatroon: veld(v, 'kleurpatr'),
+    topteken: veld(v, 'ttKleur', 'vToptek'), iala: veld(v, 'ialaCategorie', 'ialaCat'),
+    licht: lichtKleur || kar ? { kleur: lichtKleur, karakter: kar ? kar.split(' ')[0] : null, groep: veld(v, 'signGroep'), periode_s: +(veld(v, 'signPerio') || 0) || null } : null,
+    opgeheven: veld(v, 'opgeheven'), inbedrijf: veld(v, 'inbedrijf')
+  };
+}
+
+const normNaam = s => String(s || '').toUpperCase().replace(/[\s-]+/g, '');
+
+function vergelijkBetonning(nieuw, oud) {
+  const o = new Map((oud || []).map(m => [m.id, m])), n = new Map(nieuw.map(m => [m.id, m]));
+  const erbij = nieuw.filter(m => !o.has(m.id)), weg = (oud || []).filter(m => !n.has(m.id));
+  const verschoven = nieuw.filter(m => o.has(m.id)).map(m => ({ m, d: afstandM(m, o.get(m.id)) })).filter(x => x.d > 10).sort((a, b) => b.d - a.d);
+  const anders = nieuw.filter(m => o.has(m.id) && JSON.stringify({ ...m, lat: 0, lon: 0 }) !== JSON.stringify({ ...o.get(m.id), lat: 0, lon: 0 }));
+  return { erbij, weg, verschoven, anders };
+}
+
+function controleerEdities(betonning) {
+  const perNaam = new Map();
+  betonning.forEach(m => { const k = normNaam(m.naam); (perNaam.get(k) || perNaam.set(k, []).get(k)).push(m); });
+  const regels = [];
+  for (const f of readdirSync(join(MAP, 'gegevens', 'wedstrijden')).filter(f => f.endsWith('.json')).sort()) {
+    const e = leesJson(join(MAP, 'gegevens', 'wedstrijden', f));
+    const punten = [...e.punten, ...e.zones.flatMap(z => z.punten)].filter(p => p.rws);
+    for (const p of punten) {
+      const kand = perNaam.get(normNaam(p.rws)) || [];
+      if (!kand.length) { regels.push({ editie: f, punt: p.id, rws: p.rws, melding: 'niet gevonden in de RWS-betonning' }); continue; }
+      const best = kand.map(m => ({ m, d: afstandM(p, m) })).sort((a, b) => a.d - b.d)[0];
+      regels.push({ editie: f, punt: p.id, rws: p.rws, d: best.d, melding: best.d > 10 ? `ligt ${best.d.toFixed(0)} m van de RWS-positie` : null });
+    }
+    // punten zonder RWS-naam: is er een RWS-markering met dezelfde naam?
+    for (const p of [...e.punten, ...e.zones.flatMap(z => z.punten)].filter(p => !p.rws)) {
+      const kand = perNaam.get(normNaam(p.id));
+      if (kand) regels.push({ editie: f, punt: p.id, rws: null, d: afstandM(p, kand[0]), melding: `heeft geen RWS-naam, maar RWS kent "${kand[0].naam}" op ${afstandM(p, kand[0]).toFixed(0)} m` });
+    }
+  }
+  // hetzelfde punt staat vaak in meerdere edities en zones: één regel per punt en positie
+  const uniek = new Map();
+  for (const x of regels) {
+    const k = `${x.punt}|${x.rws}|${x.d?.toFixed(0)}|${x.melding}`;
+    if (uniek.has(k)) { const u = uniek.get(k); if (!u.edities.includes(x.editie)) u.edities.push(x.editie); }
+    else uniek.set(k, { ...x, edities: [x.editie] });
+  }
+  return [...uniek.values()];
+}
+
+// ======================= Verslag =======================
+const nl = (x, d = 0) => x == null ? '–' : Number(x).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+const kB = n => nl(n / 1024) + ' kB';
+
+function schrijfVerslag(v) {
+  const r = [];
+  r.push(`# Verslag verversen vaargebied — ${vandaag}`, '');
+  r.push(`**Status: wacht op goedkeuring.** Na akkoord: \`npm run ververs -- --goedkeuren\` (vaargebied wordt versie ${v.versieNa}), daarna bouwen en committen.`, '');
+  r.push('## Bron-URL\'s', '', '| Bron | Antwoord | Tijd |', '|---|---|---|');
+  for (const u of v.urls) r.push(`| ${u.ok ? '✓' : '**✗**'} [${u.naam}](${u.url}) | ${u.status} | ${nl(u.ms)} ms |`);
+  const kapot = v.urls.filter(u => !u.ok);
+  r.push('', kapot.length ? `**${kapot.length} URL('s) antwoorden niet.**` : 'Alle URL\'s antwoorden.', '');
+  if (v.bodem) {
+    const b = v.bodem;
+    r.push('## Bodem', '');
+    r.push(`- Opname: **${b.jaar}** (laag \`${b.laag}\`); beschikbaar bij RWS: ${b.alle.join(', ')}.` + (b.vorigJaar && b.jaar > b.vorigJaar ? ` **Nieuwer dan de vorige versie (${b.vorigJaar}).**` : ''));
+    r.push(`- RWS-origineel: ${nl(b.rd.nx)} × ${nl(b.rd.ny)} cellen van ${b.rd.cel} m (RD); waterpunten: ${nl(b.rd.water)}.`);
+    r.push(`- Raster in de pagina: cellen van ${b.r.cel_m} m (${b.r.dlon}° × ${b.r.dlat}°), ${nl(b.r.nx)} × ${nl(b.r.ny)} = ${nl(b.r.nx * b.r.ny)} cellen, `
+      + `waarvan ${nl(b.water)} water. Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; minder dan de helft water = geen water.`);
+    r.push(`- Bestand \`${b.bestand}\`: ${kB(b.gzip)} (gzip); in de pagina als base64 ca. ${kB(b.gzip * 4 / 3)}.`);
+    if (b.meting) r.push(`- Ter vergelijking ${b.meting.cel_m} m: ${nl(b.meting.water)} watercellen, ${kB(b.meting.gzip)} (gzip), als base64 ca. ${kB(b.meting.gzip * 4 / 3)}.`);
+    r.push('', '| Deelgebied | Watercellen | Bodem p10 / mediaan / p90 (m NAP) |' + (b.vorig ? ' Gem. verschil | Cellen ≥ 0,3 m anders | Water erbij / weg |' : ''),
+      '|---|---|---|' + (b.vorig ? '---|---|---|' : ''));
+    for (const [n, g] of Object.entries(b.stat).sort()) {
+      const q = p => g.diep.length ? nl(g.diep[Math.floor(g.diep.length * p)], 1) : '–';
+      r.push(`| ${n} | ${nl(g.water)} | ${q(0.1)} / ${q(0.5)} / ${q(0.9)} |` + (b.vorig ? ` ${nl(g.nVerschil ? g.verschil / g.nVerschil : 0, 2)} m | ${nl(g.groot)} | ${nl(g.nieuwWater)} / ${nl(g.wegWater)} |` : ''));
+    }
+    r.push('', b.vorig ? '' : 'Geen vorige bodem om mee te vergelijken (eerste verversing).', '');
+    r.push(`Controleplaatjes (lokaal, niet in git): ${b.plaatjes.map(p => '`' + p + '`').join(', ')}.`, '');
+  }
+  if (v.betonning) {
+    const t = v.betonning;
+    r.push('## Betonning', '');
+    r.push(`- Opgehaald: ${nl(t.totaal)} markeringen in het kader (${nl(t.perLaag.drijvend)} drijvend, ${nl(t.perLaag.vast)} vast); `
+      + `in het vaargebied: **${nl(t.lijst.length)}** (${nl(t.lijst.filter(m => m.drijvend).length)} drijvend, ${nl(t.lijst.filter(m => !m.drijvend).length)} vast).`);
+    r.push(`- Buiten het vaargebied gelaten (vaarwater): ${Object.entries(t.buiten).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} (${c})`).join(', ')}.`);
+    const opg = Object.entries(t.opgeheven).filter(([k]) => k !== "leeg");
+    if (opg.length) r.push(`- Veld "opgeheven" ingevuld (betekenis RWS-code nog na te gaan): ${opg.map(([k, c]) => `${k}: ${c}`).join(", ")}.`);
+    r.push(`- Zonder positie overgeslagen: ${t.zonderPositie}.`, '');
+    if (t.verg) {
+      const { erbij, weg, verschoven, anders } = t.verg;
+      r.push(`Vergeleken met de vorige versie: ${erbij.length} erbij, ${weg.length} weg, ${verschoven.length} meer dan 10 m verschoven, ${anders.length} met andere eigenschappen.`, '');
+      const rij = (m, x = '') => `| ${m.naam} | ${m.vaarwater} | ${m.lat}, ${m.lon} | ${x} |`;
+      if (verschoven.length) r.push('**Verschoven**', '', '| Naam | Vaarwater | Positie | Verschuiving |', '|---|---|---|---|', ...verschoven.slice(0, 50).map(x => rij(x.m, nl(x.d) + ' m')), '');
+      if (erbij.length) r.push('**Erbij**', '', '| Naam | Vaarwater | Positie | |', '|---|---|---|---|', ...erbij.slice(0, 50).map(m => rij(m)), '');
+      if (weg.length) r.push('**Weg**', '', '| Naam | Vaarwater | Positie | |', '|---|---|---|---|', ...weg.slice(0, 50).map(m => rij(m)), '');
+    } else r.push('Geen vorige betonning om mee te vergelijken (eerste verversing).', '');
+    const fout = t.edities.filter(x => x.melding), goed = t.edities.filter(x => !x.melding);
+    r.push('### Wedstrijdboeien en via-punten in de edities', '');
+    r.push(`${goed.length} punten liggen binnen 10 m van hun RWS-positie: ${goed.map(x => x.punt).join(', ')}.`, '');
+    if (fout.length) {
+      r.push('**Let op:**', '', '| Punt | RWS-naam | Afstand | Melding | Edities |', '|---|---|---|---|---|');
+      for (const x of fout) r.push(`| ${x.punt} | ${x.rws || '–'} | ${x.d == null ? '–' : nl(x.d) + ' m'} | ${x.melding} | ${x.edities.join(', ')} |`);
+    } else r.push('Geen afwijkingen.');
+    r.push('');
+    r.push('');
+  }
+  const pad = join(MAP, 'beheer', 'verslagen', `${arg('alleen-urls') ? 'urls' : 'ververs'}_${vandaag}.md`);
+  writeFileSync(pad, r.join('\n'));
+  return pad;
+}
+
+// ======================= Hoofdlijn =======================
+const vg = leesJson(VG_PAD);
+
+if (arg('goedkeuren')) {
+  if (!vg.concept) { console.error('Er is geen ververste versie die op goedkeuring wacht.'); process.exit(1); }
+  const verslag = join(MAP, 'beheer', 'verslagen', `ververs_${vg.concept.verslag}.md`);
+  vg.versie += 1; vg.datum = vandaag; delete vg.concept;
+  schrijfJson(VG_PAD, vg);
+  writeFileSync(verslag, readFileSync(verslag, 'utf8').replace(/\*\*Status: wacht op goedkeuring\.\*\*[^\n]*/, `**Status: goedgekeurd op ${vandaag}; vaargebied versie ${vg.versie}.**`));
+  log(`✓ Vaargebied versie ${vg.versie} (${vandaag}). Volgende: npm run bouw, npm test, commit.`);
+  process.exit(0);
+}
+
+log('URL-controle…');
+const urls = await controleerUrls();
+urls.forEach(u => log(`  ${u.ok ? '✓' : '✗'} ${u.naam}: ${u.status}`));
+const verslag = { urls, versieNa: vg.versie + 1 };
+
+if (!arg('alleen-urls')) {
+  mkdirSync(CACHE, { recursive: true });
+  const celM = +argWaarde('resolutie', 50);
+
+  // ---- bodem ----
+  log('Bodem…');
+  const { nieuwste, alle } = await nieuwsteOpname();
+  const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
+  rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
+  const r = herbemonster(rd, vg.gebied, celM);
+  const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
+  const binPad = join(MAP, 'gegevens', bestand);
+  const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
+  const gz = gzipSync(r.codes, { level: 9 });
+  gz[4] = gz[5] = gz[6] = gz[7] = 0;     // tijdstempel in de gzip-kop leeg: zelfde inhoud = zelfde bestand
+  writeFileSync(binPad, gz);
+  const water = r.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0);
+  const plaatjes = [`bodem_${vandaag}_${celM}m.png`, `bodem_${vandaag}_${celM}m_krabbersgat.png`];
+  writeFileSync(join(CACHE, plaatjes[0]), plaatje(r, { schaal: celM >= 50 ? 0.5 : 0.25 }));
+  const KRAB = { west: 5.25, oost: 5.36, noord: 52.76, zuid: 52.68 };
+  writeFileSync(join(CACHE, plaatjes[1]), plaatje(r, { ...KRAB, schaal: 250 / celM }));
+  let meting = null;
+  if (arg('meet')) {
+    const ander = celM === 50 ? 25 : 50;
+    const m = herbemonster(rd, vg.gebied, ander);
+    meting = { cel_m: ander, water: m.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0), gzip: gzipSync(m.codes, { level: 9 }).length };
+    plaatjes.push(`bodem_${vandaag}_${ander}m_krabbersgat.png`);
+    writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
+  }
+  verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
+    stat: bodemStatistiek(r, vorig), vorig: !!vorig, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
+  vg.bodem = {
+    bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
+    cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
+    codering: '1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water',
+    sha256: createHash('sha256').update(r.codes).digest('hex')
+  };
+  log(`  ${r.nx} x ${r.ny} cellen van ${celM} m, ${water} water, ${(gz.length / 1024).toFixed(0)} kB gzip`);
+
+  // ---- betonning ----
+  log('Betonning…');
+  const ruw = { drijvend: await haalLaag('drijvend'), vast: await haalLaag('vast') };
+  const buiten = {}, opgeheven = {};
+  let zonderPositie = 0;
+  const lijst = [];
+  for (const laag of ['drijvend', 'vast']) for (const v of ruw[laag]) {
+    const m = maakMarkering(v, laag);
+    if (!IN_GEBIED.test(m.vaarwater || '')) { buiten[m.vaarwater] = (buiten[m.vaarwater] || 0) + 1; continue; }
+    if (m.lat == null || m.lon == null) { zonderPositie++; continue; }
+    opgeheven[m.opgeheven ?? 'leeg'] = (opgeheven[m.opgeheven ?? 'leeg'] || 0) + 1;
+    lijst.push(m);
+  }
+  lijst.sort((a, b) => (a.id || '').localeCompare(b.id || '') || a.lat - b.lat);
+  const oud = existsSync(BET_PAD) ? leesJson(BET_PAD).markeringen : null;
+  schrijfJson(BET_PAD, { formaat: 'betonning/1', bron: `${WFS} (lagen drijvend en vast)`, opgehaald: vandaag, markeringen: lijst });
+  vg.betonning = { bestand: 'betonning_ijsselmeergebied.json', opgehaald: vandaag, aantal: lijst.length, bron: `${WFS}` };
+  verslag.betonning = { totaal: ruw.drijvend.length + ruw.vast.length, perLaag: { drijvend: ruw.drijvend.length, vast: ruw.vast.length }, lijst, buiten, opgeheven, zonderPositie,
+    verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst) };
+  log(`  ${lijst.length} markeringen in het vaargebied`);
+
+  vg.bronnen = [
+    { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
+    { onderdeel: 'betonning', url: WFS, opgehaald: vandaag }
+  ];
+  vg.concept = { verslag: vandaag, toelichting: 'Ververst, wacht op goedkeuring (npm run ververs -- --goedkeuren)' };
+  schrijfJson(VG_PAD, vg);
+}
+
+const pad = schrijfVerslag(verslag);
+log(`\nVerslag: ${pad}`);
