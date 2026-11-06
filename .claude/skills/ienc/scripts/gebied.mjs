@@ -54,7 +54,32 @@ export function gebied(encRoot, bbox, opties = {}) {
   return { cellen, themas };
 }
 
-const isHoofd = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+/**
+ * Benoemde objecten in de buurt van een feature, dichtstbijzijnde eerst. Handig als een vlak zelf
+ * geen OBJNAM/INFORM heeft (veel resare met invaarverbod): "ligt bij tonnen SPUI-N/SPUI-Z, Lorentzsluizen".
+ * @param {object} doel  GeoJSON-feature
+ * @param {object[]} kandidaten  GeoJSON-features (bijv. alle thema's van gebied() samen)
+ * @param {{straal?: number, max?: number}} opties  straal in meters (standaard 500)
+ * @returns {Array<{naam, klasse, afstand_m}>}
+ */
+export function inDeBuurt(doel, kandidaten, { straal = 500, max = 8 } = {}) {
+  const punten = g => { const uit = []; const loop = c => typeof c[0] === 'number' ? uit.push(c) : c.forEach(loop); loop(g.coordinates); return uit; };
+  const dp = punten(doel.geometry);
+  const lat0 = dp[0][1] * Math.PI / 180;
+  const m = (a, b) => Math.hypot((a[0] - b[0]) * 111320 * Math.cos(lat0), (a[1] - b[1]) * 111320);
+  const uit = [];
+  for (const k of kandidaten) {
+    const naam = k.properties.OBJNAM || k.properties.NOBJNM;
+    if (!naam || k === doel) continue;
+    let d = Infinity;
+    for (const p of punten(k.geometry)) for (const q of dp) { const x = m(p, q); if (x < d) d = x; }
+    if (d <= straal) uit.push({ naam, klasse: k.properties.klasse, afstand_m: Math.round(d) });
+  }
+  const gezien = new Set();
+  return uit.sort((a, b) => a.afstand_m - b.afstand_m).filter(x => !gezien.has(x.naam) && gezien.add(x.naam)).slice(0, max);
+}
+
+const isHoofd =import.meta.url === pathToFileURL(process.argv[1] || '').href;
 if (isHoofd) {
   const arg = n => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : undefined; };
   const enc = arg('enc'), bboxTekst = arg('bbox');
