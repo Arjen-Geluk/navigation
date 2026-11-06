@@ -19,7 +19,7 @@ Stand 2026-11-06:
 
 | naam in de lijst | wat | grootte | fileId |
 |---|---|---|---|
-| Nederland (excl Zeeland, Waddenzee) 2026-10-05 | 109 cellen, o.a. IJsselmeer (YM), Markermeer (MK), randmeren (RM), IJ, ARK, rivieren | 42 MB | 4789373346 |
+| Nederland (excl Zeeland, Waddenzee) 2026-10-05 | 109 cellen, o.a. IJsselmeer en Markermeer (YM), randmeren (RM), IJ, ARK, rivieren | 42 MB | 4789373346 |
 | Waddenzee met Diepte 2026 - Week 44 | Waddenzee incl. gemeten dieptes en het vaarwater langs de Afsluitdijk | 25 MB | 4813483471 |
 | Zeeland met Diepte – 2026 – Week 45 | Zeeland incl. gemeten dieptes | 47 MB | 4819484941 |
 | Testbestand IENC volgens Encoding Guide versie 2.5 | 2 testcellen (Zeeland) | 1,4 MB | 4769338950 |

@@ -193,5 +193,7 @@ Waddenzee-cellen, niet in de release "Nederland (excl. Zeeland, Waddenzee)".
 - Objecten worden op celgrenzen geknipt (USAG 3 = buitenrand op de celgrens).
 - `INFORM` is soms Nederlands, soms Engels; `NINFOM`/`NOBJNM` bevatten de nationale tekst (soms Fries).
 - Celnaam `1R7YM009`: `1R` = producent Rijkswaterstaat (2R = Havenbedrijf Rotterdam), `7` = usage
-  "River" (schaal 1:2000), `YM` = vaarwegcode (YM IJsselmeer, MK Markermeer, RM randmeren, IJ, AR
-  Amsterdam-Rijnkanaal, KM Ketelmeer, ZM Zwarte Meer), daarna een volgnummer of kilometer.
+  "River" (schaal 1:2000), `YM` = vaarwegcode, daarna een volgnummer of kilometer. Rond het IJsselmeer:
+  YM001–017 IJsselmeer én Markermeer, RM001–004 randmeren, KM Ketelmeer, ZM Zwarte Meer, IJ020 het IJ,
+  AR Amsterdam-Rijnkanaal (km), YS de IJssel (km), MK een Fries kanaal (km 55–100 tussen Lemmer en Burgum, vermoedelijk het Prinses Margrietkanaal).
+  Zoek cellen altijd via `cellenVoorGebied`, niet op naam.
