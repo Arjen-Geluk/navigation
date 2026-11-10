@@ -11,130 +11,72 @@
 <meta name="theme-color" content="#12263F">
 <meta name="description" content="Vaargebieden en wedstrijdberekeningen van Arjen Geluk.">
 <style>
-  :root {
-    --bg: #0f1620;
-    --panel: #16202c;
-    --panel-border: #273243;
-    --text: #e7ecf2;
-    --text-dim: #9aa7b8;
-    --accent: #5fb4ff;
-    --accent-soft: rgba(95,180,255,0.12);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-  }
-  header {
-    padding: 48px 20px 24px;
-    max-width: 920px;
-    margin: 0 auto;
-  }
-  h1 {
-    font-size: 1.9rem;
-    margin: 0 0 6px;
-    letter-spacing: -0.01em;
-  }
-  header p {
-    color: var(--text-dim);
-    margin: 0;
-    font-size: 1rem;
-  }
-  main {
-    max-width: 920px;
-    margin: 0 auto;
-    padding: 0 20px 60px;
-  }
-  section.category {
-    margin-top: 36px;
-  }
-  section.category h2 {
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    margin: 0 0 14px;
-    font-weight: 600;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
-  }
-  a.card {
-    display: block;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    text-decoration: none;
-    color: var(--text);
-    transition: border-color 0.15s ease, transform 0.15s ease;
-  }
-  a.card:hover {
-    border-color: var(--accent);
-    transform: translateY(-1px);
-  }
-  a.card .title {
-    font-weight: 600;
-    font-size: 1.02rem;
-    margin-bottom: 4px;
-  }
-  a.card .desc {
-    color: var(--text-dim);
-    font-size: 0.9rem;
-  }
-  .placeholder {
-    background: transparent;
-    border: 1px dashed var(--panel-border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    color: var(--text-dim);
-    font-size: 0.9rem;
-    font-style: italic;
-  }
-  footer {
-    max-width: 920px;
-    margin: 0 auto;
-    padding: 20px 20px 50px;
-    color: var(--text-dim);
-    font-size: 0.85rem;
-    border-top: 1px solid var(--panel-border);
-    margin-top: 40px;
-  }
-  footer a { color: var(--accent); }
+/* Huisstijl: design system Navigation (tokens en componenten Kopbalk, Paneel) */
+:root{
+  --bg:#f3f6f9; --panel:#ffffff; --ink:#0f2235; --muted:#5b6b7b; --line:#dde4eb; --navy:#0b2545; --navy-ink:#ffffff; --navy-muted:#a9bed3;
+  --accent:#0b4f8a; --accent-ink:#ffffff; --chip:#eaf0f6;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0b1724; --panel:#102233; --ink:#e6edf3; --muted:#93a4b5; --line:#1f3447; --navy:#071523; --navy-ink:#e6edf3; --navy-muted:#8aa1b8;
+  --accent:#5aa7e6; --accent-ink:#06121d; --chip:#16304a;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b1724; --panel:#102233; --ink:#e6edf3; --muted:#93a4b5; --line:#1f3447; --navy:#071523; --navy-ink:#e6edf3; --navy-muted:#8aa1b8;
+  --accent:#5aa7e6; --accent-ink:#06121d; --chip:#16304a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif}
+.binnen,main,footer{max-width:1280px;margin:0 auto;padding:0 16px}
+header{background:var(--navy);color:var(--navy-ink)}
+header .binnen{padding-top:16px;padding-bottom:14px}
+h1{font-size:21px;margin:0;letter-spacing:2px;font-weight:700;text-transform:uppercase;display:inline-block}
+h1 .anker{display:inline-block;width:10px;height:10px;border:2px solid var(--navy-muted);border-radius:50%;margin-right:8px;vertical-align:1px}
+header .sub{color:var(--navy-muted)}
+.sub{color:var(--muted);font-size:13px}
+.paneel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0;box-shadow:0 1px 2px rgba(11,37,69,.04)}
+h2{font-size:14px;margin:0 0 8px;font-weight:650;color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
+.kaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+a.kaart{display:block;border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-decoration:none;color:var(--ink);transition:border-color .15s ease}
+a.kaart:hover{border-color:var(--accent)}
+a.kaart:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+a.kaart .titel{display:block;font-size:15px;font-weight:650;margin-bottom:2px}
+a.kaart .sub{display:block}
+footer{padding-top:4px;padding-bottom:30px}
+footer a{color:var(--accent)}
 </style>
 </head>
 <body>
 <header>
-  <h1>Navigatie</h1>
-  <p>Vaargebieden en wedstrijdberekeningen.</p>
+  <div class="binnen">
+    <h1><span class="anker"></span>Navigatie</h1>
+    <div class="sub">Vaargebieden en wedstrijdberekeningen.</div>
+  </div>
 </header>
 <main>
-
-  <section class="category">
-    <div class="cards">
-      <a class="card" href="getijkaart/">
-        <div class="title">Getijkaart Waddenzee</div>
-        <div class="desc">Bodemhoogte, waterstand en vaardieptes met tijdschuif; route-export voor OpenCPN.</div>
+  <section class="paneel">
+    <h2>Projecten</h2>
+    <div class="kaarten">
+      <a class="kaart" href="getijkaart/">
+        <span class="titel">Getijkaart Waddenzee</span>
+        <span class="sub">Bodemhoogte, waterstand en vaardieptes met tijdschuif; route-export voor OpenCPN.</span>
       </a>
-      <a class="card" href="3-stedenrace/">
-        <div class="title">Klipperrace 3 Steden</div>
-        <div class="desc">Wedstrijdanalyse en route voor de 3-stedenrace.</div>
+      <a class="kaart" href="wedstrijden/">
+        <span class="titel">Wedstrijden IJsselmeergebied</span>
+        <span class="sub">Route en tijden voor wedstrijden op IJsselmeer en Markermeer: 3-stedenrace, later beurtveer en strontrace.</span>
       </a>
-      <a class="card" href="polartool/">
-        <div class="title">Polartool</div>
-        <div class="desc">Polar voor een platbodem opbouwen uit handmatige waarden en VDR-logs van OpenCPN; alles in de browser.</div>
+      <a class="kaart" href="3-stedenrace/">
+        <span class="titel">3-stedenrace (archief)</span>
+        <span class="sub">Wedstrijdanalyse en route voor de 3-stedenrace.</span>
+      </a>
+      <a class="kaart" href="polartool/">
+        <span class="titel">Polartool</span>
+        <span class="sub">Polar voor een platbodem opbouwen uit handmatige waarden en VDR-logs van OpenCPN; alles in de browser.</span>
       </a>
     </div>
   </section>
-
 </main>
 <footer>
-  &copy; Arjen Geluk. Werk op deze site is gelicenseerd onder <a href="LICENSE">CC BY-NC-ND 4.0</a>, tenzij anders vermeld.
+  <p class="sub">&copy; Arjen Geluk. Werk op deze site is gelicenseerd onder <a href="LICENSE">CC BY-NC-ND 4.0</a>, tenzij anders vermeld.</p>
 </footer>
 </body>
 </html>

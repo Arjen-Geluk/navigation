@@ -31,6 +31,7 @@ Voorbeeld met een verzonnen schip: [`voorbeeld/voorbeeldschip_polar_v1_2026-11-0
 | `formaat` | tekst | `polartool/1` |
 | `versie` | getal | bestandsversie (v1, v2, …); elke keer opslaan geeft een nieuwe versie |
 | `gemaakt_met` | tekst | versie van de polartool, ter informatie |
+| `gewijzigd` | datum-tijd (ISO) | moment van opslaan van deze versie; een routemodel toont dit als datum van de polar |
 | `schip.id` | tekst | vaste scheeps-ID (UUID); verandert nooit |
 | `schip.naam` | tekst | scheepsnaam |
 | `schip.tuigage` | `eenmaster` / `tweemaster` | nu alleen informatief |
@@ -41,6 +42,8 @@ Voorbeeld met een verzonnen schip: [`voorbeeld/voorbeeldschip_polar_v1_2026-11-0
 | `schip.kielspeling_m` | m | standaard minimale kielspeling; het routemodel mag per berekening afwijken |
 | `schip.overstagverlies_s` | s of `null` | tijdverlies per overstag (incl. zwaard wisselen); alleen gebruiken als de gebruiker dat aanzet |
 | `schip.gijpverlies_s` | s of `null` | tijdverlies per gijp; idem |
+| `schip.windhoogtefactor` | getal (0,8–2) | gemeten wind in de mast gedeeld door deze factor = wind op 10 m. Routemodellen rekenen met wind op 10 m en gebruiken het veld niet; een analysepagina gebruikt het om gemeten (VDR-)wind naar 10 m om te rekenen |
+| `schip.windmeter_hoogte_m` | m of `null` | hoogte van de windmeter, ter toelichting bij de windhoogtefactor |
 | `polair.tws_kn` | lijst | rijen: ware windsnelheid op 10 m in kn, nu 2–40 per 2 |
 | `polair.twa_graden` | lijst | kolommen: ware windhoek t.o.v. de koers over de grond, vanaf de kruishoek tot 180; tot 100° per 5°, daarna per 10° |
 | `polair.snelheid_kn` | tabel | bootsnelheid in kn, `[rij][kolom]` = `[tws][twa]`; geen gaten |
@@ -116,6 +119,23 @@ window.addEventListener('message', e => {
 });
 if (window.opener) window.opener.postMessage({ type: 'polartool:klaar', protocol: 1 }, location.origin);
 ```
+
+### Tweede weg: via de browseropslag (sinds Polartool 0.12)
+
+Niet elke browser geeft het nieuwe tabblad een verbinding terug (`window.opener`); sommige openen de pagina zelfs in
+hetzelfde tabblad. Daarom zet de polartool de polar vóór het openen ook klaar in de browseropslag van de site
+(`localStorage`, alleen voor pagina's van dezelfde site):
+
+- sleutel `polartool:overdracht`, waarde `{ protocol: 1, id, tijd, bestand }` (`tijd` in ms, `id` een willekeurige tekst).
+
+De wedstrijdpagina leest die sleutel bij het laden:
+
+1. Is de waarde jonger dan 2 minuten: controleren en inladen zoals hierboven, en de sleutel **verwijderen**.
+2. Antwoorden onder de sleutel `polartool:overdracht:antwoord` met `{ id, type: 'polartool:ontvangen', schip_id, versie }`
+   of `{ id, type: 'polartool:geweigerd', reden }`. De polartool hoort dat via het `storage`-event (alleen als hij nog openstaat).
+3. Is de polar zo ingeladen, dan stuurt de pagina geen `polartool:klaar` meer; anders gaat het verder via `postMessage`.
+
+Een oudere waarde (> 2 minuten) negeert de pagina en verwijdert ze.
 
 Reageert een wedstrijdpagina niet binnen 15 s, dan meldt de polartool dat de pagina de polar nog niet kan ontvangen en
 dat de gebruiker het bestand daar zelf moet inladen. Elke wedstrijdpagina moet daarom **ook** een polarbestand kunnen

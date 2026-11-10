@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: betekenis-restrn-en-ctnare
+expected_outcome: |
+  Het antwoord legt uit dat restrn 8 "entry restricted" (invaren beperkt) is en CATREA 19 "waiting area"
+  (wachtplaats), dus geen absoluut verbod maar voorwaarden die in INFORM staan; dat CTNARE een
+  waarschuwingsgebied is waarvan de betekenis in INFORM staat en dat RWS het ook voor disclaimers gebruikt;
+  en dat windturbines als LNDMRK met CATLMK windmotor in de kaart staan.

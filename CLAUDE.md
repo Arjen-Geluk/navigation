@@ -30,6 +30,22 @@ De root `index.html` is de landingspagina van dit topic (alléén zeilen/
 navigatie-projecten, geen andere rubrieken — die horen in de overkoepelende
 portfoliosite).
 
+## Huisstijl (design system)
+
+- De huisstijl staat in het design system **Navigation**:
+  https://claude.ai/artifact/6F27EjgQKsX2xBuRW7kX1i — lees daar eerst `project/README.md`
+  (Artifact-tool, `read` met `path`), en voor waarden `project/tokens.json` en
+  `project/components/bundle.css`.
+- Nieuwe pagina's en nieuwe onderdelen volgen die tokens (`bg`, `panel`, `ink`, `muted`, `line`,
+  `navy`, `accent`, …, met licht- en donkerthema) en componenten (Kopbalk, Paneel, Knop, Chip,
+  Melding, Veld, Lijsttabel, Polartabel). Start vanaf het skelet van `wedstrijden/bron/pagina.html`.
+- Waarden worden **inline** in de pagina gezet (geen link naar het design system of andere externe
+  assets); het design system is de bron om uit over te nemen, niet om te laden.
+- Wijkt de code bewust af of komt er een nieuwe kleur of nieuw component bij: werk dan ook het design
+  system bij, zodat de code en het design system gelijk blijven.
+- De huisstijl wordt van boven naar beneden ingezet: de landingspagina (root `index.html`) volgt hem
+  al; de oudere kleuren van `3-stedenrace/` zijn geen voorbeeld voor nieuw werk.
+
 ## Favicon
 
 Elke pagina zet direct onder `<title>` het favicon-blok uit de `CLAUDE.md` van

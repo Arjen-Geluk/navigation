@@ -1,0 +1,109 @@
+{
+  "formaat": "wedstrijdeditie/1",
+  "wedstrijd": { "id": "3-steden", "naam": "Klipperrace 3 Steden" },
+  "jaar": 2025,
+  "versie": 6,
+  "regeltype": "varianten",
+  "status": {
+    "gecontroleerd": true,
+    "tegen": "Wedstrijdbepalingen 50e Enkhuizer Klipperrace 2025, versie 1.4",
+    "datum_bepalingen": "2025-10-10",
+    "bronbestand": "20251010-wedstrijdbepalingen-v14.pdf",
+    "toelichting": "Nagelopen op 6-11-2026: datum, start (attentiesein 09:50), finishlimiet 19:00 en alle 18 routes van art. 12 (boeien, volgorde, rondingszijden) kloppen. Alleen boeien en banen uit de bepalingen; posities uit de RWS-betonning."
+  },
+  "datum": "2025-10-11",
+  "start": "10:00",
+  "finishlimiet": "19:00",
+  "tijdzone": "Europe/Amsterdam",
+  "punten": [
+    {
+      "id": "Start",
+      "soort": "start",
+      "lat": 52.697,
+      "lon": 5.2909,
+      "toelichting": "Ankerplaatsen in het Krabbersgat; alle schepen starten gelijktijdig vanaf de toegewezen ankerplaats (art. 9.1)"
+    },
+    {
+      "id": "Finish",
+      "soort": "finish",
+      "lijn": [
+        { "id": "paal op de leidam", "rws": "HL N EINDE E LEIDAM PAAL 46" },
+        { "id": "KG 13", "rws": "KG 13" }
+      ],
+      "toelichting": "Finishlijn tussen de paal op de kop van de (oost)leidam en ton KG 13 (art. 13.1; vastgesteld op 10-11-2026)"
+    },
+    { "id": "SPORT C", "soort": "merkteken", "rws": "SPORT C", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "ST 1-SB 2", "soort": "merkteken", "rws": "ST 1-SB 2", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "ST 11", "soort": "merkteken", "rws": "ST 11", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "LC 11", "soort": "merkteken", "rws": "LC 11", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "EZ-C", "soort": "merkteken", "rws": "EZ-C", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "EZ-D", "soort": "merkteken", "rws": "EZ-D", "toelichting": "positie uit de RWS-betonning" },
+    {
+      "id": "De Kreupel",
+      "soort": "merkteken",
+      "lat": 52.80105,
+      "lon": 5.2136,
+      "toelichting": "Eiland; rondingspunt 50 m buiten ton NK-OW 5 (westpunt van het verboden gebied)"
+    },
+    { "id": "EZ-A", "soort": "merkteken", "rws": "EZ-A", "toelichting": "positie uit de RWS-betonning" },
+    { "id": "EL A", "soort": "merkteken", "rws": "EL A", "toelichting": "positie uit de RWS-betonning" }
+  ],
+  "zones": [
+    {
+      "id": "kreupel",
+      "naam": "De Kreupel, begrensd door de gele boeien NK-OW",
+      "regel": "verboden",
+      "actief": true,
+      "punten": [
+        { "id": "NK-OW 1", "rws": "NK-OW 1" },
+        { "id": "NK-OW 2", "rws": "NK-OW 2" },
+        { "id": "NK-OW 3", "rws": "NK-OW 3" },
+        { "id": "NK-OW 4", "rws": "NK-OW 4" },
+        { "id": "NK-OW 5", "rws": "NK-OW 5" },
+        { "id": "NK-OW 6", "rws": "NK-OW 6" },
+        { "id": "NK-OW 7", "rws": "NK-OW 7" },
+        { "id": "NK-OW 8", "rws": "NK-OW 8" },
+        { "id": "NK-OW 9", "rws": "NK-OW 9" },
+        { "id": "NK-OW 10", "rws": "NK-OW 10" },
+        { "id": "NK-OW 11", "rws": "NK-OW 11" }
+      ],
+      "toelichting": "Verboden gebied en hindernis in de zin van regel 20 RvW (art. 12)"
+    }
+  ],
+  "banen": {
+    "K": {
+      "naam": "Kort",
+      "routes": [
+        { "naam": "Urk – Stavoren", "volgorde": ["Start", "EZ-C sb", "EL A sb", "EZ-A sb", "Finish"] },
+        { "naam": "Stavoren – Urk", "volgorde": ["Start", "EZ-A bb", "EL A bb", "EZ-C bb", "Finish"] },
+        { "naam": "Stavoren – Medemblik", "volgorde": ["Start", "LC 11 bb", "De Kreupel bb", "Finish"] },
+        { "naam": "Medemblik – Stavoren", "volgorde": ["Start", "De Kreupel sb", "LC 11 sb", "Finish"] },
+        { "naam": "Medemblik – Urk", "volgorde": ["Start", "EZ-A sb", "EZ-D sb", "Finish"] },
+        { "naam": "Urk – Medemblik", "volgorde": ["Start", "EZ-D bb", "EZ-A bb", "Finish"] }
+      ]
+    },
+    "M": {
+      "naam": "Middel",
+      "routes": [
+        { "naam": "Urk – Stavoren", "volgorde": ["Start", "EZ-C bb", "ST 1-SB 2 bb", "Finish"] },
+        { "naam": "Stavoren – Urk", "volgorde": ["Start", "ST 1-SB 2 sb", "EZ-C sb", "Finish"] },
+        { "naam": "Stavoren – Medemblik", "volgorde": ["Start", "LC 11 bb", "De Kreupel bb", "SPORT C bb", "Finish"] },
+        { "naam": "Medemblik – Stavoren", "volgorde": ["Start", "SPORT C sb", "De Kreupel sb", "LC 11 sb", "Finish"] },
+        { "naam": "Medemblik – Urk", "volgorde": ["Start", "SPORT C sb", "EZ-C sb", "Finish"] },
+        { "naam": "Urk – Medemblik", "volgorde": ["Start", "EZ-C bb", "SPORT C bb", "Finish"] }
+      ]
+    },
+    "L": {
+      "naam": "Lang",
+      "routes": [
+        { "naam": "Urk – Stavoren", "volgorde": ["Start", "EZ-D bb", "ST 1-SB 2 bb", "Finish"] },
+        { "naam": "Stavoren – Urk", "volgorde": ["Start", "ST 1-SB 2 sb", "EZ-D sb", "Finish"] },
+        { "naam": "Stavoren – Medemblik", "volgorde": ["Start", "ST 11 bb", "SPORT C bb", "Finish"] },
+        { "naam": "Medemblik – Stavoren", "volgorde": ["Start", "SPORT C sb", "ST 11 sb", "Finish"] },
+        { "naam": "Medemblik – Urk", "volgorde": ["Start", "SPORT C sb", "EZ-D sb", "Finish"] },
+        { "naam": "Urk – Medemblik", "volgorde": ["Start", "EZ-D bb", "SPORT C bb", "Finish"] }
+      ]
+    }
+  },
+  "standaard": { "baan": "K", "windmodel": "knmi_seamless", "marge_verboden_gebied_m": 50 }
+}
