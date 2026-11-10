@@ -25,6 +25,7 @@
     if (kaart) return;
     kaart = L.map('kaart', { zoomSnap: 0.5, preferCanvas: true }).fitBounds([[52.66, 5.10], [52.88, 5.50]]);
     kaart.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    kaart.createPane('kust'); kaart.getPane('kust').style.zIndex = 450;   // boven de diepte- en bevaarbaarheidslagen (overlaypane 400)
     kaart.on('click', klik);
     bouwMenu();
     teken();
@@ -77,7 +78,17 @@
       d.set(w ? WATER : LAND, k); d[k + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
-    top10 = { url: c.toDataURL(), grenzen: [[r.noord - r.ny * r.dlat, r.west], [r.noord, r.west + r.nx * r.dlon]] };
+    // de kustlijn (overgang land/water) als eigen laag, die boven de diepte en bevaarbaarheid blijft liggen
+    const kc = document.createElement('canvas'); kc.width = r.nx; kc.height = r.ny;
+    const kctx = kc.getContext('2d'), kimg = kctx.createImageData(r.nx, r.ny), kd = kimg.data;
+    const water = (i, j) => (bits[j * rij + (i >> 3)] & (0x80 >> (i & 7))) !== 0;
+    for (let j = 0; j < r.ny; j++) for (let i = 0; i < r.nx; i++) {
+      const w = water(i, j), k = 4 * (j * r.nx + i);
+      const rand = (i > 0 && water(i - 1, j) !== w) || (i < r.nx - 1 && water(i + 1, j) !== w) || (j > 0 && water(i, j - 1) !== w) || (j < r.ny - 1 && water(i, j + 1) !== w);
+      if (rand) { kd[k] = 30; kd[k + 1] = 40; kd[k + 2] = 55; kd[k + 3] = 255; }
+    }
+    kctx.putImageData(kimg, 0, 0);
+    top10 = { url: c.toDataURL(), kust: kc.toDataURL(), grenzen: [[r.noord - r.ny * r.dlat, r.west], [r.noord, r.west + r.nx * r.dlon]] };
     return top10;
   })();
   function uitsnedeLaag(u) {
@@ -112,6 +123,8 @@
     if (o.url) lagen.ondergrond = L.tileLayer(o.url, { maxZoom: 17, attribution: o.attr }).on('tileerror', () => { $('kaartinfo').textContent = 'De online ondergrond antwoordt niet; kies Vast.'; });
     else if (S.kaart.ondergrond === 'vast' && BODEM) lagen.ondergrond = vastRaster();
     if (lagen.ondergrond) { lagen.ondergrond.addTo(kaart); if (lagen.ondergrond.bringToBack) lagen.ondergrond.bringToBack(); else { const ls = lagen.ondergrond.getLayers(); [...ls.slice(1), ls[0]].forEach(l => l.bringToBack()); } }   // uitsneden boven de grote ondergrond
+    if (lagen.kust) { kaart.removeLayer(lagen.kust); lagen.kust = null; }
+    if (S.kaart.ondergrond === 'vast' && top10) lagen.kust = L.imageOverlay(top10.kust, top10.grenzen, { pane: 'kust', interactive: false }).addTo(kaart);
   }
 
   // ---- alle lagen opnieuw tekenen ----
