@@ -61,7 +61,7 @@ const routeSleutel = (baan, naam) => baan + '|' + naam;
 // Boeien die alleen in een aangepaste route staan, komen uit de RWS-betonning. Onvindbare punten staan in .fouten.
 function huidigeEditie() {
   const e = EDITIES[S.editie], a = invoer().afwijkingen, fouten = [];
-  const punten = e.punten.map(p => a.punten[p.id] ? { ...p, ...a.punten[p.id], positie: 'verlegd' } : p);
+  const punten = e.punten.map(p => a.punten[p.id] ? { ...p, ...a.punten[p.id], lijn: undefined, positie: 'verlegd' } : p);
   for (const t of a.tonnen) punten.push({ id: t.id, soort: 'wedstrijdton', lat: t.lat, lon: t.lon, positie: 'wedstrijdton', toelichting: 'wedstrijdton (eigen positie)' });
   const banen = {};
   for (const [b, baan] of Object.entries(e.banen)) banen[b] = { ...baan, routes: baan.routes.map(r => {

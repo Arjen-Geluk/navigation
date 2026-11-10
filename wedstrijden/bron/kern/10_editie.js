@@ -26,11 +26,18 @@ function zoekBoei(index, naam) {
 // Geeft { editie, fouten }.
 function metPosities(e, index) {
   const fouten = [];
-  const vul = p => {
+  const vulPunt = p => {
     if (!p.rws) return { ...p, positie: 'editie' };
     const z = zoekBoei(index, p.rws);
     if (z.fout) { fouten.push(`${p.id}: ${z.fout}`); return { ...p, positie: 'onbekend' }; }
     return { ...p, lat: z.boei.lat, lon: z.boei.lon, positie: 'RWS' };
+  };
+  // een lijn (finish- of startlijn): beide uiteinden invullen; het punt zelf komt in het midden
+  const vul = p => {
+    if (!p.lijn) return vulPunt(p);
+    const lijn = p.lijn.map(vulPunt);
+    if (lijn.some(q => q.lat == null)) return { ...p, lijn, positie: 'onbekend' };
+    return { ...p, lijn, lat: (lijn[0].lat + lijn[1].lat) / 2, lon: (lijn[0].lon + lijn[1].lon) / 2, positie: lijn.some(q => q.positie === 'RWS') ? 'RWS' : 'editie' };
   };
   return { editie: { ...e, punten: e.punten.map(vul), zones: e.zones.map(z => ({ ...z, punten: z.punten.map(vul) })) }, fouten };
 }
@@ -48,7 +55,10 @@ function controleerEditie(e) {
   for (const p of e.punten || []) {
     if (ids.has(p.id)) fout.push(`punt ${p.id} staat dubbel`);
     ids.add(p.id);
-    if (!positieOk(p)) fout.push(`punt ${p.id} heeft geen RWS-naam en geen positie in het IJsselmeergebied`);
+    if (p.lijn) {
+      if (!Array.isArray(p.lijn) || p.lijn.length !== 2) fout.push(`punt ${p.id}: een lijn heeft precies twee uiteinden`);
+      else p.lijn.forEach((q, i) => { if (!positieOk(q)) fout.push(`punt ${p.id}, uiteinde ${i + 1}: geen RWS-naam en geen positie`); });
+    } else if (!positieOk(p)) fout.push(`punt ${p.id} heeft geen RWS-naam en geen positie in het IJsselmeergebied`);
   }
   for (const z of e.zones || []) {
     if (!z.punten || z.punten.length < 3) fout.push(`zone ${z.id} heeft te weinig punten`);

@@ -2,7 +2,7 @@
   "formaat": "wedstrijdeditie/1",
   "wedstrijd": { "id": "3-steden", "naam": "Klipperrace 3 Steden" },
   "jaar": 2025,
-  "versie": 4,
+  "versie": 5,
   "regeltype": "varianten",
   "status": {
     "gecontroleerd": true,
@@ -26,9 +26,11 @@
     {
       "id": "Finish",
       "soort": "finish",
-      "lat": 52.7022,
-      "lon": 5.3008,
-      "toelichting": "Midden van de finishlijn tussen het groene licht van de Compagnieshaven en het rode licht op de kop van de Oostdam (art. 13.1)"
+      "lijn": [
+        { "id": "groen licht Compagnieshaven", "lat": 52.699645, "lon": 5.293845, "bron": "IENC (LIGHTS, groen); staat niet in de RWS-betonning" },
+        { "id": "rood licht kop Oostdam", "rws": "HL N EINDE E LEIDAM PAAL 46" }
+      ],
+      "toelichting": "Finishlijn tussen het groene licht van de Compagnieshaven en het rode licht op de kop van de Oostdam (art. 13.1)"
     },
     { "id": "SPORT C", "soort": "merkteken", "rws": "SPORT C", "toelichting": "positie uit de RWS-betonning" },
     { "id": "ST 1-SB 2", "soort": "merkteken", "rws": "ST 1-SB 2", "toelichting": "positie uit de RWS-betonning" },

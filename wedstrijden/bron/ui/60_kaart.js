@@ -196,6 +196,11 @@
       baan.routes.forEach(x => L.polyline(x.volgorde.map(leesStap).filter(s => pt[s.punt]).map(s => [pt[s.punt].lat, pt[s.punt].lon]), { color: '#0b4f8a', weight: 1.5, opacity: 0.5, dashArray: '5 5' }).bindTooltip(x.naam, { sticky: true }).addTo(g));
     }
     const kleur = { start: '#2a9d4b', finish: '#b42318', via: '#0b4f8a', merkteken: '#e8831e' };
+    // finishlijn (of andere lijn) tussen twee lichten
+    for (const p of E.punten.filter(p => p.lijn && p.lijn.every(q => q.lat != null) && (inRoute.has(p.id) || S.kaart.lagen.andere))) {
+      L.polyline(p.lijn.map(q => [q.lat, q.lon]), { color: '#b42318', weight: 3, dashArray: '8 5', opacity: 0.9 }).bindTooltip(`${p.id}: ${p.lijn.map(q => q.id).join(' – ')}`, { sticky: true }).addTo(g);
+      for (const q of p.lijn) L.circleMarker([q.lat, q.lon], { radius: 3, color: '#b42318', weight: 1, fillColor: '#fff', fillOpacity: 1 }).bindTooltip(q.id + (q.rws ? ` (RWS ${q.rws})` : '')).addTo(g);
+    }
     for (const p of E.punten) {
       const inR = inRoute.has(p.id);
       if (!inR && !S.kaart.lagen.andere) continue;

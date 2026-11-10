@@ -15,7 +15,8 @@ function lokaleTijdNaarMs(datum, hhmm, tz = 'Europe/Amsterdam') {
 // routepunten van een route uit de editie (met eventuele afwijkingen van de schipper al verwerkt in editie.punten)
 function routePunten(editie, route) {
   const pt = Object.fromEntries(editie.punten.map(p => [p.id, p]));
-  return route.volgorde.map(leesStap).map(s => ({ id: s.punt, lat: pt[s.punt].lat, lon: pt[s.punt].lon, zijde: s.zijde }));
+  return route.volgorde.map(leesStap).map(s => ({ id: s.punt, lat: pt[s.punt].lat, lon: pt[s.punt].lon, zijde: s.zijde,
+    ...(pt[s.punt].lijn ? { lijn: pt[s.punt].lijn.map(q => ({ lat: q.lat, lon: q.lon })) } : {}) }));
 }
 
 // Rekent alle routes van één baan, plus (optioneel) de zes windafwijkingen.

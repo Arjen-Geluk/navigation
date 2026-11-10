@@ -46,7 +46,16 @@ function rondingBij(M, zijde, padIn, padUit, R) {
     wijze: ronden ? 'ronden' : 'passeren', draai_graden: Math.round(d), punten };
 }
 
-// punten: [{ id, lat, lon, zijde: 'bb' | 'sb' | null }]; startMs in ms (UTC).
+// Dichtstbijzijnde punt op een lijn (finishlijn), binnen het middelste deel (10 % van elk uiteinde af: niet vlak langs een licht).
+function puntOpLijn(p, lijn) {
+  const a = lijn[0], b = lijn[1], A = naarXY(a.lat, a.lon), B = naarXY(b.lat, b.lon), Q = naarXY(p.lat, p.lon);
+  const dx = B.x - A.x, dy = B.y - A.y, l = dx * dx + dy * dy;
+  const t = l ? Math.max(0.1, Math.min(0.9, ((Q.x - A.x) * dx + (Q.y - A.y) * dy) / l)) : 0.5;
+  return { lat: a.lat + t * (b.lat - a.lat), lon: a.lon + t * (b.lon - a.lon) };
+}
+
+// punten: [{ id, lat, lon, zijde: 'bb' | 'sb' | null, lijn?: [{ lat, lon }, { lat, lon }] }]; startMs in ms (UTC).
+// Een punt met lijn (de finish) is gehaald zodra de boot de lijn bereikt; hij vaart naar het dichtstbijzijnde deel ervan.
 // Maximale slaglengte 'auto': het model probeert deze lengtes (NM) en neemt de snelste. Slagen die nooit langer worden
 // dan een keuze geven dezelfde uitkomst; die worden overgeslagen.
 const SLAG_KEUZES = [1, 2, 3, 5];
@@ -78,13 +87,15 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
   if (res.track) res.track.push({ t, lat: pos.lat, lon: pos.lon, koers: null, vaart: 0, twa: null, tws: null, stand: null, zwaard: null });
 
   // paden tussen de merktekens vooraf: het vertrek bij een merkteken is de aanloop van het volgende rak
-  const paden = punten.slice(1).map((Bp, i) => zoekPad(V, punten[i], Bp));
+  const doelVan = (Bp, van) => Bp.lijn ? { ...Bp, ...puntOpLijn(van, Bp.lijn) } : Bp;
+  const paden = punten.slice(1).map((Bp, i) => zoekPad(V, punten[i], doelVan(Bp, punten[i])));
   for (let r = 1; r < punten.length; r++) {
     const A = punten[r - 1], Bp = punten[r];
     let pad = paden[r - 1];
-    const rak = { van: A.id, naar: Bp.id, start: t, eind: null, afstand_m: afstandM(A, Bp), zeilweg_m: 0, overstag: 0, gijp: 0,
+    const rak = { van: A.id, naar: Bp.id, start: t, eind: null, afstand_m: afstandM(A, doelVan(Bp, A)), zeilweg_m: 0, overstag: 0, gijp: 0,
       stand_s: {}, zwaard_s: {}, wind: { u: 0, v: 0, kn: 0, n: 0 }, ondiep: {}, schatting: false, omweg: !!pad && pad.length > 2 };
     res.afstand_m += rak.afstand_m;
+    if (Bp.lijn) rak.finish = puntOpLijn(A, Bp.lijn);
     if (!pad) { waarschuw(`Geen bevaarbare weg gevonden van ${A.id} naar ${Bp.id}.`); res.rakken.push(rak); return res; }
     // merkteken met rondingszijde (niet de finish): in plaats van het midden de boog eromheen
     if (Bp.zijde && r < punten.length - 1 && paden[r] && o.ronding_m > 0) {
@@ -96,7 +107,8 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
     let w = 1, slag = 0, slagStart = null, slagLengte = 0;
     let vastgelopen = 0;
     while (w < pad.length) {
-      const doel = pad[w], isMerk = w >= laatsteGewoon, inBoog = !!doel.ronding;
+      const laatste = w === pad.length - 1;
+      const doel = laatste && Bp.lijn ? puntOpLijn(pos, Bp.lijn) : pad[w], isMerk = w >= laatsteGewoon, inBoog = !!doel.ronding;
       const dist = afstandM(pos, doel);
       if (dist < (inBoog ? 15 : isMerk ? 20 : 60)) { if (isMerk) pos = { lat: doel.lat, lon: doel.lon }; w++; slag = 0; continue; }
       if (t > eindeMs) { waarschuw(`Berekening gestopt na ${o.max_uren} uur: de finish is niet gehaald.`); res.rakken.push(rak); return res; }

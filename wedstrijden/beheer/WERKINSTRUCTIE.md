@@ -50,7 +50,9 @@ Wanneer: als de wedstrijdbepalingen of het reglement van het nieuwe jaar verschi
    rondingszijden, verboden gebieden. Neem alleen op wat in de bepalingen staat (geen eigen via-punten).
    - Een RWS-boei krijgt alleen een naam (`"rws": "EZ-A"`); de positie komt bij het bouwen uit de RWS-betonning.
      De bouw weigert als de naam niet (of meer dan eens) in de betonning staat.
-   - Een wedstrijdton of eigen punt (Start, Finish, De Kreupel) krijgt `lat` en `lon` en geen `rws`.
+   - Een wedstrijdton of eigen punt (Start, De Kreupel) krijgt `lat` en `lon` en geen `rws`.
+   - Een finishlijn: `"lijn": [uiteinde, uiteinde]`, elk uiteinde met `rws` of met `lat`/`lon` (en `bron`). De bouw zet het punt in
+     het midden; de rekenkern vaart naar het dichtstbijzijnde deel van de lijn (niet de buitenste 10 %).
 3. Zet de status:
    - nog niet nagelopen: `"gecontroleerd": false`;
    - nagelopen: `"gecontroleerd": true`, `"tegen"` (naam en versie van de bepalingen), `"datum_bepalingen"` en `"bronbestand"`.

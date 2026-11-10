@@ -22,7 +22,7 @@
   // ---------- kaart per route: canvas in grijstinten ----------
   function routeKaart(r, P, B) {
     const E = huidigeEditie(), ks = rekenOpties().kielspeling, p = peil(), dg = P.schip.diepgang_m;
-    const pts = [...r.res.track, ...r.punten];
+    const pts = [...r.res.track, ...r.punten, ...r.punten.flatMap(q => q.lijn || [])];
     let zuid = Math.min(...pts.map(x => x.lat)), noord = Math.max(...pts.map(x => x.lat)), west = Math.min(...pts.map(x => x.lon)), oost = Math.max(...pts.map(x => x.lon));
     const marge = 0.012; zuid -= marge; noord += marge; west -= marge * 1.6; oost += marge * 1.6;
     const kx = Math.cos((zuid + noord) / 2 * Math.PI / 180);
@@ -67,6 +67,11 @@
     // punten met naam en rondingstijd
     const tijd = Object.fromEntries(r.res.rakken.map(k => [k.naar, k.eind]));
     ctx.font = 'bold 28px Segoe UI, Arial, sans-serif'; ctx.textBaseline = 'middle';
+    for (const q of r.punten.filter(q => q.lijn)) {
+      const [a, b] = q.lijn.map(e => naarPx(e.lat, e.lon));
+      ctx.setLineDash([16, 10]); ctx.lineWidth = 5; ctx.strokeStyle = '#000';
+      ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]);
+    }
     for (const q of r.punten) {
       const [x, y] = naarPx(q.lat, q.lon);
       ctx.beginPath(); ctx.arc(x, y, 10, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
