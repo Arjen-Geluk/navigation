@@ -15,10 +15,12 @@ import { fromArrayBuffer } from 'geotiff';
 import { leesJson, schrijfJson } from './lib/json.mjs';
 import { wgsNaarRd, afstandM } from './lib/rd.mjs';
 import { maakPng } from './lib/png.mjs';
-import { haalOsm, verbodenGebieden, OVERPASS } from './lib/verboden.mjs';
+import { haalIenc, verbodenGebieden } from './lib/verboden.mjs';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(MAP, '..', 'lokaal', 'ververs');
+// IENC (Inland ENC van RWS), uitgepakt in lokaal/; downloaden alleen na akkoord (zie .claude/skills/ienc/references/bronnen.md)
+const ENC_ROOT = join(MAP, '..', 'lokaal', 'ienc', 'nederland', 'ENC_ROOT');
 const VG_PAD = join(MAP, 'gegevens', 'vaargebied_ijsselmeergebied.json');
 const BET_PAD = join(MAP, 'gegevens', 'betonning_ijsselmeergebied.json');
 const arg = n => process.argv.includes('--' + n);
@@ -43,7 +45,7 @@ const URLS = [
   ['Ondergrond Esri grijs', 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/10/337/525'],
   ['Ondergrond Esri luchtfoto', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/337/525'],
   ['Ondergrond Esri topografisch', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/10/337/525'],
-  ['OpenStreetMap (Overpass): windturbines, Marker Wadden', 'https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode(1)%3Bout%3B'],
+  ['IENC-downloads (vaarweginformatie.nl)', 'https://www.vaarweginformatie.nl/frp/page/infra_enc'],
   ['Ondergrond OpenTopoMap', 'https://a.tile.opentopomap.org/10/525/337.png']
 ];
 
@@ -353,12 +355,20 @@ function schrijfVerslag(v) {
     r.push('## Verboden gebieden', '');
     r.push('Water dat in de pagina onbevaarbaar is (code 254 in het bodemraster), voor alle wedstrijden. Op het controleplaatje paars-rood.', '');
     r.push('- **A1-boeien**: gele boeien met topteken A1 (rood-wit-rood, verboden toegang). Per groep zijn de boeien in volgorde verbonden en de uiteinden naar het land doorgetrokken; het water achter de lijn is verboden. De Kreupel (NK-OW) staat al in de editie.');
-    r.push('- **Windparken**: windturbines in het water uit OpenStreetMap, per groep de omtrek plus 150 m.');
-    r.push('- **Marker Wadden**: omtrek uit OpenStreetMap plus 50 m (de eilanden staan niet in de bodemopname).', '');
-    if (v.osmFout) r.push(`**OpenStreetMap was niet bereikbaar** (${v.osmFout}): windparken en Marker Wadden ontbreken.`, '');
-    r.push('| Soort | Gebied | Boeien / turbines | Oppervlak | Opmerking |', '|---|---|---|---|---|');
+    r.push('- **Windparken** (IENC): windturbines (LNDMRK windmotor) in het water, per groep de omtrek plus 150 m; en de vlakken "Windpark …" (CTNARE).');
+    r.push('- **Natuurgebieden** (IENC CTNARE "Natuurgebied"), behalve gebieden die al in de editie staan.');
+    r.push('- **Marker Wadden** (IENC LNDARE binnen het kader van de Marker Wadden; de eilanden staan niet in de bodemopname): omtrek plus 50 m.');
+    r.push('- **Invaarverbod** (IENC resare met restrn 7 "entry prohibited"). Vlakken zonder naam zijn beschreven met de benoemde objecten eromheen.', '');
+    if (v.ienc) r.push(`IENC-cellen gebruikt (${v.ienc.length}): ${v.ienc.map(c => `${c.naam.replace('.000', '')} ed. ${c.editie} (${c.uitgifte})`).join(', ')}.`, '');
+    r.push('| Soort | Gebied | Boeien / turbines / vlakken | Oppervlak | Opmerking |', '|---|---|---|---|---|');
     for (const x of v.verboden.overzicht.filter(x => x.cellen > 0 || x.opmerking)) r.push(`| ${x.soort} | ${x.id}${x.vaarwater ? ' (' + x.vaarwater + ')' : ''} | ${x.boeien ?? x.turbines ?? x.ringen ?? ''} | ${x.km2 ? nl(x.km2, 2) + ' km²' : '–'} | ${x.opmerking || ''} |`);
     r.push('', `Totaal ${nl(v.verboden.cellen)} cellen (${nl(v.verboden.cellen * 0.0025, 1)} km²).`, '');
+    if (v.verboden.smal?.length) {
+      const s = v.verboden.smal;
+      r.push(`**Niet verwerkt: ${s.length} andere stukken IENC-land op plekken die in het raster water zijn** (dammen, kribben, oevers; samen ${nl(s.reduce((t, x) => t + x.cellen, 0))} watercellen). `
+        + 'Grootste: ' + [...s].sort((a, b) => b.cellen - a.cellen).slice(0, 10).map(x => `${x.plek} (${x.cellen} water, ${Math.round(x.rondom * 100)}% land rondom)`).join('; ') + '.', '');
+    }
+    if (v.verboden.naamloos?.length) r.push('**Waarschuwingen in de IENC, niet verwerkt**: ' + v.verboden.naamloos.map(x => `${x.id} (${x.plek})`).join('; ') + '.', '');
   }
   if (v.betonning) {
     const t = v.betonning;
@@ -466,17 +476,17 @@ if (!arg('alleen-urls')) {
     verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst, oud) };
   log(`  ${lijst.length} markeringen in het vaargebied`);
 
-  // ---- verboden gebieden (A1-boeien, windparken, Marker Wadden) in het raster: code 254 ----
+  // ---- verboden gebieden (A1-boeien en IENC: windparken, natuur, eilanden, invaarverbod) in het raster: code 254 ----
   log('Verboden gebieden…');
-  let osm = [];
-  try {
-    const o = await haalOsm(vg.gebied, join(CACHE, 'cache', 'osm_verboden.json'));
-    osm = o.elementen;
-    if (o.uitCache) { verslag.osmFout = `${o.fout}; gebruikt: de versie uit de cache van ${o.uitCache}`; log('  OpenStreetMap niet bereikbaar, cache van ' + o.uitCache); }
-  } catch (e) { log('  OpenStreetMap niet bereikbaar: ' + e.message); verslag.osmFout = e.message; }
-  const verboden = verbodenGebieden(r, lijst, osm, vg.gebied, { uitsluiten: ['NK-OW'] });
+  if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
+  const ienc = haalIenc(ENC_ROOT, vg.gebied);
+  log(`  IENC: ${ienc.cellen.length} cellen, ${ienc.features.length} objecten`);
+  const verboden = verbodenGebieden(r, lijst, ienc, vg.gebied, { uitsluiten: ['NK-OW'] });
   verslag.verboden = verboden;
+  verslag.ienc = ienc.cellen;
   vg.verboden = verboden.overzicht.filter(x => x.cellen > 0).map(x => ({ soort: x.soort, id: x.id, km2: +x.km2.toFixed(2), boeien: x.boeien, turbines: x.turbines }));
+  const uitgifte = ienc.cellen.map(c => c.uitgifte).sort();
+  vg.ienc = { release: 'Nederland (excl. Zeeland, Waddenzee)', cellen: ienc.cellen.length, uitgifte_van: uitgifte[0], uitgifte_tot: uitgifte[uitgifte.length - 1] };
   log(`  ${verboden.cellen} cellen verboden in ${vg.verboden.length} gebieden`);
 
   const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
@@ -512,7 +522,7 @@ if (!arg('alleen-urls')) {
     { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
     { onderdeel: 'betonning', url: WFS, opgehaald: vandaag },
     ...(top10 ? [{ onderdeel: 'land en water (TOP10NL, eenmalig)', url: top10.bron, opgehaald: top10.opgehaald }] : []),
-    { onderdeel: 'windturbines en Marker Wadden (OpenStreetMap)', url: OVERPASS, opgehaald: vandaag }
+    { onderdeel: 'verboden gebieden, windturbines, eilanden (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: vg.ienc.uitgifte_tot }
   ];
   // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md
   verslag.naam = `ververs_${vandaag}`;

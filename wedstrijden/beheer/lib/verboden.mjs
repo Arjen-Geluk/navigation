@@ -3,37 +3,35 @@
 // 1. Gele boeien met topteken A1 (rood-wit-rood): "verboden toegang". Per groep (naam zonder volgnummer, bijv. VF-OW, SB-OW, FR)
 //    worden de boeien in volgorde tot een lijn verbonden; de uiteinden worden naar het dichtstbijzijnde land doorgetrokken.
 //    Water dat daarna niet meer bereikbaar is vanaf het open water, ligt achter de lijn en is verboden.
-// 2. Windparken in het water: windturbines uit OpenStreetMap die in het water staan, gegroepeerd; het gebied binnen de
-//    omtrek van een groep plus 150 m is verboden.
-// 3. Marker Wadden: omtrek uit OpenStreetMap plus 50 m (de eilanden staan niet in de bodemopname van 2022).
+// 2. Windparken uit de IENC: windturbines (LNDMRK, CATLMK windmotor) in het water, gegroepeerd, omtrek plus 150 m;
+//    en de vlakken Windpark … (CTNARE).
+// 3. Natuurgebieden uit de IENC (CTNARE "Natuurgebied"), behalve gebieden die al in de editie staan.
+// 4. Marker Wadden (niet in de bodemopname): land uit de IENC (LNDARE) binnen het kader van de Marker Wadden, plus 50 m.
+//    Ander IENC-land op plekken die in het raster water zijn (dammen, kribben, kust) komt alleen in het verslag.
+// 5. Invaarverbod uit de IENC: resare/RESARE/MIPARE met restrn/RESTRN 7.
+// Bron: de IENC van Rijkswaterstaat via .claude/skills/ienc (lokaal/ienc/…/ENC_ROOT); de RWS-bodem blijft de dieptebron.
 import { afstandM } from './rd.mjs';
+import { gebied as iencGebied, inDeBuurt } from '../../../.claude/skills/ienc/scripts/gebied.mjs';
 
 export const GEEN_WATER = 255, VERBODEN = 254;
-export const OVERPASS = 'https://overpass-api.de/api/interpreter';
+// De Marker Wadden (aangelegd na de bodemopname): IENC-land met het midden in dit kader telt als eiland
+const MARKER_WADDEN = { zuid: 52.565, west: 5.33, noord: 52.645, oost: 5.46 };
+
+// IENC-objecten voor de verboden gebieden, plus benoemde objecten om naamloze vlakken te beschrijven
+const IENC_KLASSEN = ['LNDMRK', 'CTNARE', 'LNDARE', 'resare', 'RESARE', 'MIPARE'];
+const IENC_NAMEN = ['lokbsn', 'BOYLAT', 'boylat', 'BOYCAR', 'BOYSPP', 'BCNLAT', 'bcnlat', 'BCNSPP', 'wtwgag', 'comare', 'hrbare', 'bridge', 'BRIDGE', 'gatcon'];
+export function haalIenc(encRoot, gebied) {
+  const bbox = [gebied.west, gebied.zuid, gebied.oost, gebied.noord];
+  const { cellen, themas } = iencGebied(encRoot, bbox, { klassen: [...IENC_KLASSEN, ...IENC_NAMEN] });
+  return { cellen, features: themas.selectie.features };
+}
+const heeftCode = (v, c) => (Array.isArray(v) ? v : v == null ? [] : String(v).split(',')).map(Number).includes(c);
+const ringenVan = g => g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : [];
+const ringXY = ring => ring.map(([lon, lat]) => naarXY(lat, lon));
+const middenVan = ring => ({ lat: ring.reduce((s, p) => s + p[1], 0) / ring.length, lon: ring.reduce((s, p) => s + p[0], 0) / ring.length });
+const plek = p => `${p.lat.toFixed(3)} N, ${p.lon.toFixed(3)} O`;
 const M_LAT = 111200, M_LON = 111320 * Math.cos(52.7 * Math.PI / 180);
 const naarXY = (lat, lon) => ({ x: lon * M_LON, y: lat * M_LAT });
-
-export async function haalOsm(gebied, cachePad) {
-  const { readFileSync, writeFileSync, existsSync } = await import('node:fs');
-  let laatsteFout;
-  for (let poging = 1; poging <= 3; poging++) {
-    try {
-      const el = await haalOsmEenmaal(gebied);
-      if (cachePad) writeFileSync(cachePad, JSON.stringify({ opgehaald: new Date().toISOString(), elementen: el }));
-      return { elementen: el, uitCache: null };
-    } catch (e) { laatsteFout = e; await new Promise(z => setTimeout(z, 5000 * poging)); }
-  }
-  if (cachePad && existsSync(cachePad)) { const c = JSON.parse(readFileSync(cachePad, 'utf8')); return { elementen: c.elementen, uitCache: c.opgehaald, fout: laatsteFout.message }; }
-  throw laatsteFout;
-}
-async function haalOsmEenmaal(gebied) {
-  const bbox = `${gebied.zuid},${gebied.west},${gebied.noord},${gebied.oost}`;
-  const q = `[out:json][timeout:120];(node["generator:source"="wind"](${bbox});relation["name"="Marker Wadden"];way["name"="Marker Wadden"];relation["name"~"Marker Wadden"]["place"];);out geom;`;
-  const r = await fetch(OVERPASS, { method: 'POST', headers: { 'User-Agent': 'navigation-wedstrijden-ververs/1', Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(180000) });
-  if (!r.ok) throw new Error(`OpenStreetMap (Overpass): HTTP ${r.status}`);
-  return (await r.json()).elements;
-}
 
 // ---- rasterhulpjes ----
 function raster(r) {
@@ -84,6 +82,28 @@ function markeerRing(r, R, ring, marge) {
   return n;
 }
 
+// cellen met het midden binnen een ring: water (bevaarbaar, nog niet verboden) en land
+function cellenBinnen(r, R, ring) {
+  const lat = ring.map(p => p.y / M_LAT), lon = ring.map(p => p.x / M_LON);
+  let water = 0, land = 0;
+  R.kader(Math.min(...lat), Math.min(...lon), Math.max(...lat), Math.max(...lon), k => {
+    if (!inRing(naarXY(R.midden(k).lat, R.midden(k).lon), ring)) return;
+    if (r.codes[k] < VERBODEN) water++; else if (r.codes[k] === GEEN_WATER) land++;
+  });
+  return { water, land };
+}
+// land rondom: aandeel landcellen in de rand van 100 m buiten de ring (0 = vrijliggend eiland)
+function landRondom(r, R, ring, rand = 100) {
+  const lat = ring.map(p => p.y / M_LAT), lon = ring.map(p => p.x / M_LON), dl = rand / M_LAT, dn = rand / M_LON;
+  let land = 0, n = 0;
+  R.kader(Math.min(...lat) - dl, Math.min(...lon) - dn, Math.max(...lat) + dl, Math.max(...lon) + dn, k => {
+    const p = naarXY(R.midden(k).lat, R.midden(k).lon);
+    if (inRing(p, ring) || afstandTotRing(p, ring) > rand) return;
+    n++; if (r.codes[k] === GEEN_WATER) land++;
+  });
+  return n ? land / n : 1;
+}
+
 // bereikbaar water vanaf de startpunten, zonder door land, verboden cellen of de barrière te gaan
 function bereikbaar(r, R, zaden, barriere) {
   const b = new Uint8Array(r.codes.length), rij = [];
@@ -112,7 +132,7 @@ function naasteLand(r, R, p, maxM) {
 const groepVan = naam => ((String(naam).toUpperCase().match(/^([A-Z]+(?:-OW)?)/) || [])[1]) || String(naam).toUpperCase();
 
 // Past r.codes aan (VERBODEN) en geeft een overzicht per gebied.
-export function verbodenGebieden(r, betonning, osm, gebied, { uitsluiten = [], gat_m = 1200, land_m = 2000 } = {}) {
+export function verbodenGebieden(r, betonning, ienc, gebied, { uitsluiten = [], gat_m = 1200, land_m = 2000 } = {}) {
   const R = raster(r), celKm2 = (r.dlat * M_LAT) * (r.dlon * M_LON) / 1e6, overzicht = [];
   const zaden = gebied.zaden || [];
 
@@ -152,8 +172,13 @@ export function verbodenGebieden(r, betonning, osm, gebied, { uitsluiten = [], g
       opmerking: !n ? 'geen gebied' : open ? `${open} uiteinde(n) niet aan land gekoppeld (binnen ${land_m} m geen land)` : '' });
   }
 
-  // 2. windparken: turbines in het water, gegroepeerd (afstand < 1500 m), omtrek + 150 m
-  const turbines = osm.filter(e => e.type === 'node' && e.tags && e.tags['generator:source'] === 'wind').map(e => ({ lat: e.lat, lon: e.lon }))
+  const f = ienc.features, naamloos = [];
+  const beschrijf = x => x.properties.OBJNAM || x.properties.INFORM
+    || (inDeBuurt(x, f).map(b => b.naam).slice(0, 3).join(', ') || 'zonder naam') ;
+
+  // 2. windparken: turbines (IENC LNDMRK windmotor) in het water, gegroepeerd (afstand < 1500 m), omtrek + 150 m
+  const turbines = f.filter(x => x.properties.klasse === 'LNDMRK' && heeftCode(x.properties.CATLMK, 19) && x.geometry.type === 'Point')
+    .map(x => ({ lat: x.geometry.coordinates[1], lon: x.geometry.coordinates[0] }))
     .filter(t => { const k = R.cel(t.lat, t.lon); return k >= 0 && r.codes[k] !== GEEN_WATER; });
   const ouder = turbines.map((_, i) => i), wortel = i => ouder[i] === i ? i : (ouder[i] = wortel(ouder[i]));
   for (let i = 0; i < turbines.length; i++) for (let j = i + 1; j < turbines.length; j++) if (afstandM(turbines[i], turbines[j]) < 1500) ouder[wortel(i)] = wortel(j);
@@ -163,22 +188,48 @@ export function verbodenGebieden(r, betonning, osm, gebied, { uitsluiten = [], g
     const ring = omhullende(c.map(t => naarXY(t.lat, t.lon)));
     const n = markeerRing(r, R, ring, 150);
     const m = { lat: c.reduce((s, t) => s + t.lat, 0) / c.length, lon: c.reduce((s, t) => s + t.lon, 0) / c.length };
-    overzicht.push({ soort: 'windpark', id: `windpark bij ${m.lat.toFixed(3)} N, ${m.lon.toFixed(3)} O`, turbines: c.length, cellen: n, km2: n * celKm2, opmerking: '' });
+    overzicht.push({ soort: 'windpark (turbines)', id: `windpark bij ${plek(m)}`, turbines: c.length, cellen: n, km2: n * celKm2, opmerking: 'IENC LNDMRK windmotor, omtrek + 150 m' });
+  }
+  // windpark- en natuurvlakken (CTNARE); per naam samengevoegd (vlakken zijn per IENC-cel geknipt)
+  const a1Uitgesloten = betonning.filter(m => uitsluiten.includes(groepVan(m.naam))).map(m => naarXY(m.lat, m.lon));
+  const vlakken = {};
+  for (const x of f.filter(x => x.properties.klasse === 'CTNARE')) {
+    const t = x.properties.INFORM || x.properties.OBJNAM || '';
+    const soort = /windpark/i.test(t) ? 'windpark (vlak)' : /natuur/i.test(t) ? 'natuurgebied' : null;
+    if (!soort) { if (/zandwinning|werk in uitvoering/i.test(t)) naamloos.push({ soort: 'waarschuwing (niet verwerkt)', id: t, plek: plek(middenVan(ringenVan(x.geometry)[0])) }); continue; }
+    const sleutel = soort + '|' + t;
+    (vlakken[sleutel] ||= { soort, id: t, ringen: [] }).ringen.push(...ringenVan(x.geometry));
+  }
+  for (const v of Object.values(vlakken)) {
+    const ringen = v.ringen.map(ringXY);
+    // gebied dat al in de editie staat (bijv. De Kreupel): niet in het raster, anders kan de schipper de zone niet uitzetten
+    const inEditie = a1Uitgesloten.some(p => ringen.some(g => inRing(p, g) || afstandTotRing(p, g) < 300));
+    if (inEditie) { overzicht.push({ soort: v.soort, id: v.id, ringen: ringen.length, cellen: 0, opmerking: 'zit al in de editie (wedstrijdbepalingen)' }); continue; }
+    let n = 0; for (const g of ringen) n += markeerRing(r, R, g, 0);
+    overzicht.push({ soort: v.soort, id: `${v.id} (${plek(middenVan(v.ringen[0]))})`, ringen: ringen.length, cellen: n, km2: n * celKm2, opmerking: 'IENC CTNARE' });
   }
 
-  // 3. Marker Wadden: gesloten ringen uit OpenStreetMap, + 50 m
-  const ringen = [];
-  for (const e of osm.filter(e => e.tags && /Marker Wadden/.test(e.tags.name || ''))) {
-    if (e.type === 'way' && e.geometry && e.geometry.length > 3) ringen.push(e.geometry);
-    if (e.type === 'relation') for (const m of e.members || []) if (m.type === 'way' && m.role !== 'inner' && m.geometry && m.geometry.length > 3) ringen.push(m.geometry);
+  // 4. eilanden die niet in de bodemopname staan: IENC-land (LNDARE) op water in het raster, + 50 m
+  const smal = [];
+  for (const x of f.filter(x => x.properties.klasse === 'LNDARE')) for (const ring of ringenVan(x.geometry)) {
+    const g = ringXY(ring), { water: w, land } = cellenBinnen(r, R, g);
+    if (!w) continue;
+    // alleen vrijliggende eilanden (Marker Wadden); land dat aan bestaand land vastzit (dammen, kust) alleen in het verslag
+    const m = middenVan(ring), mw = m.lat > MARKER_WADDEN.zuid && m.lat < MARKER_WADDEN.noord && m.lon > MARKER_WADDEN.west && m.lon < MARKER_WADDEN.oost;
+    if (!mw) { smal.push({ cellen: w, rondom: landRondom(r, R, g), plek: plek(m) }); continue; }
+    const n = markeerRing(r, R, g, 50);
+    overzicht.push({ soort: 'eiland', id: `Marker Wadden, deel bij ${plek(m)}`, ringen: 1, cellen: n, km2: n * celKm2, opmerking: `IENC LNDARE, ${w} cellen water in de bodemopname, omtrek + 50 m` });
   }
-  let nMw = 0;
-  for (const g of ringen) {
-    const eerste = g[0], laatste = g[g.length - 1];
-    if (Math.abs(eerste.lat - laatste.lat) > 1e-6 || Math.abs(eerste.lon - laatste.lon) > 1e-6) continue;   // alleen gesloten ringen
-    nMw += markeerRing(r, R, g.map(p => naarXY(p.lat, p.lon)), 50);
-  }
-  overzicht.push({ soort: 'eilanden', id: 'Marker Wadden', ringen: ringen.length, cellen: nMw, km2: nMw * celKm2, opmerking: nMw ? '' : 'geen gesloten omtrek gevonden in OpenStreetMap' });
 
-  return { overzicht, cellen: r.codes.reduce((n, c) => n + (c === VERBODEN), 0) };
+  // 5. invaarverbod: resare/RESARE/MIPARE met restrn/RESTRN 7
+  for (const x of f.filter(x => ['resare', 'RESARE', 'MIPARE'].includes(x.properties.klasse) && (heeftCode(x.properties.restrn, 7) || heeftCode(x.properties.RESTRN, 7)))) {
+    let n = 0; const ringen = ringenVan(x.geometry);
+    for (const g of ringen) n += markeerRing(r, R, ringXY(g), 0);
+    const m = middenVan(ringen[0]), binnen = R.cel(m.lat, m.lon) >= 0;
+    if (!binnen) continue;                                     // buiten het raster van het vaargebied
+    overzicht.push({ soort: 'invaarverbod', id: `${beschrijf(x)} (${plek(m)})`, ringen: ringen.length, cellen: n, km2: n * celKm2,
+      opmerking: `IENC ${x.properties.klasse} restrn 7${n ? '' : ': kleiner dan een cel of op land'}` });
+  }
+
+  return { overzicht, smal, naamloos, cellen: r.codes.reduce((n, c) => n + (c === VERBODEN), 0) };
 }
