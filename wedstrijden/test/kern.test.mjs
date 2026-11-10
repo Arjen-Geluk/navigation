@@ -78,7 +78,7 @@ test('merktekens: ronden op 30 m aan de goede kant, passeren zonder lus', () => 
 test('finish als lijn: de boot eindigt op de lijn, niet in het midden', () => {
   const f = E.punten.find(p => p.id === 'Finish');
   assert.equal(f.lijn.length, 2);
-  assert.ok(f.lijn.every(q => q.lat > 52.69 && q.lat < 52.71), 'beide uiteinden ingevuld');
+  assert.ok(f.lijn.every(q => q.lat > 52.70 && q.lat < 52.71), "beide uiteinden ingevuld");
   const W = vasteWind(K, 240, 12, t0);
   for (const r of K.rekenBaan(V, W, P, E, 'K', { robuustheid: false }).routes) {
     const eind = r.res.track[r.res.track.length - 1];
