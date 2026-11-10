@@ -29,6 +29,9 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
    Vraag de gebruiker altijd eerst toestemming voor een download en noem bestandsnaam, bron en grootte.
    Hoe je de actuele lijst en de directe downloadlink vindt staat in `references/bronnen.md`.
    Uitgepakt: `lokaal/ienc/nederland/ENC_ROOT/` met `CATALOG.031` en per cel een map.
+   `lokaal/` hoort bij één checkout en gaat niet mee in git: werk je in een worktree
+   (`.claude/worktrees/<naam>`), dan staat de data in `lokaal/` van de hoofdcheckout
+   (`git worktree list`, eerste regel). Zoek daar voordat je concludeert dat er geen data is.
 
 2. **Release controleren** voordat je hem gebruikt:
    ```bash
