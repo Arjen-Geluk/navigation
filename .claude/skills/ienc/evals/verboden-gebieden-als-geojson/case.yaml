@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: verboden-gebieden-als-geojson
+expected_outcome: |
+  Er komt een GeoJSON-bestand met de vlakken uit de lokale IENC-cellen die een invaarverbod hebben
+  (resare/RESARE met restrn/RESTRN 7) binnen het gevraagde vak, met per vlak naam of toelichting
+  (OBJNAM/INFORM). In de chat staat een lijst van die gebieden. Er is niets gedownload.
