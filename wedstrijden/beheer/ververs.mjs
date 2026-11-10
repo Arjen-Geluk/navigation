@@ -16,6 +16,7 @@ import { leesJson, schrijfJson } from './lib/json.mjs';
 import { wgsNaarRd, afstandM } from './lib/rd.mjs';
 import { maakPng } from './lib/png.mjs';
 import { haalIenc, verbodenGebieden } from './lib/verboden.mjs';
+import { iencVlakken, telWater } from './lib/ienc_water.mjs';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(MAP, '..', 'lokaal', 'ververs');
@@ -78,7 +79,7 @@ async function controleerUrls() {
 //   0..250 = bodemhoogte −25,0 .. 0,0 m NAP in stappen van 0,1 m (dieper/hoger wordt afgekapt)
 //   255    = geen water (land, dijk of geen meting)
 const GEEN_WATER = 255;
-const WATER_ZONDER_METING = 250;          // water volgens TOP10NL maar zonder RWS-meting (havens): als 0,0 m NAP, dus onbevaarbaar
+const WATER_ZONDER_METING = 250;          // water volgens de IENC maar zonder RWS-meting (havens): als 0,0 m NAP, dus onbevaarbaar
 const codeer = v => Math.max(0, Math.min(250, Math.round((v + 25) * 10)));
 const decodeer = c => c === GEEN_WATER ? null : c / 10 - 25;
 
@@ -140,6 +141,41 @@ async function haalBodemRd(laag, gebied) {
 // Van het RD-raster (20 m) naar een raster in graden; per cel k x k monsterpunten, gemiddelde van de waterpunten.
 // Een cel is land zodra een kwart van de monsterpunten land is (geen meting of boven NAP): zo blijven smalle dammen
 // en strekdammen (20 à 30 m breed) in het raster staan; langs de kust is dat iets voorzichtiger.
+// Land en water uit de IENC: telling per cel van 50 m (10 × 10 monsterpunten) en de havenuitsneden van 10 m (2 × 2).
+// Schrijft gegevens/water_ienc_50m.bin, havens_ienc_10m.bin en water_ienc.json (formaat watermasker/1); de pagina
+// gebruikt ze voor de vaste ondergrond en de uitsneden. Geeft { telling, drempel, opgehaald } voor herbemonster.
+function landEnWater(vg, celM) {
+  const dlat = +(celM / 111200).toFixed(6), dlon = +(celM / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(6);
+  const raster = { west: vg.gebied.west, noord: vg.gebied.noord, dlon, dlat, nx: Math.round((vg.gebied.oost - vg.gebied.west) / dlon), ny: Math.round((vg.gebied.noord - vg.gebied.zuid) / dlat), cel_m: celM };
+  const { cellen, vlakken } = iencVlakken(ENC_ROOT, vg.gebied);
+  const K = 10, telling = telWater(vlakken, raster, K);
+  const uitgifte = cellen.map(c => c.uitgifte).sort(), opgehaald = `IENC-cellen ${uitgifte[0]}–${uitgifte[uitgifte.length - 1]}`;
+  const gz = b => { const z = gzipSync(b, { level: 9 }); z[4] = z[5] = z[6] = z[7] = 0; return z; };
+  writeFileSync(join(MAP, 'gegevens', 'water_ienc_50m.bin'), gz(telling));
+  // havenuitsneden van 10 m (kaders uit vaargebied.havens); welke er in de pagina komen staat in havens.actief
+  const metaPad = join(MAP, 'gegevens', 'water_ienc.json');
+  const actief = existsSync(metaPad) ? leesJson(metaPad).havens?.actief : ['enkhuizen'];
+  const hl = +(10 / 111200).toFixed(7), hn = +(10 / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(7);
+  const delen = [], index = [];
+  let offset = 0;
+  for (const h of vg.havens || []) {
+    const k = h.kader, u = { west: k.west, noord: k.noord, dlon: hn, dlat: hl, nx: Math.ceil((k.oost - k.west) / hn), ny: Math.ceil((k.noord - k.zuid) / hl) };
+    const t = telWater(vlakken, u, 2, { randen: true }), water = t.map(c => c >= 4 ? 1 : 0);   // water = alle 4 monsterpunten water
+    delen.push(water); index.push({ id: h.id, ...u, offset }); offset += water.length;
+  }
+  const alles = new Uint8Array(offset); delen.forEach((d, i) => alles.set(d, index[i].offset));
+  writeFileSync(join(MAP, 'gegevens', 'havens_ienc_10m.bin'), gz(alles));
+  schrijfJson(metaPad, {
+    formaat: 'watermasker/1', bron: 'IENC van Rijkswaterstaat (DEPARE, DRGARE, lokbsn, hrbbsn = water; LNDARE = land), lokaal uit lokaal/ienc/', licentie: 'open data (RWS)',
+    opgehaald, cellen: cellen.map(c => `${c.naam} ed. ${c.editie} (${c.uitgifte})`),
+    raster, codering: `1 byte per cel (zelfde raster als het bodembestand): aantal van de ${K} × ${K} monsterpunten dat water is (0..${K * K})`,
+    monsterpunten: K * K, sha256: createHash('sha256').update(telling).digest('hex'),
+    havens: { bestand: 'havens_ienc_10m.bin', cel_m: 10, codering: '1 byte per cel van 10 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land',
+      actief, uitsneden: index, sha256: createHash('sha256').update(alles).digest('hex') }
+  });
+  return { telling, drempel: Math.ceil(0.75 * K * K), opgehaald };
+}
+
 function herbemonster(rdr, gebied, celM, water = null) {
   const dlat = +(celM / 111200).toFixed(6), dlon = +(celM / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(6);
   const nx = Math.round((gebied.oost - gebied.west) / dlon), ny = Math.round((gebied.noord - gebied.zuid) / dlat);
@@ -156,7 +192,7 @@ function herbemonster(rdr, gebied, celM, water = null) {
       if (v === v && v <= 0) { som += v; n++; } else land++;
     }
     if (water) {
-      // land of water volgens TOP10NL (eenmalig ingebouwd, beheer/top10nl.mjs); diepte uit RWS
+      // land of water volgens de IENC (lib/ienc_water.mjs); diepte uit RWS
       if (water.telling[j * nx + i] >= water.drempel) codes[j * nx + i] = n ? codeer(som / n) : WATER_ZONDER_METING;
     } else if (land < kwart && n) codes[j * nx + i] = codeer(som / n);
   }
@@ -338,7 +374,7 @@ function schrijfVerslag(v) {
     r.push(`- Opname: **${b.jaar}** (laag \`${b.laag}\`); beschikbaar bij RWS: ${b.alle.join(', ')}.` + (b.vorigJaar && b.jaar > b.vorigJaar ? ` **Nieuwer dan de vorige versie (${b.vorigJaar}).**` : ''));
     r.push(`- RWS-origineel: ${nl(b.rd.nx)} × ${nl(b.rd.ny)} cellen van ${b.rd.cel} m (RD); waterpunten: ${nl(b.rd.water)}.`);
     r.push(`- Raster in de pagina: cellen van ${b.r.cel_m} m (${b.r.dlon}° × ${b.r.dlat}°), ${nl(b.r.nx)} × ${nl(b.r.ny)} = ${nl(b.r.nx * b.r.ny)} cellen, `
-      + `waarvan ${nl(b.water)} water. ${b.top10 ? `Land en water uit TOP10NL (${b.top10}): een cel is water als minstens driekwart van 10 × 10 monsterpunten water is; diepte = gemiddelde van de RWS-metingen in de cel. Water zonder RWS-meting (havens): ${nl(b.zonderMeting)} cellen, behandeld als 0,0 m NAP.` : `Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; een kwart of meer land (geen meting of boven NAP) = land.`}`);
+      + `waarvan ${nl(b.water)} water. ${b.top10 ? `Land en water uit de IENC (${b.top10}): een cel is water als minstens driekwart van 10 × 10 monsterpunten water is; diepte = gemiddelde van de RWS-metingen in de cel. Water zonder RWS-meting (havens): ${nl(b.zonderMeting)} cellen, behandeld als 0,0 m NAP.` : `Per cel het gemiddelde van ${b.k} × ${b.k} monsterpunten; een kwart of meer land (geen meting of boven NAP) = land.`}`);
     r.push(`- Afgebakend: ${nl(b.buitenGebied)} watercellen buiten het vaargebied weggelaten (niet bereikbaar zonder ${(b.afsluitingen || []).map(a => a.naam).join(' of ')} te kruisen).`);
     r.push(`- Bestand \`${b.bestand}\`: ${kB(b.gzip)} (gzip); in de pagina als base64 ca. ${kB(b.gzip * 4 / 3)}.`);
     if (b.meting) r.push(`- Ter vergelijking ${b.meting.cel_m} m: ${nl(b.meting.water)} watercellen, ${kB(b.meting.gzip)} (gzip), als base64 ca. ${kB(b.meting.gzip * 4 / 3)}.`);
@@ -430,16 +466,10 @@ if (!arg('alleen-urls')) {
   const { nieuwste, alle } = await nieuwsteOpname();
   const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
   rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
-  // land en water uit TOP10NL als dat bestand bij dit raster past (anders alleen RWS)
-  const W10 = join(MAP, 'gegevens', 'water_top10nl.json');
-  let top10 = null;
-  if (existsSync(W10)) {
-    const m = leesJson(W10), dl = +(celM / 111200).toFixed(6);
-    if (m.raster.cel_m === celM && Math.abs(m.raster.dlat - dl) < 1e-9) {
-      top10 = { telling: gunzipSync(readFileSync(join(MAP, 'gegevens', 'water_top10nl_50m.bin'))), drempel: Math.ceil(0.75 * m.monsterpunten), bron: m.bron, opgehaald: m.opgehaald };
-      log(`  land en water uit TOP10NL (${m.opgehaald})`);
-    } else log('  TOP10NL-bestand past niet bij dit raster: land en water alleen uit RWS (draai npm run top10nl)');
-  }
+  // land en water uit de IENC (lokaal): 50 m-raster en de havenuitsneden van 10 m; diepte uit RWS
+  if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
+  const top10 = landEnWater(vg, celM);
+  log(`  land en water uit de IENC (${top10.opgehaald})`);
   const r = herbemonster(rd, vg.gebied, celM, top10);
   if (top10) {
     const afstand = new Uint8Array(r.codes.length).fill(255), rij = [];
@@ -453,7 +483,7 @@ if (!arg('alleen-urls')) {
     for (let k = 0; k < r.codes.length; k++) if (r.codes[k] === WATER_ZONDER_METING && afstand[k] === 255) r.codes[k] = GEEN_WATER;
   }
   const zonderMeting = top10 ? r.codes.reduce((t, c) => t + (c === WATER_ZONDER_METING), 0) : 0;
-  const buitenGebied = afbakenen(r, vg.gebied);   // (na TOP10NL en het inkorten van water zonder meting)
+  const buitenGebied = afbakenen(r, vg.gebied);   // (na de IENC en het inkorten van water zonder meting)
 
   // ---- betonning ----
   log('Betonning…');
@@ -521,7 +551,7 @@ if (!arg('alleen-urls')) {
   vg.bronnen = [
     { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
     { onderdeel: 'betonning', url: WFS, opgehaald: vandaag },
-    ...(top10 ? [{ onderdeel: 'land en water (TOP10NL, eenmalig)', url: top10.bron, opgehaald: top10.opgehaald }] : []),
+    { onderdeel: 'land en water (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: top10.opgehaald },
     { onderdeel: 'verboden gebieden, windturbines, eilanden (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: vg.ienc.uitgifte_tot }
   ];
   // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md

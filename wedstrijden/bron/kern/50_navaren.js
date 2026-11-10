@@ -46,11 +46,13 @@ function rondingBij(M, zijde, padIn, padUit, R) {
     wijze: ronden ? 'ronden' : 'passeren', draai_graden: Math.round(d), punten };
 }
 
-// Dichtstbijzijnde punt op een lijn (finishlijn), binnen het middelste deel (10 % van elk uiteinde af: niet vlak langs een licht).
+// Dichtstbijzijnde punt op een lijn (finishlijn), binnen het middelste deel: minstens 10 % en 30 m van elk uiteinde
+// (niet vlak langs een licht of over de kop van een dam).
 function puntOpLijn(p, lijn) {
   const a = lijn[0], b = lijn[1], A = naarXY(a.lat, a.lon), B = naarXY(b.lat, b.lon), Q = naarXY(p.lat, p.lon);
   const dx = B.x - A.x, dy = B.y - A.y, l = dx * dx + dy * dy;
-  const t = l ? Math.max(0.1, Math.min(0.9, ((Q.x - A.x) * dx + (Q.y - A.y) * dy) / l)) : 0.5;
+  const rand = l ? Math.min(0.5, Math.max(0.1, 30 / Math.sqrt(l))) : 0.5;
+  const t = l ? Math.max(rand, Math.min(1 - rand, ((Q.x - A.x) * dx + (Q.y - A.y) * dy) / l)) : 0.5;
   return { lat: a.lat + t * (b.lat - a.lat), lon: a.lon + t * (b.lon - a.lon) };
 }
 
@@ -108,9 +110,14 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
     let vastgelopen = 0;
     while (w < pad.length) {
       const laatste = w === pad.length - 1;
-      const doel = laatste && Bp.lijn ? puntOpLijn(pos, Bp.lijn) : pad[w], isMerk = w >= laatsteGewoon, inBoog = !!doel.ronding;
+      // finishlijn: het dichtstbijzijnde deel van de lijn, maar alleen als de weg ernaartoe vrij is (niet over een dam)
+      const opLijn = laatste && Bp.lijn ? puntOpLijn(pos, Bp.lijn) : null;
+      const doel = opLijn && vrijZicht(V, pos, opLijn) ? opLijn : pad[w], isMerk = w >= laatsteGewoon, inBoog = !!doel.ronding;
       const dist = afstandM(pos, doel);
-      if (dist < (inBoog ? 15 : isMerk ? 20 : 60)) { if (isMerk) pos = { lat: doel.lat, lon: doel.lon }; w++; slag = 0; continue; }
+      // een tussenpunt mag vanaf 60 m worden afgesneden, maar alleen als de weg naar het volgende punt vrij is;
+      // anders vaart de boot door tot op 10 m en zet hij zich op het punt zelf
+      const afsnijden = !isMerk && !inBoog && dist < 60 && vrijZicht(V, pos, pad[w + 1]);
+      if (afsnijden || dist < (inBoog ? 15 : isMerk ? 20 : 10)) { if (isMerk || !afsnijden) pos = { lat: doel.lat, lon: doel.lon }; w++; slag = 0; continue; }
       if (t > eindeMs) { waarschuw(`Berekening gestopt na ${o.max_uren} uur: de finish is niet gehaald.`); res.rakken.push(rak); return res; }
 
       const wind = windOp(W, pos.lat, pos.lon, t, variant), tws = wind.kn, dir = wind.dir;

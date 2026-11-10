@@ -3,7 +3,7 @@
   let kaart = null, tijd = null;
   const lagen = {};             // naam → Leaflet-laag
   const ONDERGRONDEN = {
-    vast: { naam: 'Vast (TOP10NL, ingebakken, ook offline)' },
+    vast: { naam: 'Vast (IENC, ingebakken, ook offline)' },
     topo: { naam: 'Topografisch', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, HERE, Garmin, © OpenStreetMap' },
     foto: { naam: 'Luchtfoto', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Esri, Maxar, Earthstar Geographics' }
   };
@@ -63,10 +63,10 @@
     return L.imageOverlay(c.toDataURL(), [[B.noord - B.ny * B.dlat, B.west], [B.noord, B.west + B.nx * B.dlon]], { className: 'raster', interactive: false });
   }
   const LAND = [233, 230, 222], WATER = [196, 220, 238];
-  // TOP10NL-ondergrond: één keer uitpakken en als canvas bewaren
+  // vaste ondergrond (land en water uit de IENC): één keer uitpakken en als canvas bewaren
   let top10 = null;
   const top10Klaar = (async () => {
-    const b64 = $('ondergrond').textContent.trim(), r = G.top10nl && G.top10nl.raster;
+    const b64 = $('ondergrond').textContent.trim(), r = G.watermasker && G.watermasker.raster;
     if (!b64 || !r) return null;
     const gz = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     const bits = new Uint8Array(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());

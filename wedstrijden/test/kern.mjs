@@ -21,10 +21,10 @@ export function laadGegevens(K = laadKern()) {
   // edities met de posities van de boeien uit de RWS-betonning, net als in het bouwscript
   const index = K.betonningIndex(JSON.parse(lees('gegevens/' + vaargebied.betonning.bestand)).markeringen);
   const edities = Object.fromEntries(readdirSync(new URL('gegevens/wedstrijden/', MAP)).map(f => [f.replace('.json', ''), K.metPosities(JSON.parse(lees('gegevens/wedstrijden/' + f)), index).editie]));
-  // fijne uitsneden van 10 m rond havens en sluizen (TOP10NL)
+  // fijne uitsneden van 10 m rond havens en sluizen (IENC)
   let uitsneden = [];
   try {
-    const m = JSON.parse(lees('gegevens/water_top10nl.json')).havens;
+    const m = JSON.parse(lees('gegevens/water_ienc.json')).havens;
     if (m) { const alles = new Uint8Array(gunzipSync(readFileSync(new URL('gegevens/' + m.bestand, MAP))));
       uitsneden = m.uitsneden.filter(u => (m.actief || []).includes(u.id)).map(u => ({ ...u, water: alles.subarray(u.offset, u.offset + u.nx * u.ny) })); }
   } catch (e) { /* geen uitsneden */ }

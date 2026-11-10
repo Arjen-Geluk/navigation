@@ -1,8 +1,8 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 3,
-  "datum": "2026-11-06",
+  "versie": 4,
+  "datum": "2026-11-10",
   "toelichting": "Bodem en betonning uit het ververs-script (beheer/ververs.mjs); streefpeilen met de hand (versie 3). Havens en doorgangen volgen.",
   "gebied": {
     "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
@@ -43,7 +43,7 @@
     "bestand": "bodem_ijsselmeergebied_50m.bin",
     "opname": 2022,
     "bron": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)",
-    "opgehaald": "2026-11-06",
+    "opgehaald": "2026-11-10",
     "cel_m": 50,
     "west": 4.9,
     "noord": 53.1,
@@ -51,19 +51,316 @@
     "dlat": 0.00045,
     "nx": 1417,
     "ny": 1889,
-    "codering": "1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 255 = geen water",
-    "sha256": "22d40b29585331d2494652bfbe4d9f6c0ce5c41dfd74cb06996bfb3774aa1cc5"
+    "codering": "1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 254 = verboden gebied (water); 255 = geen water",
+    "sha256": "8bd908e60e60db587103219d8a78cd3b9a32bef2c0a7763ee736385448eaa766"
   },
   "betonning": {
     "bestand": "betonning_ijsselmeergebied.json",
-    "opgehaald": "2026-11-06",
+    "opgehaald": "2026-11-10",
     "aantal": 1674,
     "bron": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"
   },
-  "havens": [],
+  "havens": [
+    {
+      "id": "buiten-ij",
+      "naam": "Buiten-IJ (Amsterdam, Durgerdam)",
+      "soort": "lijn",
+      "kader": { "zuid": 52.362, "west": 4.96, "noord": 52.4, "oost": 5.03 },
+      "reglement": "beurtveer 2.2.7, 2.9.7-8; strontrace 2.8.1",
+      "lijnen": [
+        {
+          "id": "buiten-ij",
+          "rol": "finish heenreis / start terugreis / havengebied Amsterdam",
+          "status": "kandidaat",
+          "punten": [
+            { "naam": "vuurtoren Buiten-IJ (toren met wit-rood sectorlicht)", "lat": 52.371814, "lon": 5.014017, "bron": "IENC" },
+            { "naam": "rood licht Iso 6s op de dam", "lat": 52.369694, "lon": 5.015644, "bron": "IENC" }
+          ],
+          "toelichting": "uit de IENC: toren met lichtfunctie en het rode licht ten zuiden ervan; graag nakijken"
+        }
+      ]
+    },
+    {
+      "id": "workum",
+      "naam": "Workum",
+      "soort": "haven",
+      "kader": { "zuid": 52.95, "west": 5.385, "noord": 52.985, "oost": 5.45 },
+      "reglement": "beurtveer 2.2.5, 2.2.11, 2.9.16-17; strontrace 2.2, 2.3",
+      "lijnen": [
+        {
+          "id": "workum-start",
+          "rol": "startlijn heenreis beurtveer",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "H 4", "lat": 52.955383, "lon": 5.394367, "bron": "RWS" },
+            { "naam": "H 2-W 1", "lat": 52.958383, "lon": 5.391217, "bron": "RWS" }
+          ]
+        },
+        {
+          "id": "workum-haven",
+          "rol": "havengebied (sluis tot deze lijn)",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "Groene HL Workum", "lat": 52.959617, "lon": 5.403013, "bron": "RWS" },
+            { "naam": "W 2", "lat": 52.960575, "lon": 5.39944, "bron": "RWS" }
+          ]
+        },
+        {
+          "id": "workum-finish",
+          "rol": "finish terugreis beurtveer (groene lichtopstand It Soal – dijk)",
+          "status": "open",
+          "punten": [],
+          "toelichting": "groene lichtopstand van de jachthaven It Soal niet gevonden"
+        }
+      ]
+    },
+    {
+      "id": "enkhuizen",
+      "naam": "Enkhuizen, Krabbersgat en Naviduct",
+      "soort": "sluis",
+      "kader": { "zuid": 52.678, "west": 5.265, "noord": 52.712, "oost": 5.32 },
+      "reglement": "beurtveer 2.9.9; strontrace 2.8; 3-stedenrace art. 13.1",
+      "lijnen": [
+        {
+          "id": "enkhuizen-noord",
+          "rol": "havengebied noord / finish 3-stedenrace",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "groen havenlicht Compagniehaven", "lat": 52.69961, "lon": 5.29376, "bron": "OpenStreetMap" },
+            { "naam": "HL N EINDE E LEIDAM PAAL 46", "lat": 52.704015, "lon": 5.3077, "bron": "RWS" }
+          ]
+        },
+        {
+          "id": "enkhuizen-zuid",
+          "rol": "havengebied zuid (groen licht quick op de punt van de dam – hoek van de dam)",
+          "status": "kandidaat",
+          "punten": [{ "naam": "SCHEIDINGSLICHT ZZ (groen Q)", "lat": 52.684212, "lon": 5.275907, "bron": "RWS" }],
+          "toelichting": "tweede punt (hoek van de dam) nog vast te stellen"
+        },
+        { "id": "naviduct-motor", "rol": "verplicht motorgebied (remmingwerk noord – ND_5 en 3e rode staak zuid)", "status": "open", "punten": [] }
+      ]
+    },
+    {
+      "id": "lelystad",
+      "naam": "Lelystad, Houtribsluizen",
+      "soort": "sluis",
+      "kader": { "zuid": 52.51, "west": 5.405, "noord": 52.55, "oost": 5.455 },
+      "reglement": "beurtveer 2.9.12; strontrace 2.8",
+      "lijnen": [
+        {
+          "id": "lelystad-noord",
+          "rol": "havengebied / motorgebied noord",
+          "status": "kandidaat",
+          "punten": [
+            { "naam": "HOUTRIBSLUIZEN KOP N DAM (groen ISO 4)", "lat": 52.53768, "lon": 5.436747, "bron": "RWS" },
+            { "naam": "rood havenlicht Houtribhaven", "lat": 52.533886, "lon": 5.440894, "bron": "IENC" }
+          ],
+          "toelichting": "rode licht uit de IENC, tegenover de groene ISO 4; graag nakijken"
+        },
+        {
+          "id": "lelystad-zuid",
+          "rol": "havengebied zuid (groene en rode vaste havenlichten)",
+          "status": "kandidaat",
+          "punten": [
+            { "naam": "Bataviahaven gn", "lat": 52.51579, "lon": 5.43866, "bron": "OpenStreetMap" },
+            { "naam": "Bataviahaven rd", "lat": 52.51608, "lon": 5.43793, "bron": "OpenStreetMap" }
+          ],
+          "toelichting": "zijn dit de bedoelde lichten?"
+        }
+      ]
+    },
+    {
+      "id": "medemblik",
+      "naam": "Medemblik",
+      "soort": "haven",
+      "kader": { "zuid": 52.762, "west": 5.098, "noord": 52.782, "oost": 5.128 },
+      "reglement": "beurtveer 2.9.13",
+      "lijnen": [
+        {
+          "id": "medemblik",
+          "rol": "havengebied",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "Medemblik rd", "lat": 52.77436, "lon": 5.11376, "bron": "OpenStreetMap" },
+            { "naam": "Medemblik gn", "lat": 52.77462, "lon": 5.11319, "bron": "OpenStreetMap" }
+          ],
+          "toelichting": "er is ook een lichtenpaar bij het Regatta Center (52,7714 N, 5,1185 O)"
+        }
+      ]
+    },
+    {
+      "id": "lemmer",
+      "naam": "Lemmer",
+      "soort": "haven",
+      "kader": { "zuid": 52.828, "west": 5.685, "noord": 52.852, "oost": 5.73 },
+      "reglement": "beurtveer 2.9.11",
+      "lijnen": [
+        {
+          "id": "lemmer",
+          "rol": "havengebied (groen havenlicht – eerste hoek jachthaven De Friese Hoek)",
+          "status": "kandidaat",
+          "punten": [{ "naam": "groen havenlicht", "lat": 52.838591, "lon": 5.708971, "bron": "IENC" }],
+          "toelichting": "groen licht van de haveningang uit de IENC (rood ertegenover op 52,8366 N, 5,7086 O); hoek van De Friese Hoek nog vast te stellen"
+        }
+      ]
+    },
+    {
+      "id": "stavoren",
+      "naam": "Stavoren",
+      "soort": "haven",
+      "kader": { "zuid": 52.878, "west": 5.34, "noord": 52.898, "oost": 5.372 },
+      "reglement": "niet in de reglementen als haven; wel 3-stedenrace (boeien)",
+      "lijnen": [
+        {
+          "id": "stavoren",
+          "rol": "haveningang",
+          "status": "kandidaat",
+          "punten": [
+            { "naam": "Stavoren rd", "lat": 52.88638, "lon": 5.35247, "bron": "OpenStreetMap" },
+            { "naam": "Stavoren gn", "lat": 52.88598, "lon": 5.35383, "bron": "OpenStreetMap" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "urk",
+      "naam": "Urk",
+      "soort": "haven",
+      "kader": { "zuid": 52.65, "west": 5.58, "noord": 52.67, "oost": 5.615 },
+      "reglement": "beurtveer 2.9.14",
+      "lijnen": [
+        {
+          "id": "urk",
+          "rol": "havengebied (rood havenlicht – tank op de Zuidermeerdijk)",
+          "status": "kandidaat",
+          "punten": [{ "naam": "rood havenlicht", "lat": 52.65651, "lon": 5.59786, "bron": "OpenStreetMap" }],
+          "toelichting": "positie van de tank nog vast te stellen"
+        }
+      ]
+    },
+    {
+      "id": "hoorn",
+      "naam": "Hoorn",
+      "soort": "haven",
+      "kader": { "zuid": 52.625, "west": 5.045, "noord": 52.648, "oost": 5.085 },
+      "reglement": "beurtveer 2.9.10",
+      "lijnen": [
+        {
+          "id": "hoorn",
+          "rol": "havengebied (havenlichten van de Buitenhaven)",
+          "status": "kandidaat",
+          "punten": [
+            { "naam": "Hoorn red", "lat": 52.63275, "lon": 5.06406, "bron": "OpenStreetMap" },
+            { "naam": "Hoorn green", "lat": 52.63319, "lon": 5.065, "bron": "OpenStreetMap" }
+          ],
+          "toelichting": "reglement spreekt van de havenlichten van de beide haveningangen"
+        }
+      ]
+    },
+    {
+      "id": "volendam",
+      "naam": "Volendam",
+      "soort": "haven",
+      "kader": { "zuid": 52.485, "west": 5.055, "noord": 52.505, "oost": 5.085 },
+      "reglement": "beurtveer 2.9.15",
+      "lijnen": [
+        {
+          "id": "volendam",
+          "rol": "havengebied",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "rood havenlicht", "lat": 52.49261, "lon": 5.07637, "bron": "OpenStreetMap" },
+            { "naam": "groen havenlicht", "lat": 52.49262, "lon": 5.0769, "bron": "OpenStreetMap" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blocq",
+      "naam": "Blocq van Kuffeler",
+      "soort": "haven",
+      "kader": { "zuid": 52.412, "west": 5.21, "noord": 52.432, "oost": 5.245 },
+      "reglement": "beurtveer 2.9.6",
+      "lijnen": [
+        {
+          "id": "blocq",
+          "rol": "havengebied",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "RODE HL BLOCQ VAN KUFFELER", "lat": 52.424592, "lon": 5.229993, "bron": "RWS" },
+            { "naam": "GROENE HL BLOCQ VAN KUFFELER", "lat": 52.4235, "lon": 5.22698, "bron": "RWS" }
+          ]
+        }
+      ]
+    }
+  ],
   "doorgangen": [],
   "bronnen": [
-    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-06" },
-    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-06" }
-  ]
+    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-10" },
+    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-10" },
+    {
+      "onderdeel": "land en water (IENC van RWS, lokaal)",
+      "url": "https://www.vaarweginformatie.nl/frp/page/infra_enc",
+      "opgehaald": "IENC-cellen 20260818–20261005"
+    },
+    {
+      "onderdeel": "verboden gebieden, windturbines, eilanden (IENC van RWS, lokaal)",
+      "url": "https://www.vaarweginformatie.nl/frp/page/infra_enc",
+      "opgehaald": "20261005"
+    }
+  ],
+  "verboden": [
+    { "soort": "A1-boeien", "id": "VF-OW", "km2": 14.36, "boeien": 82 },
+    { "soort": "A1-boeien", "id": "SB-OW", "km2": 21.34, "boeien": 75 },
+    { "soort": "A1-boeien", "id": "FR", "km2": 15.28, "boeien": 41 },
+    { "soort": "A1-boeien", "id": "DM", "km2": 3.94, "boeien": 24 },
+    { "soort": "A1-boeien", "id": "DE", "km2": 0.48, "boeien": 21 },
+    { "soort": "A1-boeien", "id": "VIJ", "km2": 0.13, "boeien": 20 },
+    { "soort": "A1-boeien", "id": "SPUIKAN", "km2": 0.38, "boeien": 14 },
+    { "soort": "A1-boeien", "id": "WB", "km2": 0.34, "boeien": 12 },
+    { "soort": "A1-boeien", "id": "WBK", "km2": 2.6, "boeien": 11 },
+    { "soort": "A1-boeien", "id": "TZ", "km2": 0.96, "boeien": 8 },
+    { "soort": "A1-boeien", "id": "DW", "km2": 1.16, "boeien": 8 },
+    { "soort": "A1-boeien", "id": "VGK", "km2": 0.05, "boeien": 7 },
+    { "soort": "A1-boeien", "id": "SPH", "km2": 0.32, "boeien": 6 },
+    { "soort": "A1-boeien", "id": "SHP", "km2": 0.14, "boeien": 6 },
+    { "soort": "A1-boeien", "id": "SPO", "km2": 0.01, "boeien": 5 },
+    { "soort": "A1-boeien", "id": "SPK", "km2": 0.06, "boeien": 5 },
+    { "soort": "A1-boeien", "id": "MW", "km2": 0.13, "boeien": 4 },
+    { "soort": "A1-boeien", "id": "IJB", "km2": 0.03, "boeien": 4 },
+    { "soort": "A1-boeien", "id": "NW-OW", "km2": 0.06, "boeien": 2 },
+    { "soort": "windpark (turbines)", "id": "windpark bij 53.002 N, 5.263 O", "km2": 35.99, "turbines": 89 },
+    { "soort": "windpark (turbines)", "id": "windpark bij 52.727 N, 5.582 O", "km2": 6.46, "turbines": 35 },
+    { "soort": "windpark (turbines)", "id": "windpark bij 52.799 N, 5.614 O", "km2": 1.96, "turbines": 13 },
+    { "soort": "windpark (vlak)", "id": "Windpark Fryslân (53.023 N, 5.251 O)", "km2": 2.23 },
+    { "soort": "natuurgebied", "id": "Natuurgebied (52.610 N, 5.432 O)", "km2": 0.4 },
+    { "soort": "eiland", "id": "Marker Wadden, deel bij 52.594 N, 5.402 O", "km2": 0.45 },
+    { "soort": "eiland", "id": "Marker Wadden, deel bij 52.596 N, 5.368 O", "km2": 0.42 },
+    { "soort": "eiland", "id": "Marker Wadden, deel bij 52.621 N, 5.415 O", "km2": 1.45 },
+    {
+      "soort": "invaarverbod",
+      "id": "Doorvaartopening (beweegbaar) Noodkering bovenhoof, Sluiskolk Friese sluis Lemmer, Werkhaven Lemmer (52.837 N, 5.713 O)",
+      "km2": 0
+    },
+    { "soort": "invaarverbod", "id": "KL 11, Prinses Margrietsluis, GROENE HL LEMMER (52.846 N, 5.680 O)", "km2": 0.02 },
+    {
+      "soort": "invaarverbod",
+      "id": "Zuidkolk Johan Frisosluis, Buitenhaven Marina Stavoren, Vereniging Jachthaven Stavoren (52.878 N, 5.365 O)",
+      "km2": 0.01
+    },
+    {
+      "soort": "invaarverbod",
+      "id": "Wachtplaats 2 Krabbersgatsluis - Buiten, Sluiskolk Krabbersgatsluis, KRAZ Krabbersgat Zuid (52.692 N, 5.284 O)",
+      "km2": 0.01
+    },
+    { "soort": "invaarverbod", "id": "Houtribsluizen Lelystad, HOUZ Houtrib Zuid, Wachtplaats 1 Houtribsluis - Binnen (52.526 N, 5.428 O)", "km2": 0 },
+    { "soort": "invaarverbod", "id": "Zandwinning (52.505 N, 5.387 O)", "km2": 0.14 },
+    {
+      "soort": "invaarverbod",
+      "id": "Vluchthaven Almere-Buiten, Sluiskolk Zuidersluis Almere, Haven WV De Block van Kuffeler Almere Buiten (52.418 N, 5.224 O)",
+      "km2": 0
+    },
+    { "soort": "invaarverbod", "id": "Schellingwoude post, IJTOREN-W, P 11 (52.380 N, 5.015 O)", "km2": 0.35 }
+  ],
+  "ienc": { "release": "Nederland (excl. Zeeland, Waddenzee)", "cellen": 28, "uitgifte_van": "20260818", "uitgifte_tot": "20261005" }
 }

@@ -15,7 +15,7 @@ const hoekVerschil = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180
 
 // ---- bodem ----
 // meta = vaargebied.bodem (west, noord, dlon, dlat, nx, ny), codes = Uint8Array (zie vaargebied.bodem.codering)
-// uitsneden (optioneel): fijne rasters van 10 m rond havens en sluizen, 1 = water volgens TOP10NL
+// uitsneden (optioneel): fijne rasters van 10 m rond havens en sluizen, 1 = water volgens de IENC
 //   [{ id, west, noord, dlon, dlat, nx, ny, water: Uint8Array }]
 // Binnen een uitsnede bepaalt de uitsnede wat water is; de diepte komt uit het grove raster, of is (zonder RWS-meting)
 // de aangenomen havenbodem.
@@ -46,7 +46,7 @@ function bodemOp(B, lat, lon) {
   const c = B.codes[k];
   const f = uitsnedeOp(B, lat, lon);
   if (f) {
-    if (!f.u.water[f.k] || c === 254) return null;                       // land volgens TOP10NL, of verboden gebied
+    if (!f.u.water[f.k] || c === 254) return null;                       // land volgens de IENC, of verboden gebied
     return c < 250 ? c / 10 - 25 : HAVENBODEM_AANNAME;                   // RWS-diepte, of de aanname in de haven
   }
   return c > 250 ? null : c / 10 - 25;      // 254 = verboden gebied, 255 = geen water
@@ -94,6 +94,9 @@ function maakVaarwater(B, P, instellingen) {
 function maakMasker(V, diepgang) {
   const B = V.B, m = new Uint8Array(B.nx * B.ny), grens = V.peil - diepgang - V.kielspeling;   // bodem moet dieper liggen dan dit
   for (let k = 0; k < m.length; k++) { const c = B.codes[k]; m[k] = c <= 250 && c / 10 - 25 <= grens + 1e-9 ? 1 : 0; }
+  // In een uitsnede is een grove cel open als er een fijne watercel in ligt. Elke open cel krijgt dan een punt op die fijne
+  // watercel (het dichtst bij het midden): het padzoeken gebruikt die punten en toetst elke stap op de fijne kaart.
+  const punt = new Map();
   for (const u of B.uitsneden || []) {
     const open = new Map();
     for (let j = 0; j < u.ny; j++) for (let i = 0; i < u.nx; i++) {
@@ -101,10 +104,15 @@ function maakMasker(V, diepgang) {
       if (k < 0) continue;
       if (!open.has(k)) open.set(k, 0);
       const b = u.water[j * u.nx + i] ? bodemOp(B, lat, lon) : null;
-      if (b != null && b <= grens + 1e-9) open.set(k, 1);
+      if (b != null && b <= grens + 1e-9) {
+        open.set(k, 1);
+        const c = celMidden(B, k), d = (lat - c.lat) ** 2 + ((lon - c.lon) * 0.6) ** 2, oud = punt.get(k);
+        if (!oud || d < oud.d) punt.set(k, { lat, lon, d });
+      }
     }
-    for (const [k, v] of open) m[k] = v;
+    for (const [k, v] of open) { m[k] = v; if (!v) punt.delete(k); }
   }
+  m.punt = punt;
   for (const z of V.zones) {
     const a = naarLL(z.min.x - z.marge, z.max.y + z.marge), b = naarLL(z.max.x + z.marge, z.min.y - z.marge);
     const i0 = Math.max(0, Math.floor((a.lon - B.west) / B.dlon)), i1 = Math.min(B.nx - 1, Math.ceil((b.lon - B.west) / B.dlon));
@@ -128,6 +136,8 @@ function bevaarbaar(V, lat, lon, diepgang) {
 const inVerbodenZone = (V, lat, lon) => { const p = naarXY(lat, lon); return V.zones.find(z => inZone(p, z)) || null; };
 
 // ---- padzoeken ----
+// punt waar het pad door een cel gaat: in een uitsnede het fijne waterpunt, anders het midden van de cel
+const celPunt = (V, k) => { const p = V.masker.punt && V.masker.punt.get(k); return p ? { lat: p.lat, lon: p.lon } : celMidden(V.B, k); };
 // Vrij zicht: de rechte lijn van a naar b gaat alleen door open cellen van het masker.
 function vrijZicht(V, a, b, m = V.masker) {
   const d = afstandM(a, b), n = Math.max(1, Math.ceil(d / 20));
@@ -170,7 +180,7 @@ function zoekPad(V, a, b) {
     if (start >= 0 && doel >= 0) {
       const cel = rasterAster(V, start, doel);
       if (cel) {
-        const punten = [a, ...cel.map(k => celMidden(B, k)), b];
+        const punten = [a, ...cel.map(k => celPunt(V, k)), b];
         pad = [a];
         let i = 0;
         while (i < punten.length - 1) {
@@ -206,6 +216,7 @@ function rasterAster(V, start, doel) {
       const n = jj * nx + ii;
       if (!m[n] || klaar[n]) continue;
       if (ddi && ddj && (!m[j * nx + ii] || !m[jj * nx + i])) continue;   // niet schuin langs een hoek
+      if (m.punt && (m.punt.has(k) || m.punt.has(n)) && !vrijZicht(V, celPunt(V, k), celPunt(V, n))) continue;   // dammen in de uitsnede
       const gn = g[k] + c;
       if (gn < g[n]) { g[n] = gn; vorige[n] = k; duw(n, gn + h(n)); }
     }

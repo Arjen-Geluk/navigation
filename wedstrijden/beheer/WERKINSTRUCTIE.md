@@ -7,6 +7,9 @@ Alles gaat in Claude Code in de map `navigation`. De zin tussen aanhalingstekens
 
 - Node.js LTS staat op deze computer (`node --version`).
 - In `navigation/wedstrijden`: `npm install` (haalt Leaflet en de GeoTIFF-lezer op; komt niet in git).
+- De IENC van Rijkswaterstaat uitgepakt in `lokaal/ienc/nederland/ENC_ROOT` (release "Nederland excl. Zeeland en
+  Waddenzee"; niet in git). Downloaden alleen na akkoord; zie de IENC-skill (`.claude/skills/ienc/references/bronnen.md`).
+  Een nieuwe release eerst controleren: `node ../.claude/skills/ienc/scripts/controle.mjs ../lokaal/ienc/nederland/ENC_ROOT`.
 
 ## Hoe het in elkaar zit
 
@@ -26,7 +29,9 @@ Wanneer: vóór elk wedstrijdseizoen, en als RWS een nieuwe bodemopname of beton
 > "ververs het vaargebied"
 
 1. Claude Code draait `npm run ververs`. Het script haalt bodem en betonning opnieuw op bij RWS en controleert alle
-   bron-URL's (RWS, Open-Meteo, kaartondergronden).
+   bron-URL's (RWS, Open-Meteo, kaartondergronden). Land en water (50 m-raster, vaste ondergrond, havenuitsneden van
+   10 m) en de verboden gebieden (windparken, natuur, Marker Wadden, invaarverbod) komen uit de lokale IENC; de
+   A1-tonnen uit de betonning. Welke havenuitsneden in de pagina komen, staat in `havens.actief` in `gegevens/water_ienc.json`.
 2. Het schrijft een verslag in `beheer/verslagen/`: aantal tonnen, nieuwe, verdwenen en verschoven tonnen
    (wedstrijdboeien apart), verschil in bodem per deelgebied, nieuwere bodemopname beschikbaar, URL's die niet antwoorden.
    Controleplaatjes van de bodem (heel het gebied en het Krabbersgat) komen in `lokaal/ververs/` (niet in git).
@@ -52,7 +57,7 @@ Wanneer: als de wedstrijdbepalingen of het reglement van het nieuwe jaar verschi
      De bouw weigert als de naam niet (of meer dan eens) in de betonning staat.
    - Een wedstrijdton of eigen punt (Start, De Kreupel) krijgt `lat` en `lon` en geen `rws`.
    - Een finishlijn: `"lijn": [uiteinde, uiteinde]`, elk uiteinde met `rws` of met `lat`/`lon` (en `bron`). De bouw zet het punt in
-     het midden; de rekenkern vaart naar het dichtstbijzijnde deel van de lijn (niet de buitenste 10 %).
+     het midden; de rekenkern vaart naar het dichtstbijzijnde deel van de lijn (minstens 10 % en 30 m van elk uiteinde).
 3. Zet de status:
    - nog niet nagelopen: `"gecontroleerd": false`;
    - nagelopen: `"gecontroleerd": true`, `"tegen"` (naam en versie van de bepalingen), `"datum_bepalingen"` en `"bronbestand"`.
