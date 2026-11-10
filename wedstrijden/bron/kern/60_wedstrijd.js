@@ -31,7 +31,8 @@ function rekenBaan(V, W, P, editie, baanId, opties = {}) {
     for (const v of WINDVARIANTEN) {
       let best = null;
       for (const r of routes) {
-        const x = vaarRoute(V, W, P, r.punten, start, { ...opties, variant: v, track: false });
+        const slag = r.res.slag_auto ? { max_slag_nm: r.res.max_slag_nm ?? Infinity } : {};
+        const x = vaarRoute(V, W, P, r.punten, start, { ...opties, ...slag, variant: v, track: false });
         r.varianten[v.id] = x.klaar ? x.zeiltijd_ms : null;
         if (x.klaar && (!best || x.zeiltijd_ms < best.varianten[v.id])) best = r;
       }

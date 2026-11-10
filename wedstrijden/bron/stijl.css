@@ -157,3 +157,4 @@ input:disabled{opacity:.6}
   .db-tabel th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .vloeiend{image-rendering:auto}
+.rondpijl{background:none;border:0;pointer-events:none}

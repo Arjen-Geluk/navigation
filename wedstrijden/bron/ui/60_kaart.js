@@ -156,6 +156,22 @@
       .bindTooltip(`${z.naam}${z.actief ? '' : ' (niet actief)'}`).addTo(g);
     return g;
   }
+  // Kromme pijl om een merkteken: de kant en de draairichting (bb = linksom, sb = rechtsom). Bij ronden loopt de boog
+  // van aanloop naar vertrek; bij passeren een korte boog aan de kant waar de boot langs gaat.
+  function rondPijl(x) {
+    const s = x.zijde === 'bb' ? -1 : 1, R = 18, c = 28;
+    let van, boog;
+    if (x.wijze === 'ronden') { van = x.aanloop - s * 90; boog = Math.max(60, Math.abs(x.draai_graden)); }
+    else { van = x.aanloop + x.draai_graden / 2 - s * 90 - s * 35; boog = 70; }
+    const pt = b => [c + R * Math.sin(b * Math.PI / 180), c - R * Math.cos(b * Math.PI / 180)].map(v => v.toFixed(1));
+    const [x1, y1] = pt(van), [x2, y2] = pt(van + s * boog), eind = van + s * boog;
+    // pijlpunt: twee korte lijnen terug langs de raaklijn
+    const raak = eind + s * 90, punt = d => [(+x2 - 7 * Math.sin((raak + d) * Math.PI / 180)).toFixed(1), (+y2 + 7 * Math.cos((raak + d) * Math.PI / 180)).toFixed(1)];
+    const [a1, b1] = punt(30), [a2, b2] = punt(-30), kleur = x.zijde === 'bb' ? '#c0262d' : '#1c7c3a';
+    return `<svg width="56" height="56" viewBox="0 0 56 56"><title>${x.id}: ${x.zijde === 'bb' ? 'aan bakboord, linksom' : 'aan stuurboord, rechtsom'} (${x.wijze})</title>`
+      + `<path d="M${x1} ${y1} A${R} ${R} 0 ${boog > 180 ? 1 : 0} ${s > 0 ? 1 : 0} ${x2} ${y2} M${a1} ${b1} L${x2} ${y2} L${a2} ${b2}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+      + `<path d="M${x1} ${y1} A${R} ${R} 0 ${boog > 180 ? 1 : 0} ${s > 0 ? 1 : 0} ${x2} ${y2} M${a1} ${b1} L${x2} ${y2} L${a2} ${b2}" fill="none" stroke="${kleur}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
   function routeLaag() {
     const g = L.layerGroup(), E = huidigeEditie(), r = toonRoute();
     const inRoute = new Set(r ? r.punten.map(p => p.id) : E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan].routes.flatMap(x => x.volgorde.map(s => leesStap(s).punt)));
@@ -173,6 +189,7 @@
         }
       }
       r.res.rakken.forEach(k => { ronding[k.naar] = k.eind; });
+      for (const x of r.res.rondingen || []) L.marker([x.lat, x.lon], { interactive: false, icon: L.divIcon({ className: 'rondpijl', iconSize: [56, 56], html: rondPijl(x) }) }).addTo(g);
     } else {
       const baan = E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan];
       const pt = Object.fromEntries(E.punten.map(p => [p.id, p]));

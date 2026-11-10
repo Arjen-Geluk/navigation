@@ -58,6 +58,35 @@ test('alle routes van de korte baan worden gevaren, buiten land en verboden gebi
   assert.ok(terug.res.overstag > 0, 'aan de wind wordt er gekruist');
 });
 
+test('merktekens: ronden op 30 m aan de goede kant, passeren zonder lus', () => {
+  const W = vasteWind(K, 240, 12, t0);
+  const r = K.rekenBaan(V, W, P, E, 'M', { robuustheid: false }).routes.find(x => x.naam === 'Medemblik – Stavoren');
+  const per = Object.fromEntries(r.res.rondingen.map(x => [x.id, x]));
+  assert.equal(per['De Kreupel'].wijze, 'passeren', 'koers draait naar bakboord bij sb: passeren');
+  assert.equal(per['LC 11'].wijze, 'ronden');
+  for (const x of r.res.rondingen) {
+    const dichtst = Math.min(...r.res.track.map(p => K.afstandM(p, x)));
+    assert.ok(dichtst > 10 && dichtst < 80, `${x.id}: dichtstbij ${dichtst.toFixed(0)} m`);
+    // de boot ligt aan de voorgeschreven kant: het merkteken aan bb = links van de koers van de boot
+    const p = r.res.track.reduce((a, q) => K.afstandM(q, x) < K.afstandM(a, x) ? q : a);
+    const kant = ((K.koersNaar(p, x) - p.koers) % 360 + 540) % 360 - 180;
+    assert.ok(x.zijde === 'bb' ? kant < 0 : kant > 0, `${x.id} ${x.zijde}: merkteken op ${kant.toFixed(0)}° van de koers`);
+  }
+});
+
+test('maximale slaglengte: automatisch is nooit trager dan een vaste keuze', () => {
+  const W = vasteWind(K, 30, 8, t0);
+  const auto = K.rekenBaan(V, W, P, E, 'K', { robuustheid: false, max_slag_nm: 'auto' }).routes;
+  for (const nm of [1, 3, Infinity]) {
+    const vast = K.rekenBaan(V, W, P, E, 'K', { robuustheid: false, max_slag_nm: nm }).routes;
+    for (const r of vast) {
+      const a = auto.find(x => x.naam === r.naam);
+      assert.ok(a.res.zeiltijd_ms <= r.res.zeiltijd_ms + 1000, `${r.naam}: auto ${a.res.zeiltijd_ms} > ${nm} NM ${r.res.zeiltijd_ms}`);
+    }
+  }
+  assert.ok(auto.every(a => a.res.slag_auto));
+});
+
 // Regressie: dezelfde invoer moet dezelfde uitkomst geven. Verandert de rekenwijze bewust, maak het bestand dan
 // opnieuw met:  node test/kern.test.mjs --vastleggen   (en leg in de commit uit waarom de tijden veranderen)
 test('regressie: voorbeeldschip, vaste wind, alle banen 2026', async () => {

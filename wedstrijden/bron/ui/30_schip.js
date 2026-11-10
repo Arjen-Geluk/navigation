@@ -120,6 +120,7 @@ const SCHIP = (function () {
     $('metOverstag').checked = s.metOverstag; $('overstagS').value = s.overstag_s ?? ''; $('overstagS').placeholder = p.overstagverlies_s ?? '';
     $('metGijp').checked = s.metGijp; $('gijpS').value = s.gijp_s ?? ''; $('gijpS').placeholder = p.gijpverlies_s ?? '';
     $('factor').value = s.factor;
+    $('maxSlag').value = s.maxSlag ?? '3';
   }
   const getalOfNull = v => v === '' ? null : +v;
   $('kielspeling').onchange = () => { s.kielspeling = getalOfNull($('kielspeling').value); bewaar(); meld('invoer'); };
@@ -127,11 +128,15 @@ const SCHIP = (function () {
   $('overstagS').onchange = () => { s.overstag_s = getalOfNull($('overstagS').value); bewaar(); meld('invoer'); };
   $('metGijp').onchange = () => { s.metGijp = $('metGijp').checked; bewaar(); meld('invoer'); };
   $('gijpS').onchange = () => { s.gijp_s = getalOfNull($('gijpS').value); bewaar(); meld('invoer'); };
+  $('maxSlag').onchange = () => { s.maxSlag = $('maxSlag').value; bewaar(); meld('invoer'); };
   $('factor').onchange = () => { s.factor = Math.max(50, Math.min(150, +$('factor').value || 100)); bewaar(); vul(); meld('invoer'); };
   op('polar', vul);
   vul();
 })();
 
+// Maximale slaglengte: 'auto' (het model kiest de snelste), 'geen' (alleen overstag bij krimper of ondiepte) of een aantal NM
+const maxSlagKeuze = v => v === 'auto' ? 'auto' : v === 'geen' ? Infinity : Number.isFinite(+v) && +v > 0 ? +v : 3;
+const maxSlagTekst = (v = S.schip.maxSlag) => v === 'auto' ? 'automatisch' : v === 'geen' ? 'geen grens' : `${getal(maxSlagKeuze(v), 1)} NM`;
 // Rekeninstellingen voor de kern, uit polar en invoer
 function rekenOpties() {
   const P = SCHIP.actief, s = S.schip;
@@ -139,6 +144,7 @@ function rekenOpties() {
     kielspeling: s.kielspeling ?? P.schip.kielspeling_m ?? 0.3,
     overstag_s: s.metOverstag ? (s.overstag_s ?? P.schip.overstagverlies_s ?? 0) : null,
     gijp_s: s.metGijp ? (s.gijp_s ?? P.schip.gijpverlies_s ?? 0) : null,
-    snelheidsfactor: (s.factor || 100) / 100
+    snelheidsfactor: (s.factor || 100) / 100,
+    max_slag_nm: maxSlagKeuze(s.maxSlag)
   };
 }

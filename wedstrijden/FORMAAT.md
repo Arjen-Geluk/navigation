@@ -41,8 +41,8 @@ eerst dit document.
 | `invoer.datum`, `invoer.start`, `invoer.limiet` | tekst | wedstrijddatum (`YYYY-MM-DD`), start en finishlimiet (`HH:MM`, lokale tijd Europe/Amsterdam) |
 | `invoer.baan_wl` | tekst | baan volgens de wedstrijdleiding (`K`, `M`, `L`) of leeg |
 | `invoer.eenheden` | `nm` / `km` | weergave van afstanden |
-| `invoer.peil` | `{ keuze, waarde_m }` | `auto`, `zomer`, `winter` of `hand`; waarde in m NAP |
-| `invoer.schip` | object | `kielspeling_m`, `overstag_s` en `gijp_s` (`null` = uit), `snelheidsfactor` (1 = 100%) |
+| `invoer.peil` | `{ keuze, waarde_m, meting? }` | `auto`, `zomer`, `winter`, `hand` of `actueel`; waarde in m NAP. Bij `actueel`: `meting` = `{ tijd, meer, meetpunten: [{ code, naam, waarde_m, tijd }] }` (RWS-waterstand) |
+| `invoer.schip` | object | `kielspeling_m`, `overstag_s` en `gijp_s` (`null` = uit), `snelheidsfactor` (1 = 100%), `max_slag` (`auto`, `geen` of NM als tekst, standaard `3`) |
 | `wind` | object | `bron`, `model`, `opgehaald` (ms), `historisch`, `verschuiving_min` (+ = eerder), `aanpassingen` (per uur en plaats `{ draai, factor }`), `raster`, `punten`, `tijden` (ms, UTC), `data[punt][uur]` = `{ dir, kn, vlaag }` |
 | `polar` | object | kopie van het gebruikte deel van het polarbestand (zie `polartool/FORMAAT.md`): `formaat`, `versie`, `gewijzigd`, `schip`, `polair` |
 | `uitkomst.limiet` | ms | finishlimiet (UTC) |
@@ -66,6 +66,8 @@ eerst dit document.
 | `res.overstag`, `res.gijp` | aantallen |
 | `res.waarschuwingen` | teksten |
 | `res.rakken` | per rak: `van`, `naar`, `start`, `eind` (ms), `afstand_m`, `zeilweg_m`, `overstag`, `gijp`, `stand_s` en `zwaard_s` (seconden per zeilstand / zwaardstand), `wind` `{ dir, kn }`, `ondiep` (s per zwaardstand), `schatting`, `omweg` |
+| `res.rondingen` | per merkteken met rondingszijde: `id`, `zijde`, `lat`, `lon`, `aanloop` en `vertrek` (graden), `wijze` (`ronden` of `passeren`), `draai_graden` (koerswijziging, − = bakboord) |
+| `res.max_slag_nm` | gebruikte maximale slaglengte (`null` = geen grens); `res.slag_auto` = gekozen door het model |
 | `res.track` | geplande track, compact: `{ velden: ['t','lat','lon','koers','vaart','twa','tws','stand','zwaard'], rijen: [[…], …] }`; `t` in ms (UTC), `vaart` en `tws` in kn |
 
 ## Wijzigingen

@@ -78,8 +78,13 @@
         <label class="vink"><input type="checkbox" id="metOverstag"> Tijdverlies per overstag <input type="number" id="overstagS" min="0" max="300" step="1" class="kort"> s</label>
         <label class="vink"><input type="checkbox" id="metGijp"> Tijdverlies per gijp <input type="number" id="gijpS" min="0" max="300" step="1" class="kort"> s</label>
         <label>Snelheidsfactor (%) <input type="number" id="factor" min="50" max="150" step="1"></label>
+        <label>Maximale slaglengte <select id="maxSlag">
+          <option value="auto">Automatisch (snelste)</option><option value="1">1 NM</option><option value="2">2 NM</option>
+          <option value="3">3 NM</option><option value="5">5 NM</option><option value="geen">Geen grens</option></select></label>
       </div>
-      <p class="sub">Leeg = de waarde uit het polarbestand. De snelheidsfactor is alleen voor wat-als; staat hij niet op 100%, dan staat dat op het advies.</p>
+      <p class="sub">Leeg = de waarde uit het polarbestand. De snelheidsfactor is alleen voor wat-als; staat hij niet op 100%, dan staat dat op het advies.
+        Maximale slaglengte: bij kruisen gaat de boot uiterlijk na deze afstand overstag (en eerder bij een krimper of ondiep water).
+        Automatisch: het model rekent elke route met 1, 2, 3 en 5 NM en zonder grens, en neemt de snelste.</p>
     </div>
   </section>
 
@@ -95,7 +100,7 @@
       <p class="sub" id="windbron"></p>
       <div class="tabelvak"><table class="tabel" id="windtabel"></table></div>
       <p class="sub">De berekening gebruikt alle 63 windpunten over IJsselmeer en Markermeer, met de wind per plek en per moment.
-        De tabel toont die wind op zes plaatsen. Pas je daar richting of kracht aan, dan verandert de wind in de omgeving van die plaats mee
+        De tabel toont die wind op de plaatsen bij de banen van deze wedstrijd. Pas je daar richting of kracht aan, dan verandert de wind in de omgeving van die plaats mee
         (hoe dichterbij, hoe sterker). <button type="button" class="knop stil klein" id="windHerstel">Aanpassingen wissen</button></p>
     </div>
     <div class="paneel">
@@ -103,7 +108,9 @@
       <div class="velden">
         <label>Peil <select id="peilkeuze"></select></label>
         <label id="peilHandVak">Eigen waarde (m NAP) <input type="number" id="peil" step="0.01" min="-1.5" max="1"></label>
+        <button type="button" class="knop" id="peilOphalen">Peil ophalen bij RWS</button>
       </div>
+      <p class="melding" id="peilmelding" hidden></p>
       <p class="sub" id="peiluitleg"></p>
     </div>
   </section>

@@ -34,7 +34,7 @@ function standaardStaat() {
   return { v: 1, editie: editieSleutels[0], per: {}, eenheden: 'nm',
     schip: { kielspeling: null, metOverstag: false, overstag_s: null, metGijp: false, gijp_s: null, factor: 100 },
     wind: { model: 'knmi_seamless', W: null, aanpassingen: {}, verschuiving_min: 0 },
-    peilKeuze: 'auto', peilHand: null,
+    peilKeuze: 'auto', peilHand: null, peilActueel: null,
     kaart: { ondergrond: 'vast', lagen: { bodem: false, bevaarbaar: false, betonning: true, zones: true, route: true, andere: false, wind: false } },
     selectie: { baan: null, route: null } };
 }
@@ -80,11 +80,23 @@ function huidigeEditie() {
 const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length + Object.keys(a.routes).length + a.tonnen.length > 0; };
 const startMs = () => lokaleTijdNaarMs(invoer().datum, invoer().start, EDITIES[S.editie].tijdzone);
 const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone); return l > s ? l : l + 864e5; };
-// Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), of een eigen waarde
+// Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), het gemeten peil van RWS, of een eigen waarde.
+// Gemeten peil zonder meting: terug naar het streefpeil van het seizoen.
 const PEIL = G.vaargebied.peil;
 const seizoenBij = datum => { const md = datum.slice(5); return md >= PEIL.zomer.van && md <= PEIL.zomer.tot ? 'zomer' : 'winter'; };
 const peilKeuze = () => S.peilKeuze === 'auto' || !S.peilKeuze ? seizoenBij(invoer().datum) : S.peilKeuze;
-const peil = () => peilKeuze() === 'hand' ? (S.peilHand ?? PEIL.winter.waarde) : PEIL[peilKeuze()].waarde;
+const peil = () => {
+  const k = peilKeuze();
+  if (k === 'hand') return S.peilHand ?? PEIL.winter.waarde;
+  if (k === 'actueel') return S.peilActueel ? S.peilActueel.waarde : PEIL[seizoenBij(invoer().datum)].waarde;
+  return PEIL[k].waarde;
+};
+const peilBron = () => {
+  const k = peilKeuze();
+  if (k === 'hand') return 'eigen waarde';
+  if (k === 'actueel') return S.peilActueel ? `gemeten door RWS, ${S.peilActueel.meer}, ${dagEnTijd(S.peilActueel.tijd)}` : `streefpeil ${seizoenBij(invoer().datum)} (geen meting)`;
+  return 'streefpeil ' + k;
+};
 
 // ---- gebeurtenissen tussen de schermen ----
 const luisteraars = {};

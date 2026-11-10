@@ -53,6 +53,17 @@
     // track
     ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.lineJoin = 'round'; ctx.beginPath();
     r.res.track.forEach((q, i) => { const [x, y] = naarPx(q.lat, q.lon); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+    // kromme pijl om elk merkteken met rondingszijde (zelfde vorm als op de kaart)
+    for (const q of r.res.rondingen || []) {
+      const [x, y] = naarPx(q.lat, q.lon), s = q.zijde === 'bb' ? -1 : 1, R = 34;
+      const van = q.wijze === 'ronden' ? q.aanloop - s * 90 : q.aanloop + q.draai_graden / 2 - s * 90 - s * 35;
+      const boog = q.wijze === 'ronden' ? Math.max(60, Math.abs(q.draai_graden)) : 70, eind = van + s * boog, rad = b => (b - 90) * Math.PI / 180;
+      const ex = x + R * Math.sin(eind * Math.PI / 180), ey = y - R * Math.cos(eind * Math.PI / 180), raak = eind + s * 90;
+      const kop = d => [ex - 14 * Math.sin((raak + d) * Math.PI / 180), ey + 14 * Math.cos((raak + d) * Math.PI / 180)];
+      ctx.lineWidth = 5; ctx.strokeStyle = '#000';
+      ctx.beginPath(); ctx.arc(x, y, R, rad(van), rad(eind), s < 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(...kop(30)); ctx.lineTo(ex, ey); ctx.lineTo(...kop(-30)); ctx.stroke();
+    }
     // punten met naam en rondingstijd
     const tijd = Object.fromEntries(r.res.rakken.map(k => [k.naar, k.eind]));
     ctx.font = 'bold 28px Segoe UI, Arial, sans-serif'; ctx.textBaseline = 'middle';
@@ -93,8 +104,8 @@
       ['Baan wedstrijdleiding', inv.baanWL ? E.banen[inv.baanWL].naam : 'nog onbekend'],
       ['Schip en polar', `${polarLabel(P)} · opgeslagen ${P.gewijzigd ? new Date(P.gewijzigd).toLocaleDateString('nl-NL') : 'onbekend'}`],
       ['Wind', `${(WINDMODELLEN.find(m => m.id === W.model) || { naam: W.model }).naam}, opgehaald ${dagEnTijd(W.opgehaald)}${S.wind.verschuiving_min ? ` · windverandering ${verschuivingTekst()}` : ''}${Object.keys(S.wind.aanpassingen).length ? ' · windtabel met de hand aangepast' : ''}`],
-      ['Peil', `${getal(peil(), 2)} m NAP (${peilKeuze() === 'hand' ? 'eigen waarde' : 'streefpeil ' + peilKeuze()})`],
-      ['Instellingen', `kielspeling ${getal(o.kielspeling, 2)} m · overstag ${o.overstag_s == null ? 'zonder tijdverlies' : o.overstag_s + ' s'} · gijp ${o.gijp_s == null ? 'zonder tijdverlies' : o.gijp_s + ' s'}${o.snelheidsfactor !== 1 ? ` · SNELHEIDSFACTOR ${Math.round(o.snelheidsfactor * 100)}% (wat-als)` : ''}`],
+      ['Peil', `${getal(peil(), 2)} m NAP (${peilBron()})`],
+      ['Instellingen', `kielspeling ${getal(o.kielspeling, 2)} m · max. slaglengte ${maxSlagTekst()} · overstag ${o.overstag_s == null ? 'zonder tijdverlies' : o.overstag_s + ' s'} · gijp ${o.gijp_s == null ? 'zonder tijdverlies' : o.gijp_s + ' s'}${o.snelheidsfactor !== 1 ? ` · SNELHEIDSFACTOR ${Math.round(o.snelheidsfactor * 100)}% (wat-als)` : ''}`],
       ['Berekend', `${dagEnTijd(UITKOMST.gemaakt)} · pagina versie ${TOOL.versie} · vaargebied v${G.vaargebied.versie}`]
     ];
     const afw = [];
@@ -161,8 +172,8 @@
     if (ondiep) waarsch.push(`Op sommige rakken is het water te ondiep voor de zwaardstand bij die koers (peil ${getal(peil(), 2)} m NAP, kielspeling ${getal(o.kielspeling, 2)} m).`);
     bladen.push(el('section', { class: 'db-blad' }, kop('Windtabel en waarschuwingen'),
       el('h2', {}, 'Windverwachting (ware wind op 10 m: richting · kracht in kn)'),
-      tabel(['Tijd', ...WINDPLAATSEN.map(q => q.naam)], uren.map(t => el('tr', {}, el('td', {}, kloktijd(t)),
-        ...WINDPLAATSEN.map(q => { const w = windOp(WE, q.lat, q.lon, t); return el('td', {}, `${koersTekst(w.dir)} · ${getal(w.kn, 0)} (${knNaarBft(w.kn)})`); }))), 'wind'),
+      tabel(['Tijd', ...windPlaatsen().map(q => q.naam)], uren.map(t => el('tr', {}, el('td', {}, kloktijd(t)),
+        ...windPlaatsen().map(q => { const w = windOp(WE, q.lat, q.lon, t); return el('td', {}, `${koersTekst(w.dir)} · ${getal(w.kn, 0)} (${knNaarBft(w.kn)})`); }))), 'wind'),
       el('h2', {}, 'Waarschuwingen'),
       waarsch.length ? el('ul', {}, waarsch.map(w => el('li', {}, w))) : el('p', {}, 'Geen bijzonderheden.'),
       el('p', { class: 'db-klein' }, `Gemaakt met Wedstrijden IJsselmeergebied ${TOOL.versie} (arjen-geluk.github.io/navigation/wedstrijden). Geen navigatiemiddel. Bronnen: bodem RWS opname ${G.vaargebied.bodem?.opname}, betonning RWS ${G.vaargebied.betonning?.opgehaald}, wind Open-Meteo.`)));

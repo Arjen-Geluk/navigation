@@ -9,8 +9,8 @@
       tool: TOOL, vaargebied: G.vaargebied, editieSleutel: S.editie, editie: EDITIES[S.editie], editieGebruikt: huidigeEditie(),
       afwijkingen: inv.afwijkingen,
       invoer: { datum: inv.datum, start: inv.start, limiet: inv.limiet, baan_wl: inv.baanWL, eenheden: S.eenheden,
-        peil: { keuze: S.peilKeuze || 'auto', waarde_m: peil() },
-        schip: { kielspeling_m: o.kielspeling, overstag_s: o.overstag_s, gijp_s: o.gijp_s, snelheidsfactor: o.snelheidsfactor } },
+        peil: { keuze: S.peilKeuze || 'auto', waarde_m: peil(), ...(peilKeuze() === 'actueel' && S.peilActueel ? { meting: { tijd: rwsTijd(S.peilActueel.tijd), meer: S.peilActueel.meer, meetpunten: S.peilActueel.meetpunten } } : {}) },
+        schip: { kielspeling_m: o.kielspeling, overstag_s: o.overstag_s, gijp_s: o.gijp_s, snelheidsfactor: o.snelheidsfactor, max_slag: S.schip.maxSlag ?? '3' } },
       wind: { ...S.wind.W, verschuiving_min: S.wind.verschuiving_min || 0, aanpassingen: S.wind.aanpassingen },
       polar, uitkomst: UITKOMST
     });
@@ -43,11 +43,12 @@
     Object.assign(inv, { datum: b.invoer.datum, start: b.invoer.start, limiet: b.invoer.limiet, baanWL: b.invoer.baan_wl || '',
       afwijkingen: { punten: {}, zones: {}, routes: {}, tonnen: [], ...(b.afwijkingen || {}) } });
     S.eenheden = b.invoer.eenheden || S.eenheden;
-    S.peilKeuze = b.invoer.peil.keuze === 'hand' ? 'hand' : b.invoer.peil.keuze || 'auto';
+    S.peilKeuze = ['auto', 'zomer', 'winter', 'hand', 'actueel'].includes(b.invoer.peil.keuze) ? b.invoer.peil.keuze : 'auto';
+    if (S.peilKeuze === 'actueel') S.peilActueel = b.invoer.peil.meting ? { waarde: b.invoer.peil.waarde_m, tijd: Date.parse(b.invoer.peil.meting.tijd), meer: b.invoer.peil.meting.meer, meetpunten: b.invoer.peil.meting.meetpunten, ontbreekt: [] } : null;
     if (S.peilKeuze === 'hand') S.peilHand = b.invoer.peil.waarde_m;
     const s = b.invoer.schip;
     Object.assign(S.schip, { kielspeling: s.kielspeling_m, metOverstag: s.overstag_s != null, overstag_s: s.overstag_s, metGijp: s.gijp_s != null, gijp_s: s.gijp_s,
-      factor: Math.round((s.snelheidsfactor || 1) * 100) });
+      factor: Math.round((s.snelheidsfactor || 1) * 100), maxSlag: s.max_slag ?? '3' });
     const { verschuiving_min, aanpassingen, ...W } = b.wind;
     S.wind.W = W; S.wind.model = W.model || S.wind.model; S.wind.verschuiving_min = verschuiving_min || 0; S.wind.aanpassingen = aanpassingen || {};
     bewaar();
