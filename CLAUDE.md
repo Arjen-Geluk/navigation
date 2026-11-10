@@ -43,7 +43,8 @@ portfoliosite).
   assets); het design system is de bron om uit over te nemen, niet om te laden.
 - Wijkt de code bewust af of komt er een nieuwe kleur of nieuw component bij: werk dan ook het design
   system bij, zodat de code en het design system gelijk blijven.
-- De oudere kleuren van `3-stedenrace/` en de donkere landingspagina zijn geen voorbeeld voor nieuw werk.
+- De huisstijl wordt van boven naar beneden ingezet: de landingspagina (root `index.html`) volgt hem
+  al; de oudere kleuren van `3-stedenrace/` zijn geen voorbeeld voor nieuw werk.
 
 ## Favicon
 
