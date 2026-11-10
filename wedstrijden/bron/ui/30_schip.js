@@ -117,12 +117,15 @@ const SCHIP = (function () {
   function vul() {
     const P = SCHIP.actief, p = P ? P.schip : {};
     $('kielspeling').value = s.kielspeling ?? ''; $('kielspeling').placeholder = p.kielspeling_m ?? '';
-    $('metOverstag').checked = s.metOverstag; $('overstagS').value = s.overstag_s ?? ''; $('overstagS').placeholder = p.overstagverlies_s ?? '';
-    $('metGijp').checked = s.metGijp; $('gijpS').value = s.gijp_s ?? ''; $('gijpS').placeholder = p.gijpverlies_s ?? '';
+    $('metOverstag').checked = aanOverstag(); $('overstagS').value = s.overstag_s ?? ''; $('overstagS').placeholder = p.overstagverlies_s ?? '';
+    $('metGijp').checked = aanGijp(); $('gijpS').value = s.gijp_s ?? ''; $('gijpS').placeholder = p.gijpverlies_s ?? '';
     $('factor').value = s.factor;
     $('maxSlag').value = s.maxSlag ?? '3';
   }
   const getalOfNull = v => v === '' ? null : +v;
+  // Tijdverlies: aan als de gebruiker het vinkje heeft gezet, en bij een nog niet gezet vinkje als de polar een waarde heeft
+  function aanOverstag() { const P = SCHIP.actief; return s.metOverstag ?? (P?.schip.overstagverlies_s != null); }
+  function aanGijp() { const P = SCHIP.actief; return s.metGijp ?? (P?.schip.gijpverlies_s != null); }
   $('kielspeling').onchange = () => { s.kielspeling = getalOfNull($('kielspeling').value); bewaar(); meld('invoer'); };
   $('metOverstag').onchange = () => { s.metOverstag = $('metOverstag').checked; bewaar(); meld('invoer'); };
   $('overstagS').onchange = () => { s.overstag_s = getalOfNull($('overstagS').value); bewaar(); meld('invoer'); };
@@ -142,8 +145,8 @@ function rekenOpties() {
   const P = SCHIP.actief, s = S.schip;
   return {
     kielspeling: s.kielspeling ?? P.schip.kielspeling_m ?? 0.3,
-    overstag_s: s.metOverstag ? (s.overstag_s ?? P.schip.overstagverlies_s ?? 0) : null,
-    gijp_s: s.metGijp ? (s.gijp_s ?? P.schip.gijpverlies_s ?? 0) : null,
+    overstag_s: ((s.metOverstag ?? (P.schip.overstagverlies_s != null))) ? (s.overstag_s ?? P.schip.overstagverlies_s ?? 0) : null,
+    gijp_s: ((s.metGijp ?? (P.schip.gijpverlies_s != null))) ? (s.gijp_s ?? P.schip.gijpverlies_s ?? 0) : null,
     snelheidsfactor: (s.factor || 100) / 100,
     max_slag_nm: maxSlagKeuze(s.maxSlag)
   };

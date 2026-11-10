@@ -32,7 +32,7 @@ const editieSleutels = Object.keys(EDITIES).sort((a, b) => EDITIES[b].jaar - EDI
 const OPSLAG = 'wedstrijden.invoer.v1';
 function standaardStaat() {
   return { v: 1, editie: editieSleutels[0], per: {}, eenheden: 'nm',
-    schip: { kielspeling: null, metOverstag: false, overstag_s: null, metGijp: false, gijp_s: null, factor: 100 },
+    schip: { kielspeling: null, metOverstag: null, overstag_s: null, metGijp: null, gijp_s: null, factor: 100 },
     wind: { model: 'knmi_seamless', W: null, aanpassingen: {}, verschuiving_min: 0 },
     peilKeuze: 'auto', peilHand: null, peilActueel: null,
     kaart: { ondergrond: 'vast', lagen: { bodem: false, bevaarbaar: false, betonning: true, zones: true, route: true, andere: false, wind: false } },
