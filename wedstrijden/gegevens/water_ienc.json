@@ -38,23 +38,23 @@
   "monsterpunten": 100,
   "sha256": "fe5f8a380be95cce620f374f150d5995ef3681850d47fd80b166529ba9aa3940",
   "havens": {
-    "bestand": "havens_ienc_10m.bin",
-    "cel_m": 10,
-    "codering": "1 byte per cel van 10 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land",
+    "bestand": "havens_ienc_5m.bin",
+    "cel_m": 5,
+    "codering": "1 byte per cel van 5 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land, 2 = buiten de cirkel van 1,5 km rond de havenlichten (geen gegevens; de grove raster geldt)",
     "actief": ["enkhuizen"],
     "uitsneden": [
-      { "id": "buiten-ij", "west": 4.96, "noord": 52.4, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 473, "ny": 423, "offset": 0 },
-      { "id": "workum", "west": 5.385, "noord": 52.985, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 439, "ny": 390, "offset": 200079 },
-      { "id": "enkhuizen", "west": 5.265, "noord": 52.712, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 372, "ny": 379, "offset": 371289 },
-      { "id": "lelystad", "west": 5.405, "noord": 52.55, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 338, "ny": 445, "offset": 512277 },
-      { "id": "medemblik", "west": 5.098, "noord": 52.782, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 203, "ny": 223, "offset": 662687 },
-      { "id": "lemmer", "west": 5.685, "noord": 52.852, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 304, "ny": 267, "offset": 707956 },
-      { "id": "stavoren", "west": 5.34, "noord": 52.898, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 216, "ny": 223, "offset": 789124 },
-      { "id": "urk", "west": 5.58, "noord": 52.67, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 237, "ny": 223, "offset": 837292 },
-      { "id": "hoorn", "west": 5.045, "noord": 52.648, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 270, "ny": 256, "offset": 890143 },
-      { "id": "volendam", "west": 5.055, "noord": 52.505, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 203, "ny": 223, "offset": 959263 },
-      { "id": "blocq", "west": 5.21, "noord": 52.432, "dlon": 0.0001482, "dlat": 0.0000899, "nx": 237, "ny": 223, "offset": 1004532 }
+      { "id": "buiten-ij", "west": 4.96, "noord": 52.4, "dlon": 0.0000741, "dlat": 0.000045, "nx": 945, "ny": 845, "cel_m": 5, "offset": 0 },
+      { "id": "workum", "west": 5.385, "noord": 52.985, "dlon": 0.0000741, "dlat": 0.000045, "nx": 878, "ny": 778, "cel_m": 5, "offset": 798525 },
+      { "id": "enkhuizen", "west": 5.265, "noord": 52.712, "dlon": 0.0000741, "dlat": 0.000045, "nx": 743, "ny": 756, "cel_m": 5, "offset": 1481609 },
+      { "id": "lelystad", "west": 5.405, "noord": 52.55, "dlon": 0.0000741, "dlat": 0.000045, "nx": 675, "ny": 889, "cel_m": 5, "offset": 2043317 },
+      { "id": "medemblik", "west": 5.098, "noord": 52.782, "dlon": 0.0000741, "dlat": 0.000045, "nx": 405, "ny": 445, "cel_m": 5, "offset": 2643392 },
+      { "id": "lemmer", "west": 5.685, "noord": 52.852, "dlon": 0.0000741, "dlat": 0.000045, "nx": 608, "ny": 534, "cel_m": 5, "offset": 2823617 },
+      { "id": "stavoren", "west": 5.34, "noord": 52.898, "dlon": 0.0000741, "dlat": 0.000045, "nx": 432, "ny": 445, "cel_m": 5, "offset": 3148289 },
+      { "id": "urk", "west": 5.58, "noord": 52.67, "dlon": 0.0000741, "dlat": 0.000045, "nx": 473, "ny": 445, "cel_m": 5, "offset": 3340529 },
+      { "id": "hoorn", "west": 5.045, "noord": 52.648, "dlon": 0.0000741, "dlat": 0.000045, "nx": 540, "ny": 512, "cel_m": 5, "offset": 3551014 },
+      { "id": "volendam", "west": 5.055, "noord": 52.505, "dlon": 0.0000741, "dlat": 0.000045, "nx": 405, "ny": 445, "cel_m": 5, "offset": 3827494 },
+      { "id": "blocq", "west": 5.21, "noord": 52.432, "dlon": 0.0000741, "dlat": 0.000045, "nx": 473, "ny": 445, "cel_m": 5, "offset": 4007719 }
     ],
-    "sha256": "f3f11887f33fdaf9266cf1fa1d3fddc76eb225b876a319fd34e30a53267019ed"
+    "sha256": "8627b674aa9a71f962ff1756205bc723698db02e2876d4c7c60fa2379d41e2e5"
   }
 }

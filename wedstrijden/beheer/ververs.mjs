@@ -141,10 +141,22 @@ async function haalBodemRd(laag, gebied) {
 // Van het RD-raster (20 m) naar een raster in graden; per cel k x k monsterpunten, gemiddelde van de waterpunten.
 // Een cel is land zodra een kwart van de monsterpunten land is (geen meting of boven NAP): zo blijven smalle dammen
 // en strekdammen (20 à 30 m breed) in het raster staan; langs de kust is dat iets voorzichtiger.
-// Land en water uit de IENC: telling per cel van 50 m (10 × 10 monsterpunten) en de havenuitsneden van 10 m (2 × 2).
+// Land en water uit de IENC: telling per cel van 50 m (10 × 10 monsterpunten) en de havenuitsneden van 5 m (2 × 2).
 // Schrijft gegevens/water_ienc_50m.bin, havens_ienc_10m.bin en water_ienc.json (formaat watermasker/1); de pagina
 // gebruikt ze voor de vaste ondergrond en de uitsneden. Geeft { telling, drempel, opgehaald } voor herbemonster.
-function landEnWater(vg, celM) {
+// Middelpunt per lijn van een haven: midden tussen de twee havenlichten, of het licht zelf bij één licht.
+function cirkelMiddelpunten(h) {
+  const out = [];
+  for (const l of h.lijnen || []) {
+    const p = (l.punten || []).filter(x => x.lat != null && x.lon != null);
+    if (!p.length) continue;
+    const a = p[0], b = p[1] || p[0];
+    out.push({ lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 });
+  }
+  return out;
+}
+
+export function landEnWater(vg, celM) {
   const dlat = +(celM / 111200).toFixed(6), dlon = +(celM / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(6);
   const raster = { west: vg.gebied.west, noord: vg.gebied.noord, dlon, dlat, nx: Math.round((vg.gebied.oost - vg.gebied.west) / dlon), ny: Math.round((vg.gebied.noord - vg.gebied.zuid) / dlat), cel_m: celM };
   const { cellen, vlakken } = iencVlakken(ENC_ROOT, vg.gebied);
@@ -152,25 +164,36 @@ function landEnWater(vg, celM) {
   const uitgifte = cellen.map(c => c.uitgifte).sort(), opgehaald = `IENC-cellen ${uitgifte[0]}–${uitgifte[uitgifte.length - 1]}`;
   const gz = b => { const z = gzipSync(b, { level: 9 }); z[4] = z[5] = z[6] = z[7] = 0; return z; };
   writeFileSync(join(MAP, 'gegevens', 'water_ienc_50m.bin'), gz(telling));
-  // havenuitsneden van 10 m (kaders uit vaargebied.havens); welke er in de pagina komen staat in havens.actief
+  // havenuitsneden van 5 m, binnen een cirkel van 1,5 km rond het midden van elke lijn (midden tussen de twee havenlichten,
+  // of het licht zelf bij één licht). Buiten de cirkels: waarde 2 = geen gegevens (de grove raster geldt daar).
+  // welke er in de pagina komen staat in havens.actief
   const metaPad = join(MAP, 'gegevens', 'water_ienc.json');
   const actief = existsSync(metaPad) ? leesJson(metaPad).havens?.actief : ['enkhuizen'];
-  const hl = +(10 / 111200).toFixed(7), hn = +(10 / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(7);
+  const HAVEN_M = 5, STRAAL_M = 1500;
+  const hl = +(HAVEN_M / 111200).toFixed(7), hn = +(HAVEN_M / (111320 * Math.cos(52.7 * Math.PI / 180))).toFixed(7);
+  const m_per_lon = 111320 * Math.cos(52.7 * Math.PI / 180), m_per_lat = 111200;
   const delen = [], index = [];
   let offset = 0;
   for (const h of vg.havens || []) {
-    const k = h.kader, u = { west: k.west, noord: k.noord, dlon: hn, dlat: hl, nx: Math.ceil((k.oost - k.west) / hn), ny: Math.ceil((k.noord - k.zuid) / hl) };
-    const t = telWater(vlakken, u, 2, { randen: true }), water = t.map(c => c >= 4 ? 1 : 0);   // water = alle 4 monsterpunten water
+    const k = h.kader, u = { west: k.west, noord: k.noord, dlon: hn, dlat: hl, nx: Math.ceil((k.oost - k.west) / hn), ny: Math.ceil((k.noord - k.zuid) / hl), cel_m: HAVEN_M };
+    const centra = cirkelMiddelpunten(h);
+    const t = telWater(vlakken, u, 2, { randen: true });
+    const water = t.map((c, k) => {
+      const i = k % u.nx, j = Math.floor(k / u.nx);
+      const lat = u.noord - (j + 0.5) * u.dlat, lon = u.west + (i + 0.5) * u.dlon;
+      const binnen = centra.some(c0 => Math.hypot((lat - c0.lat) * m_per_lat, (lon - c0.lon) * m_per_lon) <= STRAAL_M);
+      return !binnen ? 2 : c >= 4 ? 1 : 0;   // water = alle 4 monsterpunten water
+    });
     delen.push(water); index.push({ id: h.id, ...u, offset }); offset += water.length;
   }
   const alles = new Uint8Array(offset); delen.forEach((d, i) => alles.set(d, index[i].offset));
-  writeFileSync(join(MAP, 'gegevens', 'havens_ienc_10m.bin'), gz(alles));
+  writeFileSync(join(MAP, 'gegevens', 'havens_ienc_5m.bin'), gz(alles));
   schrijfJson(metaPad, {
     formaat: 'watermasker/1', bron: 'IENC van Rijkswaterstaat (DEPARE, DRGARE, lokbsn, hrbbsn = water; LNDARE = land), lokaal uit lokaal/ienc/', licentie: 'open data (RWS)',
     opgehaald, cellen: cellen.map(c => `${c.naam} ed. ${c.editie} (${c.uitgifte})`),
     raster, codering: `1 byte per cel (zelfde raster als het bodembestand): aantal van de ${K} × ${K} monsterpunten dat water is (0..${K * K})`,
     monsterpunten: K * K, sha256: createHash('sha256').update(telling).digest('hex'),
-    havens: { bestand: 'havens_ienc_10m.bin', cel_m: 10, codering: '1 byte per cel van 10 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land',
+    havens: { bestand: 'havens_ienc_5m.bin', cel_m: 5, codering: '1 byte per cel van 5 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land, 2 = buiten de cirkel van 1,5 km rond de havenlichten (geen gegevens; de grove raster geldt)',
       actief, uitsneden: index, sha256: createHash('sha256').update(alles).digest('hex') }
   });
   return { telling, drempel: Math.ceil(0.75 * K * K), opgehaald };
