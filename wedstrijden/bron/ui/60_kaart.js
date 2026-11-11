@@ -91,7 +91,7 @@
       if (w === null) continue;   // geen gegevens: geen lijn
       const anders = (a, b) => { const v = isWater(a, b); return v !== null && v !== w; };
       const rand = (i > 0 && anders(i - 1, j)) || (i < nx - 1 && anders(i + 1, j)) || (j > 0 && anders(i, j - 1)) || (j < ny - 1 && anders(i, j + 1));
-      if (rand) { kd[k] = 30; kd[k + 1] = 40; kd[k + 2] = 55; kd[k + 3] = 255; }
+      if (rand) { kd[k] = 30; kd[k + 1] = 40; kd[k + 2] = 55; kd[k + 3] = 110; }
     }
     kctx.putImageData(kimg, 0, 0);
     return kc.toDataURL();
