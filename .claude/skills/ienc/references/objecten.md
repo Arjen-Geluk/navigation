@@ -79,8 +79,21 @@ Strekdammen en kribben (`slcons`) zijn smalle lijnen: buffer ze als je ze als ob
 Diepte" en "Waddenzee met Diepte" bevatten gemeten dieptes (contouren 0–7 m per 0,5 m, 8, 9, 10, 15, 20,
 25 m, Spec NL hoofdstuk 4.I). Bruikbaar uit de IENC voor diepte zijn hier alleen de geulen: `DEPARE` met
 `DRVAL1` > 0 (Markermeer: 2, 3, 5 en 5,6 m, liggen als gaten in de 0-vlakken, dus zonder overlap), `DRGARE`
-(projectdiepte) en obstakels met `VALSOU`. Alle `DEPARE` samen vormen wel een goed water/land-masker,
-inclusief havens en sluiskolken. Referentievlak: plaatselijk peil, niet NAP (zie §1).
+(projectdiepte) en obstakels met `VALSOU`. Referentievlak: plaatselijk peil, niet NAP (zie §1).
+
+**Watermasker.** Alle `DEPARE` en `depare` (ook die met `DRVAL1 = 0`) + `DRGARE` + `lokbsn` (sluiskolken)
++ `hrbbsn` (havenbekkens) samen vormen een goed water/land-masker, inclusief havens en sluiskolken.
+`LNDARE` gaat altijd voor: dammen, leidammen, strekdammen en eilanden liggen vaak binnen of over een
+dieptegebied heen en zijn dan land. `scripts/raster.mjs` maakt dit masker als raster (`iencVlakken` +
+`telWater`, of de CLI).
+
+**Valkuil: smalle dammen.** Leidammen en strekdammen (bijv. bij het Krabbersgat bij Enkhuizen en bij
+Lelystad) zijn vaak smaller dan een cel van 10 m. Met monsterpunten per cel en een meerderheidsregel
+("water als de meeste monsters water zijn") vallen ze weg als losse stippen en lekt het water er dwars
+doorheen. Gebruik dan `randen: true` (CLI `--randen`): de randen van `LNDARE` worden als doorlopende,
+4-verbonden lijn land getekend. Noem een cel daarna alleen water als **alle** monsters water zijn
+(telling = k × k). Krabbersgat, cel 10 m, k 2: met randen en die regel is de oostelijke leidam rond
+52,704 N, 5,3077 O een gesloten lijn van ruim 1,5 km; zonder randen blijven er 1–2 losse landcellen over.
 
 ## 4. Verboden, beperkte en waarschuwingsgebieden (thema `beperking`)
 
