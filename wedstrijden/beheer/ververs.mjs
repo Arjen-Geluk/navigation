@@ -16,7 +16,7 @@ import { leesJson, schrijfJson } from './lib/json.mjs';
 import { wgsNaarRd, afstandM } from './lib/rd.mjs';
 import { maakPng } from './lib/png.mjs';
 import { haalIenc, verbodenGebieden } from './lib/verboden.mjs';
-import { iencVlakken, telWater } from './lib/ienc_water.mjs';
+import { iencVlakken, telWater } from '../../.claude/skills/ienc/scripts/raster.mjs';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(MAP, '..', 'lokaal', 'ververs');
@@ -192,7 +192,7 @@ function herbemonster(rdr, gebied, celM, water = null) {
       if (v === v && v <= 0) { som += v; n++; } else land++;
     }
     if (water) {
-      // land of water volgens de IENC (lib/ienc_water.mjs); diepte uit RWS
+      // land of water volgens de IENC (.claude/skills/ienc/scripts/raster.mjs); diepte uit RWS
       if (water.telling[j * nx + i] >= water.drempel) codes[j * nx + i] = n ? codeer(som / n) : WATER_ZONDER_METING;
     } else if (land < kwart && n) codes[j * nx + i] = codeer(som / n);
   }
