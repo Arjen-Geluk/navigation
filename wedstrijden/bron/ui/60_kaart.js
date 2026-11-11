@@ -25,6 +25,7 @@
     if (kaart) return;
     kaart = L.map('kaart', { zoomSnap: 0.5, preferCanvas: true }).fitBounds([[52.66, 5.10], [52.88, 5.50]]);
     kaart.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    kaart.createPane('kust'); kaart.getPane('kust').style.zIndex = 450;   // boven de diepte- en bevaarbaarheidslagen (overlaypane 400)
     kaart.on('click', klik);
     bouwMenu();
     teken();
@@ -77,15 +78,32 @@
       d.set(w ? WATER : LAND, k); d[k + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
-    top10 = { url: c.toDataURL(), grenzen: [[r.noord - r.ny * r.dlat, r.west], [r.noord, r.west + r.nx * r.dlon]] };
+    // de kustlijn (overgang land/water) als eigen laag, die boven de diepte en bevaarbaarheid blijft liggen
+    top10 = { url: c.toDataURL(), kust: kustUrl(r.nx, r.ny, (i, j) => (bits[j * rij + (i >> 3)] & (0x80 >> (i & 7))) !== 0), grenzen: [[r.noord - r.ny * r.dlat, r.west], [r.noord, r.west + r.nx * r.dlon]] };
     return top10;
   })();
+  // kustlijn als transparant beeld: alleen de pixels op de overgang land/water, in donkere lijn
+  function kustUrl(nx, ny, isWater) {
+    const kc = document.createElement('canvas'); kc.width = nx; kc.height = ny;
+    const kctx = kc.getContext('2d'), kimg = kctx.createImageData(nx, ny), kd = kimg.data;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const w = isWater(i, j), k = 4 * (j * nx + i);
+      const rand = (i > 0 && isWater(i - 1, j) !== w) || (i < nx - 1 && isWater(i + 1, j) !== w) || (j > 0 && isWater(i, j - 1) !== w) || (j < ny - 1 && isWater(i, j + 1) !== w);
+      if (rand) { kd[k] = 30; kd[k + 1] = 40; kd[k + 2] = 55; kd[k + 3] = 255; }
+    }
+    kctx.putImageData(kimg, 0, 0);
+    return kc.toDataURL();
+  }
   function uitsnedeLaag(u) {
     const c = document.createElement('canvas'); c.width = u.nx; c.height = u.ny;
     const ctx = c.getContext('2d'), img = ctx.createImageData(u.nx, u.ny), d = img.data;
     for (let k = 0; k < u.nx * u.ny; k++) { d.set(u.water[k] ? WATER : LAND, 4 * k); d[4 * k + 3] = 255; }
     ctx.putImageData(img, 0, 0);
     return L.imageOverlay(c.toDataURL(), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { interactive: false });
+  }
+  // de kustlijn van de havenuitsneden (10 m), op dezelfde manier boven de diepte en bevaarbaarheid
+  function uitsnedeKust(u) {
+    return L.imageOverlay(kustUrl(u.nx, u.ny, (i, j) => u.water[j * u.nx + i]), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { pane: 'kust', interactive: false });
   }
   function vastRaster() {
     if (!top10) return rasterLaag(c => c === 255 ? LAND : c === 254 ? [226, 190, 214] : WATER);   // terugval: bodemraster
@@ -112,6 +130,10 @@
     if (o.url) lagen.ondergrond = L.tileLayer(o.url, { maxZoom: 17, attribution: o.attr }).on('tileerror', () => { $('kaartinfo').textContent = 'De online ondergrond antwoordt niet; kies Vast.'; });
     else if (S.kaart.ondergrond === 'vast' && BODEM) lagen.ondergrond = vastRaster();
     if (lagen.ondergrond) { lagen.ondergrond.addTo(kaart); if (lagen.ondergrond.bringToBack) lagen.ondergrond.bringToBack(); else { const ls = lagen.ondergrond.getLayers(); [...ls.slice(1), ls[0]].forEach(l => l.bringToBack()); } }   // uitsneden boven de grote ondergrond
+    if (lagen.kust) { kaart.removeLayer(lagen.kust); lagen.kust = null; }
+    if (S.kaart.ondergrond === 'vast' && top10) {
+      lagen.kust = L.layerGroup([L.imageOverlay(top10.kust, top10.grenzen, { pane: 'kust', interactive: false }), ...((BODEM && BODEM.uitsneden) || []).map(uitsnedeKust)]).addTo(kaart);
+    }
   }
 
   // ---- alle lagen opnieuw tekenen ----
