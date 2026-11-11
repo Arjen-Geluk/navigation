@@ -1,0 +1,14 @@
+schema_version: "1.1"
+name: leidam-krabbersgat-raster
+expected_outcome: |
+  Met scripts/raster.mjs wordt een land/water-raster van het Krabbersgat gemaakt (bbox 5.255,52.675,5.33,52.715,
+  cel 10 m, k 2) met --randen. Een cel telt alleen als water als alle k × k monsters water zijn. De oostelijke
+  leidam rond 52,704 N, 5,3077 O is dan een gesloten, 4-verbonden lijn land van ruim een kilometer (in de
+  lokale release 1R7YM007 ed. 8: ongeveer 1,5 km tot de rand van een venster van 3 km). Zonder --randen
+  (of met een meerderheidsregel) valt de dam uiteen in losse stippen van 1–2 cellen.
+---
+tags: [skill-creator]
+max_turns: 30
+timeout_seconds: 900
+allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+---

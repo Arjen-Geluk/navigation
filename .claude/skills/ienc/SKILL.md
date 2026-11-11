@@ -15,6 +15,7 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
 | `scripts/s57.mjs` | de lezer: `leesCel`, `geometrie`, `naarGeoJSON`, `leesCatalogus`, `cellenVoorGebied`, `codes`, `betekenis` |
 | `scripts/iso8211.mjs` | de laag eronder: ISO 8211-records en -velden |
 | `scripts/gebied.mjs` | GeoJSON per thema voor een gebied (CLI én module), met de thema-indeling `THEMA`, en `inDeBuurt` om naamloze vlakken te beschrijven via benoemde objecten eromheen |
+| `scripts/raster.mjs` | land/water-raster voor een gebied (CLI én module): `iencVlakken`, `telWater`, `maakRaster`; per cel het aantal watermonsters |
 | `scripts/controle.mjs` | controle van een nieuwe release: alles leesbaar, codes bekend, ringen dicht |
 | `scripts/bouw_catalogus.mjs` | bouwt `data/ienc_catalogus.json` opnieuw uit een nieuwe IENC Feature Catalogue (XML) |
 | `data/ienc_catalogus.json` | codes, namen, toegestane waarden (IEHG IENC FC 2.6 corr3 + bIENC FC 1.0) |
@@ -57,7 +58,25 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
    Leg `cellen` (naam, editie, uitgiftedatum) vast in het verslag of het gegevensbestand, zodat te zien is
    op welke kaartversie een vaargebied is gebaseerd.
 
-5. **Uitleggen.** Voor "wat betekent X" eerst `references/objecten.md`; voor de officiële naam en alle
+5. **Land/water-raster** (vaargebied, havenuitsneden, getijkaart):
+   ```bash
+   node .claude/skills/ienc/scripts/raster.mjs --enc lokaal/ienc/nederland/ENC_ROOT --bbox 4.9,52.25,5.95,53.1 --cel 50 --k 10 --uit lokaal/ienc/uit/water.bin
+   ```
+   Water = alle `DEPARE`/`depare` + `DRGARE` + `lokbsn` + `hrbbsn`; `LNDARE` gaat voor (zie `references/objecten.md` §3).
+   Uitvoer: `water.bin` (gzip, 1 byte per cel = aantal watermonsters van k × k, rij voor rij van noord naar
+   zuid, per rij west → oost) en `water.json` met `west`, `noord`, `dlon`, `dlat`, `nx`, `ny`, `k` en de
+   gebruikte cellen (naam, editie, uitgifte). Celgrootte C m: `dlat = C/111200`, `dlon = C/(111320·cos 52,7°)`.
+   k hoogstens 15. Het hele IJsselmeergebied op 5 m duurt ongeveer 10 s.
+   Als module:
+   ```js
+   import { iencVlakken, telWater, maakRaster } from '../../.claude/skills/ienc/scripts/raster.mjs';
+   const { cellen, vlakken } = iencVlakken(encRoot, { west, zuid, oost, noord });   // eenmaal lezen
+   const telling = telWater(vlakken, maakRaster([west, zuid, oost, noord], 10), 2, { randen: true });
+   ```
+   **Fijne rasters (≤ 10 m) met dammen:** gebruik `--randen` en noem een cel alleen water als alle
+   monsters water zijn (`telling === k * k`), anders vallen leidammen weg als stippen (zie hieronder).
+
+6. **Uitleggen.** Voor "wat betekent X" eerst `references/objecten.md`; voor de officiële naam en alle
    toegestane waarden: `codes().klasseOpAcr.get('resare')`, `codes().attrOpAcr.get('restrn')`,
    `betekenis('restrn', 7)`. Bij twijfel over NL-gebruik: de Specificatie IENC NL v3.0 (`references/bronnen.md`).
 
@@ -76,6 +95,9 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
 - **Objecten zijn per cel geknipt.** Eén windpark of verboden gebied over een celgrens wordt twee features
   (bijv. Windpark Fryslân op 53°N). Voeg samen op `klasse` + naam/attributen als je één vlak nodig hebt;
   `lnam` is per stuk verschillend.
+- **Smalle dammen vallen weg in een raster.** Leidammen en strekdammen (Krabbersgat, Lelystad) zijn smaller
+  dan een cel van 10 m. Zonder `randen: true` worden het losse stippen en lekt water er dwars doorheen;
+  met `randen` en de regel "alleen water als alle monsters water zijn" blijven ze een gesloten lijn.
 - **Alleen basiscellen.** De lezer past geen updatebestanden (.001…) toe; RWS levert per release complete
   `.000`-cellen. `controle.mjs` waarschuwt als er toch updates in een map staan.
 - **Randen met `MASK`** (celgrens-randen) tellen mee voor de vlakvorming. Teken een kustlijn liever met `COALNE`
