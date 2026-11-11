@@ -27,7 +27,7 @@ function maakBodem(meta, codes, uitsneden = []) {
 function uitsnedeOp(B, lat, lon) {
   for (const u of B.uitsneden || []) {
     const i = Math.floor((lon - u.west) / u.dlon), j = Math.floor((u.noord - lat) / u.dlat);
-    if (i >= 0 && j >= 0 && i < u.nx && j < u.ny) return { u, k: j * u.nx + i };
+    if (i >= 0 && j >= 0 && i < u.nx && j < u.ny && u.water[j * u.nx + i] !== 2) return { u, k: j * u.nx + i };   // 2 = buiten de cirkel: het grove raster geldt
   }
   return null;
 }
@@ -102,6 +102,7 @@ function maakMasker(V, diepgang) {
     for (let j = 0; j < u.ny; j++) for (let i = 0; i < u.nx; i++) {
       const lat = u.noord - (j + 0.5) * u.dlat, lon = u.west + (i + 0.5) * u.dlon, k = celVan(B, lat, lon);
       if (k < 0) continue;
+      if (u.water[j * u.nx + i] === 2) continue;   // buiten de cirkel: het grove raster blijft
       if (!open.has(k)) open.set(k, 0);
       const b = u.water[j * u.nx + i] ? bodemOp(B, lat, lon) : null;
       if (b != null && b <= grens + 1e-9) {

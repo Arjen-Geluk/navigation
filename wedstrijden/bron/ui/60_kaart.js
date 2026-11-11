@@ -88,7 +88,9 @@
     const kctx = kc.getContext('2d'), kimg = kctx.createImageData(nx, ny), kd = kimg.data;
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       const w = isWater(i, j), k = 4 * (j * nx + i);
-      const rand = (i > 0 && isWater(i - 1, j) !== w) || (i < nx - 1 && isWater(i + 1, j) !== w) || (j > 0 && isWater(i, j - 1) !== w) || (j < ny - 1 && isWater(i, j + 1) !== w);
+      if (w === null) continue;   // geen gegevens: geen lijn
+      const anders = (a, b) => { const v = isWater(a, b); return v !== null && v !== w; };
+      const rand = (i > 0 && anders(i - 1, j)) || (i < nx - 1 && anders(i + 1, j)) || (j > 0 && anders(i, j - 1)) || (j < ny - 1 && anders(i, j + 1));
       if (rand) { kd[k] = 30; kd[k + 1] = 40; kd[k + 2] = 55; kd[k + 3] = 255; }
     }
     kctx.putImageData(kimg, 0, 0);
@@ -97,13 +99,13 @@
   function uitsnedeLaag(u) {
     const c = document.createElement('canvas'); c.width = u.nx; c.height = u.ny;
     const ctx = c.getContext('2d'), img = ctx.createImageData(u.nx, u.ny), d = img.data;
-    for (let k = 0; k < u.nx * u.ny; k++) { d.set(u.water[k] ? WATER : LAND, 4 * k); d[4 * k + 3] = 255; }
+    for (let k = 0; k < u.nx * u.ny; k++) { const v = u.water[k]; if (v === 2) continue; d.set(v ? WATER : LAND, 4 * k); d[4 * k + 3] = 255; }   // 2 = buiten de cirkel: transparant
     ctx.putImageData(img, 0, 0);
     return L.imageOverlay(c.toDataURL(), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { interactive: false });
   }
   // de kustlijn van de havenuitsneden (10 m), op dezelfde manier boven de diepte en bevaarbaarheid
   function uitsnedeKust(u) {
-    return L.imageOverlay(kustUrl(u.nx, u.ny, (i, j) => u.water[j * u.nx + i]), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { pane: 'kust', interactive: false });
+    return L.imageOverlay(kustUrl(u.nx, u.ny, (i, j) => { const v = u.water[j * u.nx + i]; return v === 2 ? null : v === 1; }), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { pane: 'kust', interactive: false });
   }
   function vastRaster() {
     if (!top10) return rasterLaag(c => c === 255 ? LAND : c === 254 ? [226, 190, 214] : WATER);   // terugval: bodemraster

@@ -139,7 +139,7 @@ test('rekenbestand: controles en bestandsnaam', () => {
   assert.equal(K.rekenbestandNaam('3-steden', '2026-10-10', 'Zeeën & Co', Date.parse('2026-10-10T06:15:00Z')), '3-steden_2026-10-10_Zeeen_Co_0815.json');
 });
 
-test('uitsneden: haven Enkhuizen op 10 m', () => {
+test('uitsneden: haven Enkhuizen op 5 m', () => {
   const u = G.uitsneden.find(x => x.id === 'enkhuizen');
   assert.ok(u, 'uitsnede Enkhuizen aanwezig');
   // ergens in de uitsnede ligt water dat in het grove raster land is (havens, smalle geulen)
