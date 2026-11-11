@@ -8,7 +8,7 @@
 //   npm run ververs -- --goedkeuren     na akkoord: versie van het vaargebied ophogen en verslag afsluiten
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { fromArrayBuffer } from 'geotiff';
@@ -439,127 +439,131 @@ function schrijfVerslag(v) {
   return pad;
 }
 
-// ======================= Hoofdlijn =======================
-const vg = leesJson(VG_PAD);
-
-if (arg('goedkeuren')) {
-  if (!vg.concept) { console.error('Er is geen ververste versie die op goedkeuring wacht.'); process.exit(1); }
-  const verslag = join(MAP, 'beheer', 'verslagen', `${vg.concept.verslag}.md`);
-  vg.versie += 1; vg.datum = vandaag; delete vg.concept;
-  schrijfJson(VG_PAD, vg);
-  writeFileSync(verslag, readFileSync(verslag, 'utf8').replace(/\*\*Status: wacht op goedkeuring\.\*\*[^\n]*/, `**Status: goedgekeurd op ${vandaag}; vaargebied versie ${vg.versie}.**`));
-  log(`✓ Vaargebied versie ${vg.versie} (${vandaag}). Volgende: npm run bouw, npm test, commit.`);
-  process.exit(0);
-}
-
-log('URL-controle…');
-const urls = await controleerUrls();
-urls.forEach(u => log(`  ${u.ok ? '✓' : '✗'} ${u.naam}: ${u.status}`));
-const verslag = { urls, versieNa: vg.versie + 1 };
-
-if (!arg('alleen-urls')) {
-  mkdirSync(CACHE, { recursive: true });
-  const celM = +argWaarde('resolutie', 50);
-
-  // ---- bodem ----
-  log('Bodem…');
-  const { nieuwste, alle } = await nieuwsteOpname();
-  const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
-  rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
-  // land en water uit de IENC (lokaal): 50 m-raster en de havenuitsneden van 10 m; diepte uit RWS
-  if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
-  const top10 = landEnWater(vg, celM);
-  log(`  land en water uit de IENC (${top10.opgehaald})`);
-  const r = herbemonster(rd, vg.gebied, celM, top10);
-  if (top10) {
-    const afstand = new Uint8Array(r.codes.length).fill(255), rij = [];
-    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] < WATER_ZONDER_METING) { afstand[k] = 0; rij.push(k); }
-    for (let q = 0; q < rij.length; q++) {
-      const k = rij[q], i = k % r.nx, d = afstand[k];
-      if (d >= 6) continue;
-      for (const m of [i > 0 ? k - 1 : -1, i < r.nx - 1 ? k + 1 : -1, k - r.nx, k + r.nx])
-        if (m >= 0 && m < r.codes.length && r.codes[m] === WATER_ZONDER_METING && afstand[m] === 255) { afstand[m] = d + 1; rij.push(m); }
+// Alleen als hoofdprogramma draaien; importeren (bijv. voor een test) doet niets.
+const esHoofdprogramma = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (esHoofdprogramma) {
+// ======================= Hoofdlijn =======================  
+  const vg = leesJson(VG_PAD);
+  
+  if (arg('goedkeuren')) {
+    if (!vg.concept) { console.error('Er is geen ververste versie die op goedkeuring wacht.'); process.exit(1); }
+    const verslag = join(MAP, 'beheer', 'verslagen', `${vg.concept.verslag}.md`);
+    vg.versie += 1; vg.datum = vandaag; delete vg.concept;
+    schrijfJson(VG_PAD, vg);
+    writeFileSync(verslag, readFileSync(verslag, 'utf8').replace(/\*\*Status: wacht op goedkeuring\.\*\*[^\n]*/, `**Status: goedgekeurd op ${vandaag}; vaargebied versie ${vg.versie}.**`));
+    log(`✓ Vaargebied versie ${vg.versie} (${vandaag}). Volgende: npm run bouw, npm test, commit.`);
+    process.exit(0);
+  }
+  
+  log('URL-controle…');
+  const urls = await controleerUrls();
+  urls.forEach(u => log(`  ${u.ok ? '✓' : '✗'} ${u.naam}: ${u.status}`));
+  const verslag = { urls, versieNa: vg.versie + 1 };
+  
+  if (!arg('alleen-urls')) {
+    mkdirSync(CACHE, { recursive: true });
+    const celM = +argWaarde('resolutie', 50);
+  
+    // ---- bodem ----
+    log('Bodem…');
+    const { nieuwste, alle } = await nieuwsteOpname();
+    const rd = await haalBodemRd(nieuwste.laag, vg.gebied);
+    rd.water = rd.z.reduce((n, v) => n + (v === v), 0);
+    // land en water uit de IENC (lokaal): 50 m-raster en de havenuitsneden van 10 m; diepte uit RWS
+    if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
+    const top10 = landEnWater(vg, celM);
+    log(`  land en water uit de IENC (${top10.opgehaald})`);
+    const r = herbemonster(rd, vg.gebied, celM, top10);
+    if (top10) {
+      const afstand = new Uint8Array(r.codes.length).fill(255), rij = [];
+      for (let k = 0; k < r.codes.length; k++) if (r.codes[k] < WATER_ZONDER_METING) { afstand[k] = 0; rij.push(k); }
+      for (let q = 0; q < rij.length; q++) {
+        const k = rij[q], i = k % r.nx, d = afstand[k];
+        if (d >= 6) continue;
+        for (const m of [i > 0 ? k - 1 : -1, i < r.nx - 1 ? k + 1 : -1, k - r.nx, k + r.nx])
+          if (m >= 0 && m < r.codes.length && r.codes[m] === WATER_ZONDER_METING && afstand[m] === 255) { afstand[m] = d + 1; rij.push(m); }
+      }
+      for (let k = 0; k < r.codes.length; k++) if (r.codes[k] === WATER_ZONDER_METING && afstand[k] === 255) r.codes[k] = GEEN_WATER;
     }
-    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] === WATER_ZONDER_METING && afstand[k] === 255) r.codes[k] = GEEN_WATER;
+    const zonderMeting = top10 ? r.codes.reduce((t, c) => t + (c === WATER_ZONDER_METING), 0) : 0;
+    const buitenGebied = afbakenen(r, vg.gebied);   // (na de IENC en het inkorten van water zonder meting)
+  
+    // ---- betonning ----
+    log('Betonning…');
+    const ruw = { drijvend: await haalLaag('drijvend'), vast: await haalLaag('vast') };
+    const buiten = {}, opgeheven = {};
+    let zonderPositie = 0;
+    const lijst = [];
+    for (const laag of ['drijvend', 'vast']) for (const v of ruw[laag]) {
+      const m = maakMarkering(v, laag);
+      if (!IN_GEBIED.test(m.vaarwater || '')) { buiten[m.vaarwater] = (buiten[m.vaarwater] || 0) + 1; continue; }
+      if (m.lat == null || m.lon == null) { zonderPositie++; continue; }
+      opgeheven[m.opgeheven ?? 'leeg'] = (opgeheven[m.opgeheven ?? 'leeg'] || 0) + 1;
+      lijst.push(m);
+    }
+    lijst.sort((a, b) => (a.id || '').localeCompare(b.id || '') || a.lat - b.lat);
+    const oud = existsSync(BET_PAD) ? leesJson(BET_PAD).markeringen : null;
+    schrijfJson(BET_PAD, { formaat: 'betonning/1', bron: `${WFS} (lagen drijvend en vast)`, opgehaald: vandaag, markeringen: lijst });
+    vg.betonning = { bestand: 'betonning_ijsselmeergebied.json', opgehaald: vandaag, aantal: lijst.length, bron: `${WFS}` };
+    verslag.betonning = { totaal: ruw.drijvend.length + ruw.vast.length, perLaag: { drijvend: ruw.drijvend.length, vast: ruw.vast.length }, lijst, buiten, opgeheven, zonderPositie,
+      verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst, oud) };
+    log(`  ${lijst.length} markeringen in het vaargebied`);
+  
+    // ---- verboden gebieden (A1-boeien en IENC: windparken, natuur, eilanden, invaarverbod) in het raster: code 254 ----
+    log('Verboden gebieden…');
+    if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
+    const ienc = haalIenc(ENC_ROOT, vg.gebied);
+    log(`  IENC: ${ienc.cellen.length} cellen, ${ienc.features.length} objecten`);
+    const verboden = verbodenGebieden(r, lijst, ienc, vg.gebied, { uitsluiten: ['NK-OW'] });
+    verslag.verboden = verboden;
+    verslag.ienc = ienc.cellen;
+    vg.verboden = verboden.overzicht.filter(x => x.cellen > 0).map(x => ({ soort: x.soort, id: x.id, km2: +x.km2.toFixed(2), boeien: x.boeien, turbines: x.turbines }));
+    const uitgifte = ienc.cellen.map(c => c.uitgifte).sort();
+    vg.ienc = { release: 'Nederland (excl. Zeeland, Waddenzee)', cellen: ienc.cellen.length, uitgifte_van: uitgifte[0], uitgifte_tot: uitgifte[uitgifte.length - 1] };
+    log(`  ${verboden.cellen} cellen verboden in ${vg.verboden.length} gebieden`);
+  
+    const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
+    const binPad = join(MAP, 'gegevens', bestand);
+    const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
+    const gz = gzipSync(r.codes, { level: 9 });
+    gz[4] = gz[5] = gz[6] = gz[7] = 0;     // tijdstempel in de gzip-kop leeg: zelfde inhoud = zelfde bestand
+    writeFileSync(binPad, gz);
+    const water = r.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0);
+    const plaatjes = [`bodem_${vandaag}_${celM}m.png`, `bodem_${vandaag}_${celM}m_krabbersgat.png`];
+    writeFileSync(join(CACHE, plaatjes[0]), plaatje(r, { schaal: celM >= 50 ? 0.5 : 0.25 }));
+    const KRAB = { west: 5.25, oost: 5.36, noord: 52.76, zuid: 52.68 };
+    writeFileSync(join(CACHE, plaatjes[1]), plaatje(r, { ...KRAB, schaal: 250 / celM }));
+    let meting = null;
+    if (arg('meet')) {
+      const ander = celM === 50 ? 25 : 50;
+      const m = herbemonster(rd, vg.gebied, ander);
+      meting = { cel_m: ander, water: m.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0), gzip: gzipSync(m.codes, { level: 9 }).length };
+      plaatjes.push(`bodem_${vandaag}_${ander}m_krabbersgat.png`);
+      writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
+    }
+    verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
+      stat: bodemStatistiek(r, vorig), vorig: !!vorig, top10: top10 ? top10.opgehaald : null, zonderMeting, buitenGebied, afsluitingen: vg.gebied.afsluitingen, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
+    vg.bodem = {
+      bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
+      cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
+      codering: '1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 254 = verboden gebied (water); 255 = geen water',
+      sha256: createHash('sha256').update(r.codes).digest('hex')
+    };
+    log(`  ${r.nx} x ${r.ny} cellen van ${celM} m, ${water} water, ${(gz.length / 1024).toFixed(0)} kB gzip`);
+  
+    vg.bronnen = [
+      { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
+      { onderdeel: 'betonning', url: WFS, opgehaald: vandaag },
+      { onderdeel: 'land en water (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: top10.opgehaald },
+      { onderdeel: 'verboden gebieden, windturbines, eilanden (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: vg.ienc.uitgifte_tot }
+    ];
+    // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md
+    verslag.naam = `ververs_${vandaag}`;
+    for (let n = 2; existsSync(join(MAP, 'beheer', 'verslagen', verslag.naam + '.md')); n++) verslag.naam = `ververs_${vandaag}_${n}`;
+    vg.concept = { verslag: verslag.naam, toelichting: 'Ververst, wacht op goedkeuring (npm run ververs -- --goedkeuren)' };
+    schrijfJson(VG_PAD, vg);
   }
-  const zonderMeting = top10 ? r.codes.reduce((t, c) => t + (c === WATER_ZONDER_METING), 0) : 0;
-  const buitenGebied = afbakenen(r, vg.gebied);   // (na de IENC en het inkorten van water zonder meting)
-
-  // ---- betonning ----
-  log('Betonning…');
-  const ruw = { drijvend: await haalLaag('drijvend'), vast: await haalLaag('vast') };
-  const buiten = {}, opgeheven = {};
-  let zonderPositie = 0;
-  const lijst = [];
-  for (const laag of ['drijvend', 'vast']) for (const v of ruw[laag]) {
-    const m = maakMarkering(v, laag);
-    if (!IN_GEBIED.test(m.vaarwater || '')) { buiten[m.vaarwater] = (buiten[m.vaarwater] || 0) + 1; continue; }
-    if (m.lat == null || m.lon == null) { zonderPositie++; continue; }
-    opgeheven[m.opgeheven ?? 'leeg'] = (opgeheven[m.opgeheven ?? 'leeg'] || 0) + 1;
-    lijst.push(m);
-  }
-  lijst.sort((a, b) => (a.id || '').localeCompare(b.id || '') || a.lat - b.lat);
-  const oud = existsSync(BET_PAD) ? leesJson(BET_PAD).markeringen : null;
-  schrijfJson(BET_PAD, { formaat: 'betonning/1', bron: `${WFS} (lagen drijvend en vast)`, opgehaald: vandaag, markeringen: lijst });
-  vg.betonning = { bestand: 'betonning_ijsselmeergebied.json', opgehaald: vandaag, aantal: lijst.length, bron: `${WFS}` };
-  verslag.betonning = { totaal: ruw.drijvend.length + ruw.vast.length, perLaag: { drijvend: ruw.drijvend.length, vast: ruw.vast.length }, lijst, buiten, opgeheven, zonderPositie,
-    verg: oud ? vergelijkBetonning(lijst, oud) : null, edities: controleerEdities(lijst, oud) };
-  log(`  ${lijst.length} markeringen in het vaargebied`);
-
-  // ---- verboden gebieden (A1-boeien en IENC: windparken, natuur, eilanden, invaarverbod) in het raster: code 254 ----
-  log('Verboden gebieden…');
-  if (!existsSync(join(ENC_ROOT, 'CATALOG.031'))) { console.error(`\n✗ Geen IENC in ${ENC_ROOT}. Zie .claude/skills/ienc/references/bronnen.md (downloaden alleen na akkoord).`); process.exit(1); }
-  const ienc = haalIenc(ENC_ROOT, vg.gebied);
-  log(`  IENC: ${ienc.cellen.length} cellen, ${ienc.features.length} objecten`);
-  const verboden = verbodenGebieden(r, lijst, ienc, vg.gebied, { uitsluiten: ['NK-OW'] });
-  verslag.verboden = verboden;
-  verslag.ienc = ienc.cellen;
-  vg.verboden = verboden.overzicht.filter(x => x.cellen > 0).map(x => ({ soort: x.soort, id: x.id, km2: +x.km2.toFixed(2), boeien: x.boeien, turbines: x.turbines }));
-  const uitgifte = ienc.cellen.map(c => c.uitgifte).sort();
-  vg.ienc = { release: 'Nederland (excl. Zeeland, Waddenzee)', cellen: ienc.cellen.length, uitgifte_van: uitgifte[0], uitgifte_tot: uitgifte[uitgifte.length - 1] };
-  log(`  ${verboden.cellen} cellen verboden in ${vg.verboden.length} gebieden`);
-
-  const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
-  const binPad = join(MAP, 'gegevens', bestand);
-  const vorig = vg.bodem && vg.bodem.cel_m === celM && existsSync(binPad) ? gunzipSync(readFileSync(binPad)) : null;
-  const gz = gzipSync(r.codes, { level: 9 });
-  gz[4] = gz[5] = gz[6] = gz[7] = 0;     // tijdstempel in de gzip-kop leeg: zelfde inhoud = zelfde bestand
-  writeFileSync(binPad, gz);
-  const water = r.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0);
-  const plaatjes = [`bodem_${vandaag}_${celM}m.png`, `bodem_${vandaag}_${celM}m_krabbersgat.png`];
-  writeFileSync(join(CACHE, plaatjes[0]), plaatje(r, { schaal: celM >= 50 ? 0.5 : 0.25 }));
-  const KRAB = { west: 5.25, oost: 5.36, noord: 52.76, zuid: 52.68 };
-  writeFileSync(join(CACHE, plaatjes[1]), plaatje(r, { ...KRAB, schaal: 250 / celM }));
-  let meting = null;
-  if (arg('meet')) {
-    const ander = celM === 50 ? 25 : 50;
-    const m = herbemonster(rd, vg.gebied, ander);
-    meting = { cel_m: ander, water: m.codes.reduce((n, c) => n + (c !== GEEN_WATER), 0), gzip: gzipSync(m.codes, { level: 9 }).length };
-    plaatjes.push(`bodem_${vandaag}_${ander}m_krabbersgat.png`);
-    writeFileSync(join(CACHE, plaatjes[2]), plaatje(m, { ...KRAB, schaal: 250 / ander }));
-  }
-  verslag.bodem = { laag: nieuwste.laag, jaar: nieuwste.jaar, alle, vorigJaar: vg.bodem?.opname, rd, r, water, bestand, gzip: gz.length, k: Math.max(2, Math.round(celM / 10)),
-    stat: bodemStatistiek(r, vorig), vorig: !!vorig, top10: top10 ? top10.opgehaald : null, zonderMeting, buitenGebied, afsluitingen: vg.gebied.afsluitingen, meting, plaatjes: plaatjes.map(p => 'lokaal/ververs/' + p) };
-  vg.bodem = {
-    bestand, opname: nieuwste.jaar, bron: `${WCS} (laag ${nieuwste.laag})`, opgehaald: vandaag,
-    cel_m: celM, west: r.west, noord: r.noord, dlon: r.dlon, dlat: r.dlat, nx: r.nx, ny: r.ny,
-    codering: '1 byte per cel, rij voor rij van noord naar zuid; 0..250 = bodem −25,0..0,0 m NAP per 0,1 m; 254 = verboden gebied (water); 255 = geen water',
-    sha256: createHash('sha256').update(r.codes).digest('hex')
-  };
-  log(`  ${r.nx} x ${r.ny} cellen van ${celM} m, ${water} water, ${(gz.length / 1024).toFixed(0)} kB gzip`);
-
-  vg.bronnen = [
-    { onderdeel: 'bodem', url: WCS, opgehaald: vandaag },
-    { onderdeel: 'betonning', url: WFS, opgehaald: vandaag },
-    { onderdeel: 'land en water (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: top10.opgehaald },
-    { onderdeel: 'verboden gebieden, windturbines, eilanden (IENC van RWS, lokaal)', url: 'https://www.vaarweginformatie.nl/frp/page/infra_enc', opgehaald: vg.ienc.uitgifte_tot }
-  ];
-  // nooit een eerder verslag overschrijven: een tweede run op dezelfde dag wordt ververs_<datum>_2.md
-  verslag.naam = `ververs_${vandaag}`;
-  for (let n = 2; existsSync(join(MAP, 'beheer', 'verslagen', verslag.naam + '.md')); n++) verslag.naam = `ververs_${vandaag}_${n}`;
-  vg.concept = { verslag: verslag.naam, toelichting: 'Ververst, wacht op goedkeuring (npm run ververs -- --goedkeuren)' };
-  schrijfJson(VG_PAD, vg);
+  
+  const pad = schrijfVerslag(verslag);
+  log(`\nVerslag: ${pad}`);
 }
-
-const pad = schrijfVerslag(verslag);
-log(`\nVerslag: ${pad}`);
