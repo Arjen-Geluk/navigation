@@ -30,7 +30,7 @@ Wanneer: vóór elk wedstrijdseizoen, en als RWS een nieuwe bodemopname of beton
 
 1. Claude Code draait `npm run ververs`. Het script haalt bodem en betonning opnieuw op bij RWS en controleert alle
    bron-URL's (RWS, Open-Meteo, kaartondergronden). Land en water (50 m-raster, vaste ondergrond, havenuitsneden van
-   10 m) en de verboden gebieden (windparken, natuur, Marker Wadden, invaarverbod) komen uit de lokale IENC; de
+   5 m) en de verboden gebieden (windparken, natuur, Marker Wadden, invaarverbod) komen uit de lokale IENC; de
    A1-tonnen uit de betonning. Welke havenuitsneden in de pagina komen, staat in `havens.actief` in `gegevens/water_ienc.json`.
 2. Het schrijft een verslag in `beheer/verslagen/`: aantal tonnen, nieuwe, verdwenen en verschoven tonnen
    (wedstrijdboeien apart), verschil in bodem per deelgebied, nieuwere bodemopname beschikbaar, URL's die niet antwoorden.

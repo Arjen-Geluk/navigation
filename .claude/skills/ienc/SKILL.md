@@ -16,6 +16,7 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
 | `scripts/iso8211.mjs` | de laag eronder: ISO 8211-records en -velden |
 | `scripts/gebied.mjs` | GeoJSON per thema voor een gebied (CLI én module), met de thema-indeling `THEMA`, en `inDeBuurt` om naamloze vlakken te beschrijven via benoemde objecten eromheen |
 | `scripts/raster.mjs` | land/water-raster voor een gebied (CLI én module): `iencVlakken`, `telWater`, `maakRaster`; per cel het aantal watermonsters |
+| `scripts/lichten.mjs` | lichten in een gebied met kleur, karakter en de naam van de drager (baken, paal, ton): havenlichten en lichtopstanden voor haven- en finishlijnen (CLI én module) |
 | `scripts/controle.mjs` | controle van een nieuwe release: alles leesbaar, codes bekend, ringen dicht |
 | `scripts/bouw_catalogus.mjs` | bouwt `data/ienc_catalogus.json` opnieuw uit een nieuwe IENC Feature Catalogue (XML) |
 | `data/ienc_catalogus.json` | codes, namen, toegestane waarden (IEHG IENC FC 2.6 corr3 + bIENC FC 1.0) |
@@ -76,7 +77,17 @@ Geen GDAL, geen Python, geen npm-pakketten: alleen Node.js (≥ 18).
    **Fijne rasters (≤ 10 m) met dammen:** gebruik `--randen` en noem een cel alleen water als alle
    monsters water zijn (`telling === k * k`), anders vallen leidammen weg als stippen (zie hieronder).
 
-6. **Uitleggen.** Voor "wat betekent X" eerst `references/objecten.md`; voor de officiële naam en alle
+6. **Havenlichten en lichtopstanden** (voor een havenlijn, startlijn of finishlijn uit een reglement):
+   ```bash
+   node .claude/skills/ienc/scripts/lichten.mjs --enc lokaal/ienc/nederland/ENC_ROOT --bbox 5.405,52.51,5.455,52.55 [--kleur groen]
+   ```
+   Een `LIGHTS`-object heeft vrijwel nooit een naam; de naam staat op de drager op dezelfde plek (meestal
+   `bcnlat`) en is gelijk aan de naam in de RWS-betonning. Vaste havenlichten hebben vaak geen `LITCHR`:
+   de naam zegt het dan ("FG Houtribhaven" = vast groen, "FR …" = vast rood). Reglementen noemen een licht
+   naar de plek ("groene lichtopstand op de kop van de dam"); zoek dus op kleur in een klein kader en
+   controleer de drager. Werkwijze en valkuilen: `references/objecten.md` §8.
+
+7. **Uitleggen.** Voor "wat betekent X" eerst `references/objecten.md`; voor de officiële naam en alle
    toegestane waarden: `codes().klasseOpAcr.get('resare')`, `codes().attrOpAcr.get('restrn')`,
    `betekenis('restrn', 7)`. Bij twijfel over NL-gebruik: de Specificatie IENC NL v3.0 (`references/bronnen.md`).
 

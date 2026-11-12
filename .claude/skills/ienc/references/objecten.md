@@ -202,6 +202,21 @@ Een brug bestaat vaak uit meerdere objecten (brug + doorvaartopeningen `gatcon` 
 | `sistat`, `sistaw` | seinpost verkeer / waarschuwing | |
 | `LNDMRK`, `PILPNT` | herkenningspunt (mast, molen, windturbine), paal | `CATLMK` |
 
+**Lichten vinden** (`scripts/lichten.mjs`, gecontroleerd rond Lelystad en Workum op 2026-11-12):
+
+- `LIGHTS` heeft in de RWS-cellen geen `OBJNAM`. De drager (`bcnlat`, `boylat`, `PILPNT`) ligt op
+  dezelfde positie (< 1 m) en draagt de naam, gelijk aan de RWS-betonning: "HOUTRIBSLUIZEN KOP N DAM",
+  "OL KOP DWARSDAM VAN DE LEIDAM". Een licht op een naamloze `PILPNT` heeft geen naam (rood vast bij 52,5196 N 5,4257 O).
+- Vaste havenlichten hebben vaak geen `LITCHR`; de naam van de drager begint dan met FG (vast groen) of
+  FR (vast rood): "FG Houtribhaven", "FR Deko Marine", "FG Kop Zuiderhavendam" (Workum).
+- `COLOUR` is een lijst (1 wit, 3 rood, 4 groen, 6 geel); een sectorlicht heeft meer kleuren en `SECTR1/2`.
+- Namen uit OpenStreetMap ("Bataviahaven gn") wijken af van de IENC ("FG Bataviahaven dijk"); posities
+  zijn meestal binnen enkele meters gelijk. Neem in een wedstrijdeditie de IENC/RWS-naam, dan haalt de
+  bouw de positie uit de betonning.
+- Reglementen noemen lichten naar de plek of de functie ("groen licht quick op de punt van de dam",
+  "de havenlichten van de Buitenhaven"). Zoek op kleur in een klein kader rond de haven en kijk of het
+  karakter klopt; bij twee kandidaten de gebruiker laten kiezen.
+
 **Vergelijking met PDOK-vaarwegmarkeringen** (2026-11-06): van 1674 PDOK-markeringen in het IJsselmeergebied
 ligt 1541 binnen 2 m van een IENC-markering (mediaan 0,1 m bij gelijke naam). Namen verschillen soms;
 gele tonnen staan in de IENC vaak zonder naam. De tonnen langs de Afsluitdijk (vaarwater "AD") liggen in de
