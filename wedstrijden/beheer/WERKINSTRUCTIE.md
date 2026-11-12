@@ -56,6 +56,8 @@ Wanneer: als de wedstrijdbepalingen of het reglement van het nieuwe jaar verschi
    - Een RWS-boei krijgt alleen een naam (`"rws": "EZ-A"`); de positie komt bij het bouwen uit de RWS-betonning.
      De bouw weigert als de naam niet (of meer dan eens) in de betonning staat.
    - Een wedstrijdton of eigen punt (Start, De Kreupel) krijgt `lat` en `lon` en geen `rws`.
+   - Een punt dat bij een verboden zone hoort (De Kreupel) krijgt `"zone": "<zone-id>"` naast de kant (`sb` of `bb`). De pagina
+     vaart dan de kortste weg om de zone heen, met de zone aan die kant; geen boog om het punt zelf.
    - Een finishlijn: `"lijn": [uiteinde, uiteinde]`, elk uiteinde met `rws` of met `lat`/`lon` (en `bron`). De bouw zet het punt in
      het midden; de rekenkern vaart naar het dichtstbijzijnde deel van de lijn (minstens 10 % en 30 m van elk uiteinde).
 3. Zet de status:

@@ -63,9 +63,14 @@ test('merktekens: ronden op 30 m aan de goede kant, passeren zonder lus', () => 
   const W = vasteWind(K, 240, 12, t0);
   const r = K.rekenBaan(V, W, P, E, 'M', { robuustheid: false }).routes.find(x => x.naam === 'Medemblik – Stavoren');
   const per = Object.fromEntries(r.res.rondingen.map(x => [x.id, x]));
-  assert.equal(per['De Kreupel'].wijze, 'passeren', 'koers draait naar bakboord bij sb: passeren');
+  assert.equal(per['De Kreupel'].wijze, 'om de zone', 'De Kreupel: de kortste weg om de zone heen');
   assert.equal(per['LC 11'].wijze, 'ronden');
-  for (const x of r.res.rondingen) {
+  // de zone (De Kreupel) ligt aan stuurboord van de boot die het dichtst langs de zone vaart
+  const zP = E.zones.find(z => z.id === 'kreupel').punten, cLat = zP.reduce((q, p) => q + p.lat, 0) / zP.length, cLon = zP.reduce((q, p) => q + p.lon, 0) / zP.length;
+  const c = { lat: cLat, lon: cLon }, pc = r.res.track.reduce((q, p) => K.afstandM(p, c) < K.afstandM(q, c) ? p : q);
+  const kz = ((K.koersNaar(pc, c) - pc.koers) % 360 + 540) % 360 - 180;
+  assert.ok(kz > 0, `zone op ${kz.toFixed(0)}° van de koers: stuurboord verwacht`);
+  for (const x of r.res.rondingen.filter(x => x.wijze !== 'om de zone')) {
     const dichtst = Math.min(...r.res.track.map(p => K.afstandM(p, x)));
     assert.ok(dichtst > 10 && dichtst < 80, `${x.id}: dichtstbij ${dichtst.toFixed(0)} m`);
     // de boot ligt aan de voorgeschreven kant: het merkteken aan bb = links van de koers van de boot

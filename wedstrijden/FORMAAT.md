@@ -66,7 +66,7 @@ eerst dit document.
 | `res.overstag`, `res.gijp` | aantallen |
 | `res.waarschuwingen` | teksten |
 | `res.rakken` | per rak: `van`, `naar`, `start`, `eind` (ms), `afstand_m`, `zeilweg_m`, `overstag`, `gijp`, `stand_s` en `zwaard_s` (seconden per zeilstand / zwaardstand), `wind` `{ dir, kn }`, `ondiep` (s per zwaardstand), `schatting`, `omweg` |
-| `res.rondingen` | per merkteken met rondingszijde: `id`, `zijde`, `lat`, `lon`, `aanloop` en `vertrek` (graden), `wijze` (`ronden` of `passeren`), `draai_graden` (koerswijziging, − = bakboord) |
+| `res.rondingen` | per merkteken met rondingszijde: `id`, `zijde`, `lat`, `lon`, `aanloop` en `vertrek` (graden), `wijze` (`ronden` of `passeren`), `draai_graden` (koerswijziging, − = bakboord). Bij een zone: `wijze` `om de zone` en `zone` (de zone-id), zonder `lat`/`lon` |
 | `res.max_slag_nm` | gebruikte maximale slaglengte (`null` = geen grens); `res.slag_auto` = gekozen door het model |
 | `res.track` | geplande track, compact: `{ velden: ['t','lat','lon','koers','vaart','twa','tws','stand','zwaard'], rijen: [[…], …] }`; `t` in ms (UTC), `vaart` en `tws` in kn |
 

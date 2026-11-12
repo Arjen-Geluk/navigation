@@ -76,6 +76,7 @@
     },
     {
       "id": "De Kreupel",
+      "zone": "kreupel",
       "soort": "merkteken",
       "lat": 52.80105,
       "lon": 5.2136,
