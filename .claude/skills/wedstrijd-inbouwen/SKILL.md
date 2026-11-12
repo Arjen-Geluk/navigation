@@ -78,11 +78,26 @@ wedstrijd is vooral **gegevens**. Deze skill is de werkwijze en de les uit de bo
 - **Bekende restpunten:** een raakpunt bij de kop van de leidam (Enkhuizen) en langs De Kreupel; niet als nieuwe fout melden.
 - **Browsercontrole:** schermafdrukken blijven hangen onder viewport-emulatie — terug naar de desktopinstelling.
 
+## Valkuilen bij havenlijnen (uit de beurtveer, november 2026)
+
+- **Reglement als pdf:** WebFetch levert alleen ruwe bytes. Lees het opgeslagen bestand met `pdftotext -layout` (staat in
+  Git Bash) en lees daarna alleen de artikelen die je nodig hebt.
+- **Het reglement noemt lichten die niet in de IENC staan** (bijv. "rood havenlicht op de dam" bij het Buiten-IJ,
+  ND 5 bij het Naviduct, de tank in Urk). Gok niet: laat de gebruiker de punten kiezen op een IENC-kaartje met
+  sleepbare punten die vastklikken op lichten (voorbeeld: `lokaal/havenlijnen_beurtveer.html`, niet in git). Punten
+  zonder licht krijgen bron `gebruiker (kaart)`.
+- **Kader van een haven:** de uitsnede is een cirkel van 1,5 km rond het midden van elke lijn, maar wordt afgekapt op
+  het `kader` in `havens.mjs`. Ligt een lijn bij de rand, maak het kader groter en bekijk de uitsnede als plaatje
+  (`beheer/lib/png.mjs`) voordat je goedkeurt.
+- **Wedstrijdregels horen in de editie, niet in het vaargebied:** een verbod dat maar voor één wedstrijd geldt (het
+  Oostvaardersdiep bij de beurtveer) wordt een zone in die editie; `verboden.mjs` is voor alle wedstrijden.
+
 ## Wat de beurtveer extra vraagt (stand 2026-11-12)
 
 - Heen- en terugreis met verschillende start en finish (Workum ↔ Buiten-IJ), havengebieden onderweg (Lelystad, Enkhuizen).
-- Havenlijnen: in `havens.mjs` zijn er nog `kandidaat`- en `open`-lijnen (Workum-finish It Soal, Naviduct-motorgebied,
-  Lelystad, Lemmer, Urk, Hoorn, Buiten-IJ). Met `lichten.mjs` gevonden bij Lelystad: de Houtribhaven heeft "FG Houtribhaven"
-  en "FR Deko Marine"; Workum "FG Kop Zuiderhavendam" (= "Groene HL Workum"). Laat de gebruiker kiezen.
-- Uitsneden nodig voor Workum, Lelystad en het Buiten-IJ; de A1-strook langs het Oostvaardersdiep in de verboden gebieden.
+- Havenlijnen: alle lijnen in `havens.mjs` zijn bevestigd (12-11-2026), inclusief Naviduct noord/zuid.
+- Uitsneden van 5 m voor Workum, Lelystad en het Buiten-IJ staan aan (vaargebied versie 5). Het Oostvaardersdiep
+  (verboden in 2.9.12) wordt een zone in de editie, niet in `verboden.mjs`.
+- Reglement 2026: https://zeilvracht.nl/wp-content/uploads/2026/09/Reglement_Beurtveer_2026-aangepast.pdf (2.2 start/finish,
+  2.4 routes ME en LE, 2.9 havens, 2.10 sluizen, 2.13 zeiltijd, 2.14 motorgebruik).
 - Modelkeuze vooraf: hoe tellen motor- en sluisgedeelten (vaste tijd, ingevulde tijd, of uit de rekening).
