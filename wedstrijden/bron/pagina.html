@@ -27,6 +27,7 @@
       <span class="chip let" id="kopPolar">Geen polar</span>
       <span class="chip" id="kopRoute" hidden></span>
     </div>
+    <div class="melding let" id="dummyWaarschuwing" role="status" hidden>Let op: er wordt gerekend met de <b>Vliegende Hollander</b>, een verzonnen schip (kruishoek 70°, diepgang 2 m, snelle polar). Het is om te proberen; laad je eigen polar om met jouw schip te rekenen.</div>
     <nav class="tabs" id="tabs" role="tablist">
       <button data-tab="wedstrijd" role="tab"><i class="bol"></i>1 Wedstrijd</button>
       <button data-tab="schip" role="tab"><i class="bol"></i>2 Schip</button>
@@ -137,6 +138,8 @@
   <section class="tab" id="tab-kaart">
     <div class="kaartbalk">
       <button type="button" class="knop" id="kaartBereken">Bereken</button>
+      <select id="kaartBaan" class="knop stil" aria-label="Baan"></select>
+      <select id="kaartRoute" class="knop stil" aria-label="Route"></select>
       <span class="stapper">Windverandering <button type="button" class="knop stil klein" data-schuif="-30">− 30 min</button><b class="windverschuiving">op tijd</b><button type="button" class="knop stil klein" data-schuif="30">+ 30 min</button></span>
       <span id="kaartRouteInfo" class="sub"></span>
     </div>
@@ -162,6 +165,7 @@
         berekening te delen, en leg het na de race naast je VDR-log in de analysepagina. Inladen toont precies dezelfde berekening.</p>
       <div class="rij">
         <button type="button" class="knop" id="rekenOpslaan">Rekenbestand opslaan</button>
+        <span class="sub">Het bestand komt in je downloadmap.</span>
         <label class="knop stil">Rekenbestand inladen…<input type="file" id="rekenInladen" accept=".json,application/json" hidden></label>
       </div>
       <div class="melding" id="uitvoermelding" hidden></div>
