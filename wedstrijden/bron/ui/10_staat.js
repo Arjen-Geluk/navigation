@@ -27,11 +27,14 @@ const koersTekst = k => k == null ? '–' : String(Math.round(k) % 360).padStart
 // ---- edities ----
 const EDITIES = Object.fromEntries(G.edities.map((e, i) => [G.bouw.edities[i].bestand.replace('.json', ''), e]));
 const editieSleutels = Object.keys(EDITIES).sort((a, b) => EDITIES[b].jaar - EDITIES[a].jaar || a.localeCompare(b));
+// vandaag (Amsterdamse datum) en de aankomende editie: de eerste met een datum vanaf vandaag, anders de laatste
+const vandaagIso = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });
+const aankomendeEditie = () => { const v = vandaagIso(), op = [...editieSleutels].sort((a, b) => EDITIES[a].datum.localeCompare(EDITIES[b].datum)); return op.find(k => EDITIES[k].datum >= v) || op[op.length - 1]; };
 
 // ---- opgeslagen invoer (alleen in deze browser) ----
 const OPSLAG = 'wedstrijden.invoer.v1';
 function standaardStaat() {
-  return { v: 1, editie: editieSleutels[0], per: {}, eenheden: 'nm',
+  return { v: 1, editie: aankomendeEditie(), per: {}, eenheden: 'nm',
     schip: { kielspeling: null, metOverstag: null, overstag_s: null, metGijp: null, gijp_s: null, factor: 100 },
     wind: { model: 'knmi_seamless', W: null, aanpassingen: {}, verschuiving_min: 0 },
     peilKeuze: 'auto', peilHand: null, peilActueel: null,
@@ -40,7 +43,7 @@ function standaardStaat() {
 }
 let S = standaardStaat();
 try { const o = JSON.parse(localStorage.getItem(OPSLAG) || 'null'); if (o && o.v === 1) S = { ...S, ...o, kaart: { ...S.kaart, ...o.kaart, lagen: { ...S.kaart.lagen, ...(o.kaart || {}).lagen } } }; } catch (e) { /* geen opslag */ }
-if (!EDITIES[S.editie]) S.editie = editieSleutels[0];
+if (!EDITIES[S.editie]) S.editie = aankomendeEditie();
 if (typeof S.peil === 'number') { S.peilKeuze = 'hand'; S.peilHand = S.peil; } delete S.peil;          // oud formaat (0.5)
 if (!['vast', 'topo', 'foto'].includes(S.kaart.ondergrond)) S.kaart.ondergrond = 'vast';
 if (S.wind.aanpassingen && Object.values(S.wind.aanpassingen).some(a => 'draai' in a)) S.wind.aanpassingen = {};   // oud formaat: per uur, nu per uur en plaats
@@ -49,7 +52,7 @@ function bewaar() { try { localStorage.setItem(OPSLAG, JSON.stringify(S)); } cat
 // invoer per editie (datum, tijden, baan van de wedstrijdleiding, afwijkingen van de schipper)
 function invoer() {
   const e = EDITIES[S.editie];
-  const inv = S.per[S.editie] ||= { datum: e.datum, start: e.start, limiet: e.finishlimiet, baanWL: '' };
+  const inv = S.per[S.editie] ||= { datum: vandaagIso(), start: e.start, limiet: e.finishlimiet, baanWL: '' };
   inv.afwijkingen = { punten: {}, zones: {}, routes: {}, tonnen: [], ...(inv.afwijkingen || {}) };
   return inv;
 }
