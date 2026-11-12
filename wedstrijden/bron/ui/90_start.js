@@ -15,7 +15,7 @@
     <p>Elke route wordt echt nagevaren in stappen van 30 seconden. Bij elke stap bepaalt de pagina de wind op die plek en dat moment,
       de ware windhoek, de vaart uit je polar en de zwaardstand. Ligt het volgende punt binnen de kruishoek, dan kruist het schip op de hoek
       met de beste VMG. Overstag gaat het bij een krimper (meer dan 10°), na 3 zeemijl op dezelfde slag, als het water te ondiep wordt voor
-      zwaard neer, bij de rand van een verboden gebied, of zodra het punt bezeild is. Doorsnijdt de rechte lijn een ondiepte of verboden gebied,
+      zwaard neer, bij de rand van een verboden gebied, of zodra het punt bezeild is. Een zone met kant (De Kreupel, sb of bb) wordt om de zone heen gevaren: de kortste weg, met de zone aan die kant. Doorsnijdt de rechte lijn een ondiepte of verboden gebied,
       dan zoekt de pagina de kortste bevaarbare weg eromheen.</p>
     <p>Waterdiepte = peil − bodemhoogte. Is het water te ondiep voor de romp (zwaard op) plus de kielspeling, dan is de plek onbevaarbaar.
       De robuustheid rekent elke route ook met zes afwijkingen: wind 15° links- en rechtsom, 20% meer en minder wind, en de windverandering

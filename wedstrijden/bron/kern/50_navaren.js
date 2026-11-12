@@ -29,6 +29,57 @@ const kruishoekBij = (P, tws) => kruistabel(P)[Math.max(0, Math.min(200, Math.ro
 // Draait de koers die kant op, dan rondt de boot over een boog van het instappunt (dwars op de aanloop) naar het
 // uitstappunt (dwars op het vertrek). Draait de koers de andere kant op, dan passeert de boot het merkteken op afstand R
 // aan de voorgeschreven kant, zonder lus (besluit tijdens de bouw: passeren, nooit een lus).
+// Convexe romp (monotone keten), tegen de klok in, in XY.
+function convexRomp(pts) {
+  const p = [...pts].sort((a, b) => a.x - b.x || a.y - b.y), kruis = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo = [], hi = [];
+  for (const q of p) { while (lo.length >= 2 && kruis(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.slice().reverse()) { while (hi.length >= 2 && kruis(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop(); hi.push(q); }
+  return [...lo.slice(0, -1), ...hi.slice(0, -1)];
+}
+// Ronden van een verboden zone aan de voorgeschreven kant: de kortste weg van het instappunt E naar het uitstappunt X,
+// met de zone aan die kant (sb = rechtsom om de zone, bb = linksom), op de rand van de zone plus de marge.
+// Geeft de punten van de weg (E niet, X wel), of null als er geen weg is.
+function rondingOmZone(zone, zijde, E, X) {
+  const H = convexRomp(zone.xy), n0 = H.length, marge = zone.marge;
+  const P = [];                                                          // rand plus marge, per zijde van de romp
+  for (let i = 0; i < n0; i++) {
+    const a = H[i], b = H[(i + 1) % n0], l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = (b.y - a.y) / l * marge, ny = -(b.x - a.x) / l * marge;   // buitenkant van de zijde (romp tegen de klok)
+    const k = Math.max(1, Math.ceil(l / 20));
+    for (let j = 0; j < k; j++) P.push({ x: a.x + (b.x - a.x) * j / k + nx, y: a.y + (b.y - a.y) * j / k + ny });
+  }
+  const N = P.length, S = [0];
+  for (let i = 1; i < N; i++) S.push(S[i - 1] + Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y));
+  const L = S[N - 1] + Math.hypot(P[0].x - P[N - 1].x, P[0].y - P[N - 1].y);
+  const xE = naarXY(E.lat, E.lon), xX = naarXY(X.lat, X.lon);
+  const c = { x: H.reduce((q, p) => q + p.x, 0) / n0, y: H.reduce((q, p) => q + p.y, 0) / n0 };
+  const vrij = (p, q) => { for (let j = 1; j < 30; j++) { const t = j / 30; if (inPolygoon({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t }, P)) return false; } return true; };
+  const d = zijde === 'bb' ? 1 : -1;                                     // sb: rechtsom = dalende index in een romp tegen de klok
+  const cruis = (a, b) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);   // < 0: de zone ligt rechts van a→b
+  if (vrij(xE, xX) && (zijde === 'bb' ? cruis(xE, xX) > 0 : cruis(xE, xX) < 0))
+    return [{ lat: X.lat, lon: X.lon, ronding: false }];
+  const loop = (i, j) => d > 0 ? (S[j] - S[i] + L) % L : (S[i] - S[j] + L) % L;
+  let beste = null;
+  for (let i = 0; i < N; i++) {
+    if (!vrij(xE, P[i])) continue;
+    const eI = Math.hypot(P[i].x - xE.x, P[i].y - xE.y);
+    for (let j = 0; j < N; j++) {
+      if (!vrij(P[j], xX)) continue;
+      const tot = eI + loop(i, j) + Math.hypot(xX.x - P[j].x, xX.y - P[j].y);
+      if (!beste || tot < beste.tot) beste = { tot, i, j };
+    }
+  }
+  if (!beste) return null;
+  const pts = [];
+  for (let k = beste.i, teller = 0; ; k = (k + d + N) % N, teller++) {
+    pts.push(P[k]);
+    if (k === beste.j || teller > N) break;
+  }
+  const naarLL = p => ({ lat: LAT0 + p.y / M_LAT, lon: LON0 + p.x / M_LON, ronding: true });
+  return [...pts.map(naarLL), { lat: X.lat, lon: X.lon, ronding: false }];
+}
+
 function rondingBij(M, zijde, padIn, padUit, R) {
   const ver = lijst => lijst.find(p => afstandM(p, M) > 150) || lijst[0];
   const aan = koersNaar(ver(padIn.slice(0, -1).reverse()), M), af = koersNaar(M, ver(padUit.slice(1)));
@@ -100,7 +151,21 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
     if (Bp.lijn) rak.finish = puntOpLijn(A, Bp.lijn);
     if (!pad) { waarschuw(`Geen bevaarbare weg gevonden van ${A.id} naar ${Bp.id}.`); res.rakken.push(rak); return res; }
     // merkteken met rondingszijde (niet de finish): in plaats van het midden de boog eromheen
-    if (Bp.zijde && r < punten.length - 1 && paden[r] && o.ronding_m > 0) {
+    const zone = Bp.zone ? V.zones.find(z => z.id === Bp.zone) : null;
+    // het uitstappunt X: het eerste punt van de volgende weg dat ver genoeg van het merkteken ligt, maar niet het volgende merkteken zelf
+    const xKand = zone && Bp.zijde && r < punten.length - 1 && paden[r] ? paden[r].slice(1, -1).find(p => afstandM(p, Bp) > 150) : null;
+    if (zone && Bp.zijde && r < punten.length - 1 && paden[r] && xKand) {
+      // een zone met kant: de kortste weg om de zone heen, de zone aan die kant (geen boog van 30 m om het punt)
+      const X = xKand;
+      const E = [...pad].reverse().find(p => afstandM(p, Bp) > 150) || pad[0];
+      const wag = rondingOmZone(zone, Bp.zijde, E, X);
+      if (wag) {
+        const iX = paden[r].indexOf(X);
+        pad = [...pad.slice(0, pad.indexOf(E) + 1), ...wag];
+        paden[r] = [X, ...paden[r].slice(iX + 1)];
+        res.rondingen.push({ id: Bp.id, zijde: Bp.zijde, zone: zone.id, wijze: 'om de zone', punten: wag.length });
+      } else waarschuw(`Geen weg om ${Bp.id} heen gevonden.`);
+    } else if (Bp.zijde && r < punten.length - 1 && paden[r] && o.ronding_m > 0) {
       const rd = rondingBij(Bp, Bp.zijde, pad, paden[r], o.ronding_m);
       const { punten: _boog, ...ronding } = rd; res.rondingen.push(ronding);
       pad = [...pad.slice(0, -1), ...rd.punten];
