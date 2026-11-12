@@ -302,6 +302,14 @@
       sel.replaceChildren(...Object.keys(E.banen).map(k => el('option', { value: k }, namen[k] || k)));
       sel.value = S.selectie.baan || invoer().baanWL || E.standaard.baan;
       sel.onchange = () => { S.selectie.baan = sel.value; S.selectie.route = UITKOMST?.banen?.[sel.value]?.snelste?.naam || null; bewaar(); meld('selectie'); teken(); };
+      // route in de gekozen baan (tweede keuze)
+      const rsel = $('kaartRoute'), baan = E.banen[sel.value];
+      if (rsel && baan) {
+        const namen = baan.routes.map(r => r.naam);
+        rsel.replaceChildren(...namen.map(n => el('option', { value: n }, n)));
+        rsel.value = namen.includes(S.selectie.route) && S.selectie.baan === sel.value ? S.selectie.route : (UITKOMST?.banen?.[sel.value]?.snelste?.naam || namen[0]);
+        rsel.onchange = () => { S.selectie.baan = sel.value; S.selectie.route = rsel.value; bewaar(); meld('selectie'); teken(); };
+      }
     }
     const r = gekozenRoute();
     $('kaartRouteInfo').textContent = kaartRoute && r
