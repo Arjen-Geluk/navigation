@@ -76,7 +76,8 @@ if (vaargebied.betonning?.bestand) {
   betonning = { opgehaald: b.opgehaald, velden: ['naam', 'lat', 'lon', 'kleur', 'vorm', 'licht', 'drijvend'],
     rijen: b.markeringen.map(m => [m.naam, m.lat, m.lon, m.kleur || '', m.vorm || '', licht(m.licht), m.drijvend ? 1 : 0]) };
 }
-const gegevensJson = JSON.stringify({ bouw, vaargebied, edities, betonning, uitsneden: (w10?.havens?.uitsneden || []).filter(u => (w10.havens.actief || []).includes(u.id)), watermasker: w10 ? { raster: w10.raster, opgehaald: w10.opgehaald, monsterpunten: w10.monsterpunten, bron: 'IENC' } : null }).replace(/<\//g, '<\\/');
+const voorbeeldPolar = JSON.parse(lees('gegevens/voorbeeld_polar_vliegende_hollander.json'));
+const gegevensJson = JSON.stringify({ bouw, vaargebied, voorbeeldPolar, edities, betonning, uitsneden: (w10?.havens?.uitsneden || []).filter(u => (w10.havens.actief || []).includes(u.id)), watermasker: w10 ? { raster: w10.raster, opgehaald: w10.opgehaald, monsterpunten: w10.monsterpunten, bron: 'IENC' } : null }).replace(/<\//g, '<\\/');
 // Bodemraster: het gzip-bestand als base64; de pagina pakt het uit met DecompressionStream
 const bodemB64 = vaargebied.bodem ? readFileSync(join(MAP, 'gegevens', vaargebied.bodem.bestand)).toString('base64') : '';
 

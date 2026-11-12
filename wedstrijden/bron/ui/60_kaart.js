@@ -295,6 +295,14 @@
   op('polar', () => { kaartRoute = null; });
   $('kaartBereken').onclick = () => meld('bereken');
   function kaartBalk() {
+    // baankeuze op de kaart (dezelfde keuze als in het advies)
+    const sel = $('kaartBaan'), E = huidigeEditie();
+    if (sel && E) {
+      const namen = { K: 'Kort baan', M: 'Middel baan', L: 'Lang baan' };
+      sel.replaceChildren(...Object.keys(E.banen).map(k => el('option', { value: k }, namen[k] || k)));
+      sel.value = S.selectie.baan || invoer().baanWL || E.standaard.baan;
+      sel.onchange = () => { S.selectie.baan = sel.value; S.selectie.route = UITKOMST?.banen?.[sel.value]?.snelste?.naam || null; bewaar(); meld('selectie'); teken(); };
+    }
     const r = gekozenRoute();
     $('kaartRouteInfo').textContent = kaartRoute && r
       ? `${r.naam}: zeiltijd ${duur(kaartRoute.res.zeiltijd_ms)}, finish ${kloktijd(kaartRoute.res.finish)} (advies: ${duur(r.res.zeiltijd_ms)}). Klik op Bereken voor een nieuw advies met alle routes.`

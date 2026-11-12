@@ -110,6 +110,11 @@ const SCHIP = (function () {
 
   return { get actief() { return actief; }, bijWijziging: f => luisteraars.push(f), laad };
 })();
+// zonder polar: de verzonnen Vliegende Hollander, zodat de pagina direct te proberen is
+if (!SCHIP.actief && G.voorbeeldPolar) SCHIP.laad(G.voorbeeldPolar, '(voorbeeld)');
+// waarschuwing zolang de verzonnen Vliegende Hollander de polar is
+const dummyMelding = () => { const v = document.getElementById('dummyWaarschuwing'); if (v) v.hidden = !(SCHIP.actief && SCHIP.actief.schip.naam === 'Vliegende Hollander'); };
+dummyMelding(); op('polar', dummyMelding);
 
 // Instellingen per berekening (horen bij de pagina, niet in het polarbestand)
 (function () {
