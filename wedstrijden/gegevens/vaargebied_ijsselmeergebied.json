@@ -1,8 +1,8 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 4,
-  "datum": "2026-11-10",
+  "versie": 5,
+  "datum": "2026-11-12",
   "toelichting": "Bodem en betonning uit het ververs-script (beheer/ververs.mjs); streefpeilen met de hand (versie 3). Havens en doorgangen volgen.",
   "gebied": {
     "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
@@ -43,7 +43,7 @@
     "bestand": "bodem_ijsselmeergebied_50m.bin",
     "opname": 2022,
     "bron": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)",
-    "opgehaald": "2026-11-10",
+    "opgehaald": "2026-11-12",
     "cel_m": 50,
     "west": 4.9,
     "noord": 53.1,
@@ -56,7 +56,7 @@
   },
   "betonning": {
     "bestand": "betonning_ijsselmeergebied.json",
-    "opgehaald": "2026-11-10",
+    "opgehaald": "2026-11-12",
     "aantal": 1674,
     "bron": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"
   },
@@ -65,7 +65,7 @@
       "id": "buiten-ij",
       "naam": "Buiten-IJ (Amsterdam, Durgerdam)",
       "soort": "lijn",
-      "kader": { "zuid": 52.362, "west": 4.96, "noord": 52.4, "oost": 5.03 },
+      "kader": { "zuid": 52.355, "west": 4.96, "noord": 52.4, "oost": 5.045 },
       "reglement": "beurtveer 2.2.7, 2.9.7-8; strontrace 2.8.1",
       "lijnen": [
         {
@@ -167,7 +167,7 @@
       "id": "lelystad",
       "naam": "Lelystad, Houtribsluizen",
       "soort": "sluis",
-      "kader": { "zuid": 52.51, "west": 5.405, "noord": 52.55, "oost": 5.455 },
+      "kader": { "zuid": 52.495, "west": 5.4, "noord": 52.55, "oost": 5.455 },
       "reglement": "beurtveer 2.9.12; strontrace 2.8",
       "lijnen": [
         {
@@ -323,8 +323,8 @@
   ],
   "doorgangen": [],
   "bronnen": [
-    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-10" },
-    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-10" },
+    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-12" },
+    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-12" },
     {
       "onderdeel": "land en water (IENC van RWS, lokaal)",
       "url": "https://www.vaarweginformatie.nl/frp/page/infra_enc",

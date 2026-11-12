@@ -10,7 +10,7 @@ import { leesJson, schrijfJson } from './lib/json.mjs';
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const P = (naam, lat, lon, bron) => ({ naam, lat, lon, bron });
 const HAVENS = [
-  { id: 'buiten-ij', naam: 'Buiten-IJ (Amsterdam, Durgerdam)', soort: 'lijn', kader: [52.362, 4.960, 52.400, 5.030], reglement: 'beurtveer 2.2.7, 2.9.7-8; strontrace 2.8.1',
+  { id: 'buiten-ij', naam: 'Buiten-IJ (Amsterdam, Durgerdam)', soort: 'lijn', kader: [52.355, 4.960, 52.400, 5.045], reglement: 'beurtveer 2.2.7, 2.9.7-8; strontrace 2.8.1',
     lijnen: [{ id: 'buiten-ij', rol: 'finish heenreis / start terugreis / havengebied Amsterdam', status: 'bevestigd',
       punten: [P('vuurtoren Buiten-IJ (toren met wit-rood sectorlicht)', 52.371811, 5.01402, 'IENC'), P('dam tegenover de vuurtoren', 52.367966, 5.014437, 'gebruiker (kaart)')],
       toelichting: 'reglement: "de vuurtoren van het buiten-IJ en het rode havenlicht op de dam daar tegenover"; dat licht staat niet in de IENC, punt op de dam gekozen door de gebruiker (2026-11-12)' }] },
@@ -32,7 +32,7 @@ const HAVENS = [
       { id: 'naviduct-zuid', rol: 'verplicht motorgebied zuid (ND_5 – 3e rode staak op de dam)', status: 'bevestigd',
         punten: [P('KG 21', 52.686616, 5.287843, 'RWS'), P('3e rode staak op de dam', 52.684669, 5.290457, 'gebruiker (kaart)')],
         toelichting: 'ND 5 staat niet in de RWS-betonning of de IENC; de gebruiker koos KG 21 (2026-11-12)' }] },
-  { id: 'lelystad', naam: 'Lelystad, Houtribsluizen', soort: 'sluis', kader: [52.510, 5.405, 52.550, 5.455], reglement: 'beurtveer 2.9.12; strontrace 2.8',
+  { id: 'lelystad', naam: 'Lelystad, Houtribsluizen', soort: 'sluis', kader: [52.495, 5.400, 52.550, 5.455], reglement: 'beurtveer 2.9.12; strontrace 2.8',
     lijnen: [
       { id: 'lelystad-noord', rol: 'havengebied / motorgebied noord', status: 'bevestigd',
         punten: [P('HOUTRIBSLUIZEN KOP N DAM', 52.537685, 5.43674, 'RWS'), P('FR Deko Marine', 52.533886, 5.440895, 'IENC')] },
