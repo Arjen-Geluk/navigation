@@ -1143,14 +1143,23 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return el('table', { class: 'polar' }, el('thead', {}, kop1, kop2), el('tbody', {}, ...rijen, ...extraRijen));
     }
 
-    // polardiagram: halve cirkel, 0° boven, 180° onder; een lijn per gekozen windsnelheid
-    let diagramRijen = [4, 8, 12, 16, 20, 24];
-    function polarDiagram(P, doel, markeer = null) {
+    // polardiagram: halve cirkel, 0° boven, 180° onder; een lijn per gekozen windsnelheid.
+    // bftModus (tab Handmatig): een lijn per Bft, met de polarwaarde in het midden van die Bft.
+    let diagramRijen = [4, 8, 12, 16, 20, 24], diagramBft = [2, 3, 4, 5, 6];
+    function polarDiagram(P, doel, markeer = null, bftModus = false) {
       const ns = 'http://www.w3.org/2000/svg';
       const s = (tag, attr = {}, tekst) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v); if (tekst !== undefined) e.textContent = tekst; return e; };
       const H = 540, r0 = 205, cx = 56, cy = H / 2, B = Math.round(cx + r0 * 1.42);
-      const rijen = diagramRijen.filter(t => P.tws.includes(t));
-      const max = Math.max(2, Math.ceil(Math.max(0, ...rijen.flatMap(t => P.snelheid[P.tws.indexOf(t)].filter(v => v !== null))) / 2) * 2);
+      const keuzes = bftModus ? PT.BFT : P.tws, aan = bftModus ? diagramBft : diagramRijen;
+      const rijen = aan.filter(x => keuzes.includes(x));
+      const reeks = x => bftModus ? P.twa.map((a, j) => polarBij(P, j, PT.bftKn(x))) : P.snelheid[P.tws.indexOf(x)];
+      // stip: gemeten of handmatig; bij Bft gemeten als een kn-rij van die Bft bij die hoek gemeten is
+      const stip = (x, a, j) => {
+        if (!bftModus) { const h = P.herkomst[P.tws.indexOf(x)][j]; return ['data', 'handmatig'].includes(h) ? h : null; }
+        if (P.tws.some((t, i) => PT.bftVan(t) === x && P.herkomst[i][j] === 'data')) return 'data';
+        return P.invoer[j] && S.handmatig_bft[PT.sleutel(x, a)] !== undefined ? 'handmatig' : null;
+      };
+      const max = Math.max(2, Math.ceil(Math.max(0, ...rijen.flatMap(x => reeks(x).filter(v => v !== null))) / 2) * 2);
       const pt = (a, v) => [cx + Math.sin(a * Math.PI / 180) * v / max * r0, cy - Math.cos(a * Math.PI / 180) * v / max * r0];
       const svg = s('svg', { viewBox: `0 0 ${B} ${H}`, class: 'diagram', role: 'img', 'aria-label': 'Polardiagram' });
       // zeilstanden als zachte sectoren
@@ -1172,17 +1181,18 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       for (let v = 2; v <= max; v += 2) svg.append(s('path', { d: `M${cx} ${cy - v / max * r0}A${v / max * r0} ${v / max * r0} 0 0 1 ${cx} ${cy + v / max * r0}`, class: 'ring' }), s('text', { x: cx - 4, y: cy - v / max * r0 + 4, 'text-anchor': 'end', class: 'as' }, v + ' kn'));
       for (let a = 30; a < 180; a += 30) { const [x, y] = pt(a, max), [lx, ly] = pt(a, max * 0.93); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'ring' }), s('text', { x: lx, y: ly + 4, class: 'as', 'text-anchor': 'middle' }, a + '°')); }
       { const [x, y] = pt(P.kruishoek, max); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'kruis' })); }
-      rijen.forEach((t, k) => {
-        const i = P.tws.indexOf(t);
-        const d = P.twa.map((a, j) => P.snelheid[i][j] === null ? null : pt(a, P.snelheid[i][j])).filter(Boolean).map((p, n) => (n ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+      rijen.forEach((x, k) => {
+        const w = reeks(x);
+        const d = P.twa.map((a, j) => w[j] === null ? null : pt(a, w[j])).filter(Boolean).map((p, n) => (n ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
         const kleur = `var(--lijn${k % 6})`;
-        svg.append(s('path', { d, class: 'curve' + (markeer === t ? ' dik' : ''), stroke: kleur }));
-        P.twa.forEach((a, j) => { const h = P.herkomst[i][j]; if (P.snelheid[i][j] === null || !['data', 'handmatig'].includes(h)) return; const [x, y] = pt(a, P.snelheid[i][j]); svg.append(s('circle', { cx: x, cy: y, r: 3, class: 'punt-' + h, stroke: kleur })); });
+        svg.append(s('path', { d, class: 'curve' + (markeer === x ? ' dik' : ''), stroke: kleur }));
+        P.twa.forEach((a, j) => { const h = w[j] === null ? null : stip(x, a, j); if (!h) return; const [px, py] = pt(a, w[j]); svg.append(s('circle', { cx: px, cy: py, r: 3, class: 'punt-' + h, stroke: kleur })); });
       });
-      const keuze = el('div', { class: 'diagramkeuze' }, el('span', { class: 'sub' }, 'Windsnelheid: '),
-        ...P.tws.map(t => { const k = diagramRijen.indexOf(t); const b = el('button', { type: 'button', class: 'chipknop' + (k >= 0 ? ' aan' : ''), style: k >= 0 ? `--c:var(--lijn${rijen.indexOf(t) % 6})` : '' }, String(t));
-          b.addEventListener('click', () => { diagramRijen = k >= 0 ? diagramRijen.filter(x => x !== t) : [...diagramRijen, t].sort((a, b) => a - b); polarDiagram(P, doel, markeer); }); return b; }),
-        el('span', { class: 'sub' }, ' kn · ● gemeten  ○ handmatig'));
+      const zet = lijst => { if (bftModus) diagramBft = lijst; else diagramRijen = lijst; polarDiagram(P, doel, markeer, bftModus); };
+      const keuze = el('div', { class: 'diagramkeuze' }, el('span', { class: 'sub' }, bftModus ? 'Windkracht (Bft): ' : 'Windsnelheid: '),
+        ...keuzes.map(x => { const k = aan.indexOf(x); const b = el('button', { type: 'button', class: 'chipknop' + (k >= 0 ? ' aan' : ''), style: k >= 0 ? `--c:var(--lijn${rijen.indexOf(x) % 6})` : '' }, String(x));
+          b.addEventListener('click', () => zet(k >= 0 ? aan.filter(y => y !== x) : [...aan, x].sort((a, b) => a - b))); return b; }),
+        el('span', { class: 'sub' }, (bftModus ? ' Bft' : ' kn') + ' · ● gemeten  ○ handmatig'));
       doel.replaceChildren(keuze, svg);
     }
 
@@ -1221,7 +1231,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         return td;
       }, [], rijdef);
       $('#handtabel').replaceChildren(tabel);
-      polarDiagram(P, $('#handdiagram'));
+      polarDiagram(P, $('#handdiagram'), null, true);
     }
     $('#handwissen').addEventListener('click', () => {
       if (!Object.keys(S.handmatig_bft).length || !confirm('Alle handmatige waarden wissen?')) return;
