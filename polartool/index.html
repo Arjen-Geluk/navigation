@@ -41,6 +41,9 @@ main,footer{max-width:1280px;margin:0 auto;padding:0 16px}
 header{background:var(--navy);color:var(--navy-ink)}
 header .binnen{padding-top:16px}
 h1{font-size:21px;margin:0;letter-spacing:2px;font-weight:700;text-transform:uppercase;display:inline-block}
+.terug{display:block;width:max-content;margin:0 0 8px;padding:1px 10px;border:1px solid var(--navy-muted);border-radius:999px;color:var(--navy-muted);font-size:12px;text-decoration:none}
+.terug:hover{color:var(--navy-ink);border-color:var(--navy-ink)}
+.terug:focus-visible{outline:2px solid var(--navy-ink);outline-offset:2px}
 .toolversie{display:inline-block;margin-left:12px;font-size:12px;color:var(--navy-muted);letter-spacing:.3px}
 h1 .anker{display:inline-block;width:10px;height:10px;border:2px solid var(--navy-muted);border-radius:50%;margin-right:8px;vertical-align:1px}
 header .sub{color:var(--navy-muted)}
@@ -176,6 +179,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
 <body>
 <header>
   <div class="binnen">
+    <a class="terug" href="../">← Navigatie</a>
     <h1><span class="anker"></span>Polartool</h1><span class="toolversie" id="toolversie"></span>
     <div class="sub">Polar voor een platbodem opbouwen uit handmatige waarden en VDR-logs. Alles gebeurt in je browser; de tool slaat niets op en uploadt niets.</div>
     <div class="schipregel" id="schipregel" hidden></div>
@@ -462,7 +466,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { TWS, TWA, invoer, kruishoek: k };
     }
     const R = Math.PI / 180;
-    const TOOL = { naam: 'Polartool', versie: '0.13', datum: '2026-11-12' };   // ophogen bij elke wijziging die gebruikers merken
+    const TOOL = { naam: 'Polartool', versie: '0.14', datum: '2026-11-12' };   // ophogen bij elke wijziging die gebruikers merken
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };

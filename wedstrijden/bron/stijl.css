@@ -26,6 +26,9 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI
 header{background:var(--navy);color:var(--navy-ink)}
 header .binnen{padding-top:16px;padding-bottom:14px}
 h1{font-size:21px;margin:0;letter-spacing:2px;font-weight:700;text-transform:uppercase;display:inline-block}
+.terug{display:block;width:max-content;margin:0 0 8px;padding:1px 10px;border:1px solid var(--navy-muted);border-radius:999px;color:var(--navy-muted);font-size:12px;text-decoration:none}
+.terug:hover{color:var(--navy-ink);border-color:var(--navy-ink)}
+.terug:focus-visible{outline:2px solid var(--navy-ink);outline-offset:2px}
 h1 .anker{display:inline-block;width:10px;height:10px;border:2px solid var(--navy-muted);border-radius:50%;margin-right:8px;vertical-align:1px}
 h2{font-size:17px;margin:0 0 8px}
 .toolversie{display:inline-block;margin-left:12px;font-size:12px;color:var(--navy-muted);letter-spacing:.3px}

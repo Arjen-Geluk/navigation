@@ -48,6 +48,9 @@ portfoliosite).
   system bij, zodat de code en het design system gelijk blijven.
 - De huisstijl wordt van boven naar beneden ingezet: de landingspagina (root `index.html`) volgt hem
   al.
+- Elke pagina heeft in de kopbalk een terugknop (`<a class="terug">`) naar de pagina één niveau
+  hoger: een tool naar de landingspagina (`href="../"`, "← Navigatie"), de landingspagina naar de
+  portfoliosite (`https://arjen-geluk.github.io/`, "← Arjen Geluk").
 
 ## Favicon
 

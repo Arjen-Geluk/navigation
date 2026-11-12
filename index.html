@@ -30,12 +30,15 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI
 header{background:var(--navy);color:var(--navy-ink)}
 header .binnen{padding-top:16px;padding-bottom:14px}
 h1{font-size:21px;margin:0;letter-spacing:2px;font-weight:700;text-transform:uppercase;display:inline-block}
+.terug{display:block;width:max-content;margin:0 0 8px;padding:1px 10px;border:1px solid var(--navy-muted);border-radius:999px;color:var(--navy-muted);font-size:12px;text-decoration:none}
+.terug:hover{color:var(--navy-ink);border-color:var(--navy-ink)}
+.terug:focus-visible{outline:2px solid var(--navy-ink);outline-offset:2px}
 h1 .anker{display:inline-block;width:10px;height:10px;border:2px solid var(--navy-muted);border-radius:50%;margin-right:8px;vertical-align:1px}
 header .sub{color:var(--navy-muted)}
 .sub{color:var(--muted);font-size:13px}
 .paneel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0;box-shadow:0 1px 2px rgba(11,37,69,.04)}
 h2{font-size:14px;margin:0 0 8px;font-weight:650;color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
-.kaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.kaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:14px}
 a.kaart{display:block;border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-decoration:none;color:var(--ink);transition:border-color .15s ease}
 a.kaart:hover{border-color:var(--accent)}
 a.kaart:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -48,6 +51,7 @@ footer a{color:var(--accent)}
 <body>
 <header>
   <div class="binnen">
+    <a class="terug" href="https://arjen-geluk.github.io/">← Arjen Geluk</a>
     <h1><span class="anker"></span>Navigatie</h1>
     <div class="sub">Vaargebieden en wedstrijdberekeningen.</div>
   </div>
