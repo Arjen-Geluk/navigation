@@ -225,7 +225,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
   <div id="tab-handmatig" hidden>
     <section>
       <h2>Handmatig invullen</h2>
-      <p class="sub">Bootsnelheid in knopen per ware windsnelheid (rij, op 10 m hoogte) en ware windhoek (kolom). Vul per 10° in; de smalle 5°-kolommen tussen kruishoek en halve wind rekent de tool uit. Een handmatige waarde is een startpunt: zodra een vakje genoeg metingen heeft, gaat de meting voor. Leeg laten mag; grijze getallen zijn de huidige polar.</p>
+      <p class="sub">Bootsnelheid in knopen per geschatte windkracht in Beaufort (rij) en ware windhoek (kolom). Vul per 10° in; de smalle 5°-kolommen tussen kruishoek en halve wind rekent de tool uit. De tool zet je waarden om naar de polar per 2 kn: een Bft-waarde hoort bij het midden van die Bft, tussen twee ingevulde Bft's loopt de waarde lineair. Een handmatige waarde is een startpunt: zodra een vakje genoeg metingen heeft, gaat de meting voor. Leeg laten mag; grijze getallen zijn de huidige polar.</p>
       <div class="tabelvak" id="handtabel"></div>
       <div class="knoppenrij"><button class="knop tweede" id="handwissen">Alle handmatige waarden wissen</button></div>
       <div class="diagramvak" id="handdiagram"></div>
@@ -402,7 +402,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         <thead><tr><th>Herkomst</th><th>Betekenis</th></tr></thead>
         <tbody>
           <tr><td>gemeten</td><td>genoeg metingen in het vakje; donkerder bij meer metingen</td></tr>
-          <tr><td>handmatig</td><td>door jou ingevuld; wordt vervangen zodra er genoeg metingen zijn</td></tr>
+          <tr><td>handmatig</td><td>door jou ingevuld per Bft, omgezet naar de rijen van die Bft; wordt vervangen zodra er genoeg metingen zijn</td></tr>
           <tr><td>bestaande polar</td><td>uit een eerder ingelezen polar; idem</td></tr>
           <tr><td>gladgemaakt</td><td>gewogen gemiddelde van gemeten buurvakjes (tot 2 stappen verder, dichterbij en meer metingen telt zwaarder)</td></tr>
           <tr><td>geïnterpoleerd</td><td>lineair tussen bekende vakjes, eerst per windhoek (met 0 kn bij 0 kn wind), dan per windsnelheid</td></tr>
@@ -413,6 +413,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       <h2 id="u-raster">7. Raster, zeilstanden en zwaard</h2>
       <ul>
         <li><strong>Windsnelheid:</strong> 2 tot 40 kn per 2 kn, ware wind op 10 m. In de tabel ook in m/s en Beaufort (Bft = (v[m/s] / 0,836)^(2/3), afgerond).</li>
+        <li><strong>Handmatig per Beaufort:</strong> je vult Bft 1 tot en met 8 in, zoals je de wind aan boord schat. Elke kn-rij hoort bij de Bft waarin hij valt (Bft 3 = 7–10 kn: de rijen 8 en 10). Een Bft-waarde geldt in het midden van die Bft (v = 0,836 · B^1,5 m/s, voor Bft 3 ongeveer 8,4 kn). Is de buur-Bft ook ingevuld, dan loopt de waarde daar lineair naartoe; anders geldt de ingevulde waarde voor de hele Bft. Bft's die je leeg laat, vult de tool aan zoals elk ander leeg vakje.</li>
         <li><strong>Windhoek:</strong> vanaf de max kruishoek uit het profiel tot 180°. Van kruishoek tot halve wind (100°) per 5°, daarna per 10°. Je vult per 10° in en metingen tellen per 10°; de 5°-waarden zijn lineaire tussenwaarden, zodat het routemodel aan de wind fijner kan rekenen.</li>
         <li><strong>Hoger dan de kruishoek</strong> zeilt het schip niet; het routemodel kruist dan op de hoek met de beste snelheid naar de wind toe (VMG).</li>
         <li><strong>Zeilstanden:</strong> aan de wind (kruishoek–60°), knik in de schoot (60–80°), halve wind (80–100°), ruime wind (100–150°), voor de wind (150–180°).</li>
@@ -778,6 +779,37 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { waarde: vak.map(r => r.map(waarde)), n: vak.map(r => r.map(v => v.length)), bronnen: herk };
     }
 
+    /* Handmatig invullen gebeurt per Beaufort (de schatting van de schipper), Bft 1 tot en met 8.
+       Midden van een Bft: v = 0,836 · B^1,5 m/s. Een kn-rij hoort bij de Bft waarin hij valt (afgerond).
+       Naar het kn-raster: alleen rijen van een ingevulde Bft krijgen een handmatige waarde; lineair naar het midden
+       van de buur-Bft als die ook is ingevuld, anders de waarde van de eigen Bft. Opslag: handmatig_bft { 'B_twa': kn }. */
+    const BFT = [1, 2, 3, 4, 5, 6, 7, 8];
+    const bftVan = kn => Math.round(Math.pow(kn * 0.514444 / 0.836, 2 / 3));
+    const bftKn = b => 0.836 * Math.pow(b, 1.5) / 0.514444;
+    function handmatigKn(S) {
+      const hb = S.handmatig_bft || {}, uit = {};
+      for (const [k, v] of Object.entries(hb)) {
+        const [b, a] = k.split('_').map(Number);
+        for (const t of TWS) {
+          if (bftVan(t) !== b) continue;
+          const c = bftKn(b), nb = t >= c ? b + 1 : b - 1, vn = hb[sleutel(nb, a)];
+          uit[sleutel(t, a)] = vn === undefined ? v : v + (vn - v) * (t - c) / (bftKn(nb) - c);
+        }
+      }
+      return uit;
+    }
+    // oudere bestanden hadden handmatige waarden per kn-rij: per Bft de waarde in het midden (lineair, aan de rand vastgehouden)
+    function handmatigNaarBft(hk) {
+      const kol = {};
+      for (const [k, v] of Object.entries(hk || {})) { const [t, a] = k.split('_').map(Number); (kol[a] = kol[a] || []).push([t, v]); }
+      const uit = {};
+      for (const [a, p] of Object.entries(kol)) {
+        p.sort((x, y) => x[0] - y[0]);
+        for (const b of BFT) if (p.some(([t]) => bftVan(t) === b)) uit[sleutel(b, +a)] = Math.round(interp(bftKn(b), p) * 10) / 10;
+      }
+      return uit;
+    }
+
     // waarde uit een eerder ingelezen polar (op waarde opgezocht, dus los van het raster)
     function basisWaarde(basis, tws, twa) {
       if (!basis || basis.actief === false) return null;
@@ -796,11 +828,11 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       const minN = S.instellingen.filters.minPunten;
       const V = vakkenUitBronnen(S.bronnen, S.instellingen.polarwaarde, HK);
       const W = TWS.map(() => HK.map(() => null)), H = TWS.map(() => HK.map(() => 'leeg'));
-      const uitg = new Set(S.uitgesloten || []);
+      const uitg = new Set(S.uitgesloten || []), HM = handmatigKn(S);
       for (let i = 0; i < TWS.length; i++) for (let j = 0; j < HK.length; j++) {
         const k = sleutel(TWS[i], HK[j]), b = basisWaarde(S.basis, TWS[i], HK[j]);
         if (!uitg.has(k) && V.n[i][j] >= minN) { W[i][j] = V.waarde[i][j]; H[i][j] = 'data'; }
-        else if (S.handmatig && S.handmatig[k] !== undefined) { W[i][j] = S.handmatig[k]; H[i][j] = 'handmatig'; }
+        else if (HM[k] !== undefined) { W[i][j] = HM[k]; H[i][j] = 'handmatig'; }
         else if (b !== null) { W[i][j] = b; H[i][j] = 'bestaand'; }
       }
       // gladmaken vanuit gemeten buurvakjes
@@ -914,7 +946,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
           overstagverlies_s: null, gijpverlies_s: null, windhoogtefactor: 1.0, windmeter_hoogte_m: null,
           zwaard_per_zeilstand: Object.fromEntries(ZEILSTANDEN.map(z => [z.naam, z.zwaard])) },
         instellingen: { polarwaarde: 'mediaan', filters: { ...STANDAARD_FILTERS } },
-        zwaard: {}, handmatig: {}, uitgesloten: [], basis: null, bronnen: [],     // zwaard: afwijkingen van de standaard per windhoek
+        zwaard: {}, handmatig_bft: {}, uitgesloten: [], basis: null, bronnen: [],     // zwaard: afwijkingen van de standaard per windhoek
       };
     }
     function naarBestand(S, polair) {
@@ -929,7 +961,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
           snelheid_kn: polair.snelheid, herkomst: polair.herkomst, aantal_punten: polair.n,
           zwaardstand: polair.twa.map(a => zwaardVoor(S, a)),
           zeilstanden: ZEILSTANDEN.map(z => ({ naam: z.naam, tot_graden: Math.min(z.tot, 180) })) },
-        instellingen: S.instellingen, zwaard: S.zwaard, handmatig: S.handmatig, uitgesloten: S.uitgesloten, basis: S.basis,
+        instellingen: S.instellingen, zwaard: S.zwaard, handmatig_bft: S.handmatig_bft, uitgesloten: S.uitgesloten, basis: S.basis,
         bronnen: S.bronnen,
       };
     }
@@ -943,7 +975,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
         Object.assign(S, { versie: o.versie || 0, aangemaakt: o.aangemaakt, gewijzigd: o.gewijzigd,
           schip: { ...S.schip, ...o.schip, zwaard_per_zeilstand: { ...S.schip.zwaard_per_zeilstand, ...(o.schip || {}).zwaard_per_zeilstand } },
           instellingen: { ...S.instellingen, ...o.instellingen, filters: { ...STANDAARD_FILTERS, ...(o.instellingen || {}).filters } },
-          zwaard, handmatig: o.handmatig || {}, uitgesloten: o.uitgesloten || [],
+          zwaard, handmatig_bft: o.handmatig_bft || handmatigNaarBft(o.handmatig), uitgesloten: o.uitgesloten || [],
           basis: o.basis || null, bronnen: o.bronnen || [] });
         return { S, soort: 'polartool' };
       }
@@ -972,7 +1004,8 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
     function vingerafdruk(inv, sha256) { return { start: inv.start, eind: inv.eind, sha256 }; }
 
     return { TOOL, TWS, KRUISHOEK, ZEILSTANDEN, raster, zeilstand, voorstelTijdvakken, FORMAAT, STANDAARD_FILTERS, GEWICHT, VdrParser, tienSeconden, stabielePunten, bouwPolair, plausibiliteit, motorVermoed,
-      nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, zwaardVoor, nieuwId, kwantiel };
+      nieuweStaat, naarBestand, vanBestand, vingerafdruk, sleutel, zwaardStandaard, zwaardVoor, nieuwId, kwantiel,
+      BFT, bftVan, bftKn, handmatigKn, handmatigNaarBft };
   })();
 </script>
 <script id="app">
@@ -1102,24 +1135,35 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       tussenwaarde: 'tussenwaarde van de 5°-kolom', leeg: 'leeg',
     };
     // kop met zeilstanden en windhoeken, rijen met kn, m/s en Bft; cel(i, j, a) levert de inhoud
-    function polarTabel(P, cel, extraRijen = []) {
+    // rijdef: andere rijkoppen (Handmatig gebruikt Bft-rijen); standaard de kn-rijen van het raster
+    function polarTabel(P, cel, extraRijen = [], rijdef = null) {
+      const rd = rijdef || { koppen: ['kn', 'm/s', 'Bft'], rijen: P.tws.map(t => [String(t), fmt(t * 0.514444, 1), String(bft(t))]) };
       const groepen = [];
       P.twa.forEach(a => { const z = PT.zeilstand(a).naam; const l = groepen[groepen.length - 1]; if (l && l.naam === z) l.n++; else groepen.push({ naam: z, n: 1 }); });
-      const kop1 = el('tr', { class: 'standen' }, el('th', { colspan: 3 }, 'zeilstand'), ...groepen.map(g => el('th', { colspan: g.n }, g.naam)));
-      const kop2 = el('tr', {}, el('th', {}, 'kn'), el('th', {}, 'm/s'), el('th', {}, 'Bft'), ...P.twa.map((a, j) => el('th', { class: P.invoer[j] ? '' : 'tussen' }, a + '°')));
-      const rijen = P.tws.map((t, i) => el('tr', {}, el('th', {}, String(t)), el('td', { class: 'eenh' }, fmt(t * 0.514444, 1)), el('td', { class: 'eenh' }, String(bft(t))),
+      const kop1 = el('tr', { class: 'standen' }, el('th', { colspan: rd.koppen.length }, 'zeilstand'), ...groepen.map(g => el('th', { colspan: g.n }, g.naam)));
+      const kop2 = el('tr', {}, ...rd.koppen.map(k => el('th', {}, k)), ...P.twa.map((a, j) => el('th', { class: P.invoer[j] ? '' : 'tussen' }, a + '°')));
+      const rijen = rd.rijen.map((r, i) => el('tr', {}, el('th', {}, r[0]), ...r.slice(1).map(x => el('td', { class: 'eenh' }, x)),
         ...P.twa.map((a, j) => cel(i, j, a))));
       return el('table', { class: 'polar' }, el('thead', {}, kop1, kop2), el('tbody', {}, ...rijen, ...extraRijen));
     }
 
-    // polardiagram: halve cirkel, 0° boven, 180° onder; een lijn per gekozen windsnelheid
-    let diagramRijen = [4, 8, 12, 16, 20, 24];
-    function polarDiagram(P, doel, markeer = null) {
+    // polardiagram: halve cirkel, 0° boven, 180° onder; een lijn per gekozen windsnelheid.
+    // bftModus (tab Handmatig): een lijn per Bft, met de polarwaarde in het midden van die Bft.
+    let diagramRijen = [4, 8, 12, 16, 20, 24], diagramBft = [2, 3, 4, 5, 6];
+    function polarDiagram(P, doel, markeer = null, bftModus = false) {
       const ns = 'http://www.w3.org/2000/svg';
       const s = (tag, attr = {}, tekst) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attr)) e.setAttribute(k, v); if (tekst !== undefined) e.textContent = tekst; return e; };
       const H = 540, r0 = 205, cx = 56, cy = H / 2, B = Math.round(cx + r0 * 1.42);
-      const rijen = diagramRijen.filter(t => P.tws.includes(t));
-      const max = Math.max(2, Math.ceil(Math.max(0, ...rijen.flatMap(t => P.snelheid[P.tws.indexOf(t)].filter(v => v !== null))) / 2) * 2);
+      const keuzes = bftModus ? PT.BFT : P.tws, aan = bftModus ? diagramBft : diagramRijen;
+      const rijen = aan.filter(x => keuzes.includes(x));
+      const reeks = x => bftModus ? P.twa.map((a, j) => polarBij(P, j, PT.bftKn(x))) : P.snelheid[P.tws.indexOf(x)];
+      // stip: gemeten of handmatig; bij Bft gemeten als een kn-rij van die Bft bij die hoek gemeten is
+      const stip = (x, a, j) => {
+        if (!bftModus) { const h = P.herkomst[P.tws.indexOf(x)][j]; return ['data', 'handmatig'].includes(h) ? h : null; }
+        if (P.tws.some((t, i) => PT.bftVan(t) === x && P.herkomst[i][j] === 'data')) return 'data';
+        return P.invoer[j] && S.handmatig_bft[PT.sleutel(x, a)] !== undefined ? 'handmatig' : null;
+      };
+      const max = Math.max(2, Math.ceil(Math.max(0, ...rijen.flatMap(x => reeks(x).filter(v => v !== null))) / 2) * 2);
       const pt = (a, v) => [cx + Math.sin(a * Math.PI / 180) * v / max * r0, cy - Math.cos(a * Math.PI / 180) * v / max * r0];
       const svg = s('svg', { viewBox: `0 0 ${B} ${H}`, class: 'diagram', role: 'img', 'aria-label': 'Polardiagram' });
       // zeilstanden als zachte sectoren
@@ -1141,49 +1185,61 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       for (let v = 2; v <= max; v += 2) svg.append(s('path', { d: `M${cx} ${cy - v / max * r0}A${v / max * r0} ${v / max * r0} 0 0 1 ${cx} ${cy + v / max * r0}`, class: 'ring' }), s('text', { x: cx - 4, y: cy - v / max * r0 + 4, 'text-anchor': 'end', class: 'as' }, v + ' kn'));
       for (let a = 30; a < 180; a += 30) { const [x, y] = pt(a, max), [lx, ly] = pt(a, max * 0.93); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'ring' }), s('text', { x: lx, y: ly + 4, class: 'as', 'text-anchor': 'middle' }, a + '°')); }
       { const [x, y] = pt(P.kruishoek, max); svg.append(s('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'kruis' })); }
-      rijen.forEach((t, k) => {
-        const i = P.tws.indexOf(t);
-        const d = P.twa.map((a, j) => P.snelheid[i][j] === null ? null : pt(a, P.snelheid[i][j])).filter(Boolean).map((p, n) => (n ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+      rijen.forEach((x, k) => {
+        const w = reeks(x);
+        const d = P.twa.map((a, j) => w[j] === null ? null : pt(a, w[j])).filter(Boolean).map((p, n) => (n ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
         const kleur = `var(--lijn${k % 6})`;
-        svg.append(s('path', { d, class: 'curve' + (markeer === t ? ' dik' : ''), stroke: kleur }));
-        P.twa.forEach((a, j) => { const h = P.herkomst[i][j]; if (P.snelheid[i][j] === null || !['data', 'handmatig'].includes(h)) return; const [x, y] = pt(a, P.snelheid[i][j]); svg.append(s('circle', { cx: x, cy: y, r: 3, class: 'punt-' + h, stroke: kleur })); });
+        svg.append(s('path', { d, class: 'curve' + (markeer === x ? ' dik' : ''), stroke: kleur }));
+        P.twa.forEach((a, j) => { const h = w[j] === null ? null : stip(x, a, j); if (!h) return; const [px, py] = pt(a, w[j]); svg.append(s('circle', { cx: px, cy: py, r: 3, class: 'punt-' + h, stroke: kleur })); });
       });
-      const keuze = el('div', { class: 'diagramkeuze' }, el('span', { class: 'sub' }, 'Windsnelheid: '),
-        ...P.tws.map(t => { const k = diagramRijen.indexOf(t); const b = el('button', { type: 'button', class: 'chipknop' + (k >= 0 ? ' aan' : ''), style: k >= 0 ? `--c:var(--lijn${rijen.indexOf(t) % 6})` : '' }, String(t));
-          b.addEventListener('click', () => { diagramRijen = k >= 0 ? diagramRijen.filter(x => x !== t) : [...diagramRijen, t].sort((a, b) => a - b); polarDiagram(P, doel, markeer); }); return b; }),
-        el('span', { class: 'sub' }, ' kn · ● gemeten  ○ handmatig'));
+      const zet = lijst => { if (bftModus) diagramBft = lijst; else diagramRijen = lijst; polarDiagram(P, doel, markeer, bftModus); };
+      const keuze = el('div', { class: 'diagramkeuze' }, el('span', { class: 'sub' }, bftModus ? 'Windkracht (Bft): ' : 'Windsnelheid: '),
+        ...keuzes.map(x => { const k = aan.indexOf(x); const b = el('button', { type: 'button', class: 'chipknop' + (k >= 0 ? ' aan' : ''), style: k >= 0 ? `--c:var(--lijn${rijen.indexOf(x) % 6})` : '' }, String(x));
+          b.addEventListener('click', () => zet(k >= 0 ? aan.filter(y => y !== x) : [...aan, x].sort((a, b) => a - b))); return b; }),
+        el('span', { class: 'sub' }, (bftModus ? ' Bft' : ' kn') + ' · ● gemeten  ○ handmatig'));
       doel.replaceChildren(keuze, svg);
     }
 
     /* ---------- handmatig ---------- */
     function huidigePolair() { if (!polair) polair = PT.bouwPolair(S); return polair; }
+    // Beaufortschaal: kn en m/s per Bft (KNMI)
+    const BFT_KN = ['1–3', '4–6', '7–10', '11–16', '17–21', '22–27', '28–33', '34–40'];
+    const BFT_MS = ['0,3–1,5', '1,6–3,3', '3,4–5,4', '5,5–7,9', '8,0–10,7', '10,8–13,8', '13,9–17,1', '17,2–20,7'];
+    // waarde van de huidige polar in kolom j bij een windsnelheid tussen de kn-rijen (lineair, 0 bij 0 kn)
+    function polarBij(P, j, kn) {
+      const p = [[0, 0], ...P.tws.map((t, i) => [t, P.snelheid[i][j]]).filter(x => x[1] !== null)];
+      if (p.length < 2) return null;
+      for (let k = 1; k < p.length; k++) if (kn <= p[k][0]) return p[k - 1][1] + (p[k][1] - p[k - 1][1]) * (kn - p[k - 1][0]) / (p[k][0] - p[k - 1][0]);
+      return p[p.length - 1][1];
+    }
     function tekenHandmatig() {
       const P = huidigePolair();
+      const rijdef = { koppen: ['Bft', 'kn', 'm/s'], rijen: PT.BFT.map(b => [String(b), BFT_KN[b - 1], BFT_MS[b - 1]]) };
       const tabel = polarTabel(P, (i, j, a) => {
-        const t = P.tws[i];
-        if (!P.invoer[j]) return el('td', { class: 'tussen', title: 'Tussenwaarde: rekent de tool uit' }, P.snelheid[i][j] === null ? '' : fmt(P.snelheid[i][j], 1));
-        const k = PT.sleutel(t, a), w = S.handmatig[k];
-        const inp = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t} kn wind, ${a}°`, value: w !== undefined ? fmt(w) : '' });
-        if (P.snelheid[i][j] !== null && P.herkomst[i][j] !== 'handmatig') inp.placeholder = fmt(P.snelheid[i][j], 1);
+        const b = PT.BFT[i], huidig = polarBij(P, j, PT.bftKn(b));
+        if (!P.invoer[j]) return el('td', { class: 'tussen', title: 'Tussenwaarde: rekent de tool uit' }, huidig === null ? '' : fmt(huidig, 1));
+        const k = PT.sleutel(b, a), w = S.handmatig_bft[k];
+        const inp = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': `Bft ${b}, ${a}°`, value: w !== undefined ? fmt(w) : '' });
+        if (w === undefined && huidig !== null) inp.placeholder = fmt(huidig, 1);
         const td = el('td', { class: 'inv' + (w !== undefined ? ' gevuld' : '') }, inp);
         inp.addEventListener('change', () => {
           const v = getal(inp.value);
           const fout = Number.isNaN(v) || (v !== null && (v < 0 || v > 20));
           td.classList.toggle('fout', fout); inp.title = fout ? 'Vul een snelheid tussen 0 en 20 kn in' : '';
           if (fout) return;
-          if (v === null) delete S.handmatig[k]; else S.handmatig[k] = v;
+          if (v === null) delete S.handmatig_bft[k]; else S.handmatig_bft[k] = v;
           wijzig(); tekenHandmatig();
           const volgende = [...$('#handtabel').querySelectorAll('input')].find(x => x.getAttribute('aria-label') === inp.getAttribute('aria-label'));
           if (volgende) volgende.focus();
         });
         return td;
-      });
+      }, [], rijdef);
       $('#handtabel').replaceChildren(tabel);
-      polarDiagram(P, $('#handdiagram'));
+      polarDiagram(P, $('#handdiagram'), null, true);
     }
     $('#handwissen').addEventListener('click', () => {
-      if (!Object.keys(S.handmatig).length || !confirm('Alle handmatige waarden wissen?')) return;
-      S.handmatig = {}; wijzig(); tekenHandmatig();
+      if (!Object.keys(S.handmatig_bft).length || !confirm('Alle handmatige waarden wissen?')) return;
+      S.handmatig_bft = {}; wijzig(); tekenHandmatig();
     });
 
     /* ---------- controle en opslaan ---------- */
@@ -1259,7 +1315,8 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       }
       const bw = S.basis && S.basis.actief !== false ? (() => { const ti = (S.basis.tws_kn || []).indexOf(t), ta = (S.basis.twa_graden || []).indexOf(a); return ti < 0 || ta < 0 ? null : S.basis.snelheid[ti][ta]; })() : null;
       if (bw !== null && bw !== undefined && h === 'data' && Math.abs(w - bw) / bw > 0.15) meldingen.push(`De metingen wijken ${Math.round((w / bw - 1) * 100)}% af van de bestaande polar (${fmt(bw, 1)} kn).`);
-      if (S.handmatig[k] !== undefined && h === 'data' && Math.abs(w - S.handmatig[k]) / S.handmatig[k] > 0.15) meldingen.push(`De metingen wijken ${Math.round((w / S.handmatig[k] - 1) * 100)}% af van je handmatige waarde (${fmt(S.handmatig[k], 1)} kn).`);
+      const hw = PT.handmatigKn(S)[k], bt = PT.bftVan(t), kb = PT.sleutel(bt, a);
+      if (hw !== undefined && h === 'data' && Math.abs(w - hw) / hw > 0.15) meldingen.push(`De metingen wijken ${Math.round((w / hw - 1) * 100)}% af van je handmatige waarde (${fmt(hw, 1)} kn).`);
       if (rijen.length) delen.push(el('table', { class: 'lijst' },
         el('thead', {}, el('tr', {}, el('th', {}, 'Bron'), el('th', { class: 'num' }, 'blokken'), el('th', { class: 'num' }, 'mediaan'), el('th', { class: 'num' }, 'p75'), el('th', { class: 'num' }, 'gem.'), el('th', { class: 'num' }, 'spreiding'))),
         el('tbody', {}, ...rijen)));
@@ -1267,16 +1324,17 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       if (h !== 'data' && P.n[i][j] > 0 && P.n[i][j] < S.instellingen.filters.minPunten) delen.push(el('p', { class: 'sub' }, `${P.n[i][j]} blokken: te weinig om mee te tellen (minimaal ${S.instellingen.filters.minPunten}).`));
       for (const m of meldingen) delen.push(el('div', { class: 'melding let' }, m + ' Mogelijk een ander schip, andere zeilvoering of een meetfout.'));
       // bewerken: handmatige waarde en uitsluiten
-      const inp = el('input', { type: 'text', inputmode: 'decimal', value: S.handmatig[k] !== undefined ? fmt(S.handmatig[k]) : '', 'aria-label': 'Handmatige waarde' });
+      // handmatig gaat per Bft: deze kn-rij valt in Bft bt; de waarde geldt voor alle kn-rijen van die Bft bij deze windhoek
+      const inp = el('input', { type: 'text', inputmode: 'decimal', value: S.handmatig_bft[kb] !== undefined ? fmt(S.handmatig_bft[kb]) : '', 'aria-label': `Handmatige waarde Bft ${bt}` });
       const zet = el('button', { class: 'klein', type: 'button' }, 'opslaan in polar');
       zet.addEventListener('click', () => {
         const v = getal(inp.value);
         if (Number.isNaN(v) || (v !== null && (v < 0 || v > 20))) { inp.style.borderColor = 'var(--bad)'; return; }
-        if (v === null) delete S.handmatig[k]; else S.handmatig[k] = v;
+        if (v === null) delete S.handmatig_bft[kb]; else S.handmatig_bft[kb] = v;
         wijzig(); tekenControle();
       });
-      delen.push(el('div', { class: 'detailregel' }, el('label', {}, 'Handmatige waarde (kn):'), inp, zet,
-        el('span', { class: 'sub' }, h === 'data' ? 'Telt alleen als de metingen wegvallen.' : 'Leeg = geen handmatige waarde.')));
+      delen.push(el('div', { class: 'detailregel' }, el('label', {}, `Handmatige waarde voor Bft ${bt} bij ${a}° (kn):`), inp, zet,
+        el('span', { class: 'sub' }, (h === 'data' ? 'Telt alleen als de metingen wegvallen. ' : 'Leeg = geen handmatige waarde. ') + `Geldt voor alle rijen van Bft ${bt} (${BFT_KN[bt - 1]} kn).`)));
       if (P.n[i][j] > 0 || S.uitgesloten.includes(k)) {
         const uit = S.uitgesloten.includes(k);
         const knop = el('button', { class: 'klein', type: 'button' }, uit ? 'Metingen weer laten meetellen' : 'Metingen in dit vakje uitsluiten');

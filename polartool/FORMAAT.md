@@ -54,8 +54,13 @@ Voorbeeld met een verzonnen schip: [`voorbeeld/voorbeeldschip_polar_v1_2026-11-0
 Lees de rijen en kolommen altijd uit `tws_kn` en `twa_graden`. Ga er niet van uit dat ze vastliggen: de kolommen hangen
 af van de kruishoek van het schip, en een latere versie kan meer rijen hebben.
 
-De overige velden (`instellingen`, `zwaard`, `handmatig`, `uitgesloten`, `basis`, `bronnen`) zijn voor de polartool zelf
-en bevatten onder andere alle metingen. Een routemodel gebruikt ze niet.
+De overige velden (`instellingen`, `zwaard`, `handmatig_bft`, `uitgesloten`, `basis`, `bronnen`) zijn voor de polartool
+zelf en bevatten onder andere alle metingen. Een routemodel gebruikt ze niet.
+
+`handmatig_bft` bevat de handmatige schattingen van de schipper per Beaufort (Bft 1–8) en windhoek, als
+`{ "B_twa": kn }`. De polartool zet ze om naar de kn-rijen van `polair.snelheid_kn` (herkomst `handmatig`). Bestanden
+van vóór Polartool 0.13 hadden in plaats daarvan `handmatig` per kn-rij (`{ "tws_twa": kn }`); de polartool leest die
+nog en zet ze bij het inlezen om naar Bft.
 
 ## Gebruiksregels voor de polar
 
