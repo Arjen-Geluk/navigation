@@ -44,6 +44,8 @@ function standaardStaat() {
 let S = standaardStaat();
 try { const o = JSON.parse(localStorage.getItem(OPSLAG) || 'null'); if (o && o.v === 1) S = { ...S, ...o, kaart: { ...S.kaart, ...o.kaart, lagen: { ...S.kaart.lagen, ...(o.kaart || {}).lagen } } }; } catch (e) { /* geen opslag */ }
 if (!EDITIES[S.editie]) S.editie = aankomendeEditie();
+// bij elk openen van de pagina de datum van vandaag (de tijden en de baan blijven staan)
+if (S.per[S.editie]) S.per[S.editie].datum = vandaagIso();
 if (typeof S.peil === 'number') { S.peilKeuze = 'hand'; S.peilHand = S.peil; } delete S.peil;          // oud formaat (0.5)
 if (!['vast', 'topo', 'foto'].includes(S.kaart.ondergrond)) S.kaart.ondergrond = 'vast';
 if (S.wind.aanpassingen && Object.values(S.wind.aanpassingen).some(a => 'draai' in a)) S.wind.aanpassingen = {};   // oud formaat: per uur, nu per uur en plaats
