@@ -40,7 +40,7 @@ function convexRomp(pts) {
 // Ronden van een verboden zone aan de voorgeschreven kant: de kortste weg van het instappunt E naar het uitstappunt X,
 // met de zone aan die kant (sb = rechtsom om de zone, bb = linksom), op de rand van de zone plus de marge.
 // Geeft de punten van de weg (E niet, X wel), of null als er geen weg is.
-function rondingOmZone(zone, zijde, E, X) {
+function rondingOmZone(zone, zijde, E, X, M) {
   const H = convexRomp(zone.xy), n0 = H.length, marge = zone.marge;
   const P = [];                                                          // rand plus marge, per zijde van de romp
   for (let i = 0; i < n0; i++) {
@@ -60,12 +60,19 @@ function rondingOmZone(zone, zijde, E, X) {
   if (vrij(xE, xX) && (zijde === 'bb' ? cruis(xE, xX) > 0 : cruis(xE, xX) < 0))
     return [{ lat: X.lat, lon: X.lon, ronding: false }];
   const loop = (i, j) => d > 0 ? (S[j] - S[i] + L) % L : (S[i] - S[j] + L) % L;
+  // noordkardinaal: de weg passeert de zone aan de noordkant van het merkteken (het punt 300 m ten noorden ervan)
+  let kN = 0;
+  if (M) {
+    const mxy = naarXY(M.lat, M.lon), nw = { x: mxy.x, y: mxy.y + 300 };
+    for (let k = 1; k < N; k++) if (Math.hypot(P[k].x - nw.x, P[k].y - nw.y) < Math.hypot(P[kN].x - nw.x, P[kN].y - nw.y)) kN = k;
+  }
   let beste = null;
   for (let i = 0; i < N; i++) {
     if (!vrij(xE, P[i])) continue;
     const eI = Math.hypot(P[i].x - xE.x, P[i].y - xE.y);
     for (let j = 0; j < N; j++) {
       if (!vrij(P[j], xX)) continue;
+      if (M && loop(i, kN) > loop(i, j) + 1e-6) continue;   // de weg moet langs de noordkant
       const tot = eI + loop(i, j) + Math.hypot(xX.x - P[j].x, xX.y - P[j].y);
       if (!beste || tot < beste.tot) beste = { tot, i, j };
     }
@@ -153,16 +160,17 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
     // merkteken met rondingszijde (niet de finish): in plaats van het midden de boog eromheen
     const zone = Bp.zone ? V.zones.find(z => z.id === Bp.zone) : null;
     // het uitstappunt X: het eerste punt van de volgende weg dat ver genoeg van het merkteken ligt, maar niet het volgende merkteken zelf
-    const xKand = zone && Bp.zijde && r < punten.length - 1 && paden[r] ? paden[r].slice(1, -1).find(p => afstandM(p, Bp) > 150) : null;
+    const xKand = zone && Bp.zijde && r < punten.length - 1 && paden[r] ? paden[r].slice(1).find(p => afstandM(p, Bp) > 150) : null;
     if (zone && Bp.zijde && r < punten.length - 1 && paden[r] && xKand) {
       // een zone met kant: de kortste weg om de zone heen, de zone aan die kant (geen boog van 30 m om het punt)
       const X = xKand;
       const E = [...pad].reverse().find(p => afstandM(p, Bp) > 150) || pad[0];
-      const wag = rondingOmZone(zone, Bp.zijde, E, X);
+      const wag = rondingOmZone(zone, Bp.zijde, E, X, Bp);
       if (wag) {
         const iX = paden[r].indexOf(X);
         pad = [...pad.slice(0, pad.indexOf(E) + 1), ...wag];
         paden[r] = [X, ...paden[r].slice(iX + 1)];
+        if (paden[r].length < 2) paden[r].push(X);   // het uitstappunt is het volgende merkteken zelf
         res.rondingen.push({ id: Bp.id, zijde: Bp.zijde, zone: zone.id, wijze: 'om de zone', punten: wag.length });
       } else waarschuw(`Geen weg om ${Bp.id} heen gevonden.`);
     } else if (Bp.zijde && r < punten.length - 1 && paden[r] && o.ronding_m > 0) {
