@@ -213,7 +213,7 @@
         }
       }
       r.res.rakken.forEach(k => { ronding[k.naar] = k.eind; });
-      for (const x of r.res.rondingen || []) L.marker([x.lat, x.lon], { interactive: false, icon: L.divIcon({ className: 'rondpijl', iconSize: [56, 56], html: rondPijl(x) }) }).addTo(g);
+      for (const x of (r.res.rondingen || []).filter(x => x.wijze !== 'om de zone')) L.marker([x.lat, x.lon], { interactive: false, icon: L.divIcon({ className: 'rondpijl', iconSize: [56, 56], html: rondPijl(x) }) }).addTo(g);
     } else {
       const baan = E.banen[S.selectie.baan || invoer().baanWL || E.standaard.baan];
       const pt = Object.fromEntries(E.punten.map(p => [p.id, p]));

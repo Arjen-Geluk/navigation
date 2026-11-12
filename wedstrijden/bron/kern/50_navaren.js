@@ -171,7 +171,7 @@ function vaarRouteVast(V, W, P, punten, startMs, opties) {
         pad = [...pad.slice(0, pad.indexOf(E) + 1), ...wag];
         paden[r] = [X, ...paden[r].slice(iX + 1)];
         if (paden[r].length < 2) paden[r].push(X);   // het uitstappunt is het volgende merkteken zelf
-        res.rondingen.push({ id: Bp.id, zijde: Bp.zijde, zone: zone.id, wijze: 'om de zone', punten: wag.length });
+        res.rondingen.push({ id: Bp.id, zijde: Bp.zijde, lat: Bp.lat, lon: Bp.lon, zone: zone.id, wijze: 'om de zone', punten: wag.length });
       } else waarschuw(`Geen weg om ${Bp.id} heen gevonden.`);
     } else if (Bp.zijde && r < punten.length - 1 && paden[r] && o.ronding_m > 0) {
       const rd = rondingBij(Bp, Bp.zijde, pad, paden[r], o.ronding_m);

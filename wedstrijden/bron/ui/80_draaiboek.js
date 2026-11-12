@@ -54,7 +54,7 @@
     ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.lineJoin = 'round'; ctx.beginPath();
     r.res.track.forEach((q, i) => { const [x, y] = naarPx(q.lat, q.lon); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
     // kromme pijl om elk merkteken met rondingszijde (zelfde vorm als op de kaart)
-    for (const q of r.res.rondingen || []) {
+    for (const q of (r.res.rondingen || []).filter(q => q.wijze !== 'om de zone')) {
       const [x, y] = naarPx(q.lat, q.lon), s = q.zijde === 'bb' ? -1 : 1, R = 34;
       const van = q.wijze === 'ronden' ? q.aanloop - s * 90 : q.aanloop + q.draai_graden / 2 - s * 90 - s * 35;
       const boog = q.wijze === 'ronden' ? Math.max(60, Math.abs(q.draai_graden)) : 70, eind = van + s * boog, rad = b => (b - 90) * Math.PI / 180;
