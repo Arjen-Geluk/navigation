@@ -85,6 +85,5 @@ npm run toon              # lokaal bekijken: http://localhost:8642/navigation/we
 ## Afspraken
 
 - Geen scheepsnaam of herleidbare scheepsdata in `bron/`, `gegevens/` of `test/`. Echte data alleen in `lokaal/`.
-- De oude map `3-stedenrace/` blijft ongewijzigd als archief.
 - Versies: de tool (`bron/kern/00_versie.js`), het vaargebied en elke editie hebben elk een eigen versienummer;
   alle drie komen in het rekenbestand.

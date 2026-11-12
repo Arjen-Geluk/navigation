@@ -462,7 +462,7 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
       return { TWS, TWA, invoer, kruishoek: k };
     }
     const R = Math.PI / 180;
-    const TOOL = { naam: 'Polartool', versie: '0.12', datum: '2026-11-06' };   // ophogen bij elke wijziging die gebruikers merken
+    const TOOL = { naam: 'Polartool', versie: '0.13', datum: '2026-11-12' };   // ophogen bij elke wijziging die gebruikers merken
     const FORMAAT = 'polartool/1';
     // sogMin hangt af van de wind: sogMinFactor × TWS (10 m), tussen sogMinLaag en sogMin. Zo blijft lichte wind meetellen.
     const STANDAARD_FILTERS = { sogMin: 2, sogMinLaag: 0.5, sogMinFactor: 0.25, cogSdMax: 8, sogSdMax: 0.6, twaMin: 30, wisselVoorS: 20, wisselNaS: 60, minPunten: 6 };
@@ -1336,7 +1336,6 @@ button.klein{font:inherit;font-size:12px;background:none;border:1px solid var(--
        { type: 'polartool:ontvangen', schip_id, versie } of { type: 'polartool:geweigerd', reden }. */
     const WEDSTRIJDEN = [
       { naam: 'Wedstrijden IJsselmeergebied', url: '../wedstrijden/' },
-      { naam: '3-stedenrace (oude tool, eigen polarinvoer)', url: '../3-stedenrace/' },
       // Slag in de Rondte: toevoegen zodra die pagina online staat en de polar kan ontvangen
     ];
     const vulWedstrijden = () => $('#wedstrijdkeuze').replaceChildren(...WEDSTRIJDEN.map((w, k) => el('option', { value: String(k) }, w.naam)));

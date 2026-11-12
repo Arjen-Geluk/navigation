@@ -9,14 +9,17 @@ algemene conventies — structuur, licentie, publiceren).
 Elk project/deliverable binnen dit onderwerp krijgt een eigen submap met
 een eigen zelfstandige `index.html` (geen externe assets, alles inline):
 
-- `getijkaart/` — Getijkaart Waddenzee (bodemhoogte, waterstand, tijdschuif)
-- `3-stedenrace/` — Klipperrace 3 Steden (wedstrijdanalyse en route)
 - `polartool/` — Polartool: polar voor een platbodem uit handmatige waarden en VDR-logs
+- `wedstrijden/` — Wedstrijden IJsselmeergebied (snelste route per wedstrijd en baan)
+- `getijkaart/` — Getijkaart Waddenzee (bodemhoogte, waterstand, tijdschuif)
+
+De landingspagina toont ze in deze volgorde. De oude `3-stedenrace/` is verwijderd (staat nog in de
+git-geschiedenis); de 3-stedenrace wordt gerekend in `wedstrijden/`.
 
 ## Polar en routemodellen
 
 - De polar van een schip komt uitsluitend uit een **polarbestand** van de polartool. Routemodellen
-  (3-stedenrace, Slag in de Rondte) hebben geen eigen invoer voor een polar meer.
+  (Wedstrijden, Slag in de Rondte) hebben geen eigen invoer voor een polar meer.
 - Het formaat, de gebruiksregels en het overdrachtsprotocol ("Openen in wedstrijd", `postMessage`)
   staan in [`polartool/FORMAAT.md`](polartool/FORMAAT.md). Dat is het contract: houd je eraan en werk
   het eerst bij als het formaat verandert.
@@ -44,7 +47,7 @@ portfoliosite).
 - Wijkt de code bewust af of komt er een nieuwe kleur of nieuw component bij: werk dan ook het design
   system bij, zodat de code en het design system gelijk blijven.
 - De huisstijl wordt van boven naar beneden ingezet: de landingspagina (root `index.html`) volgt hem
-  al; de oudere kleuren van `3-stedenrace/` zijn geen voorbeeld voor nieuw werk.
+  al.
 
 ## Favicon
 

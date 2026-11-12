@@ -2,7 +2,7 @@
 
 Rekenpagina voor platbodemwedstrijden in het IJsselmeergebied: per wedstrijd en baan de snelste route, uit je eigen
 polarbestand ([polartool](../polartool/)) en de windverwachting. Eerst de Klipperrace 3 Steden; de beurtveer en de
-strontrace volgen. Vervangt op termijn [`3-stedenrace/`](../3-stedenrace/), dat als archief blijft staan.
+strontrace volgen.
 
 **In opbouw** (bouwstap 7 van 10: rekenbestand en draaiboek klaar; analysepagina volgt).
 

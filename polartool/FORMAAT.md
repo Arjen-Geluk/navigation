@@ -1,7 +1,7 @@
 # Polarbestand: afspraken voor routemodellen
 
 Dit document is het contract tussen de polartool (`polartool/index.html`) en elk routemodel dat een polar gebruikt,
-zoals de 3-stedenrace (`3-stedenrace/index.html`) en de Slag in de Rondte. Een routemodel houdt zich hieraan;
+zoals Wedstrijden IJsselmeergebied (`wedstrijden/`) en de Slag in de Rondte. Een routemodel houdt zich hieraan;
 verandert het formaat, dan verandert eerst dit document.
 
 Voorbeeld met een verzonnen schip: [`voorbeeld/voorbeeldschip_polar_v1_2026-11-05.json`](voorbeeld/voorbeeldschip_polar_v1_2026-11-05.json).
