@@ -1,6 +1,6 @@
 {
  "240/12 K Medemblik – Stavoren": {
-  "s": 11752,
+  "s": 11756,
   "overstag": 0,
   "gijp": 1
  },
@@ -40,8 +40,8 @@
   "gijp": 2
  },
  "240/12 M Stavoren – Medemblik": {
-  "s": 16047,
-  "overstag": 37,
+  "s": 16002,
+  "overstag": 35,
   "gijp": 0
  },
  "240/12 M Stavoren – Urk": {
@@ -90,7 +90,7 @@
   "gijp": 2
  },
  "30/8 K Medemblik – Stavoren": {
-  "s": 15985,
+  "s": 15941,
   "overstag": 22,
   "gijp": 0
  },
@@ -125,9 +125,9 @@
   "gijp": 0
  },
  "30/8 M Stavoren – Medemblik": {
-  "s": 20438,
-  "overstag": 43,
-  "gijp": 5
+  "s": 20146,
+  "overstag": 42,
+  "gijp": 2
  },
  "30/8 M Urk – Stavoren": {
   "s": 20483,
