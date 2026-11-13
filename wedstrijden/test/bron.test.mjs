@@ -24,7 +24,7 @@ for (const f of readdirSync(new URL('gegevens/wedstrijden/', MAP))) {
     const e = JSON.parse(lees('gegevens/wedstrijden/' + f));
     gelijk(controleerEditie(e), []);
     assert.equal(f, `${e.wedstrijd.id}_${e.jaar}.json`, 'bestandsnaam = <wedstrijd>_<jaar>.json');
-    for (const b of Object.values(e.banen)) assert.equal(b.routes.length, 6, 'zes routes per baan');
+    if (e.wedstrijd.id === '3-steden') for (const b of Object.values(e.banen)) assert.equal(b.routes.length, 6, 'zes routes per baan (3-stedenrace)');
   });
 }
 

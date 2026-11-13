@@ -178,6 +178,10 @@ test('reis met sluis, haven en rust (beurtveer): sluistijd en rust tellen niet, 
   const r2 = K.vaarReis(V, W, P, punten, t0, { max_slag_nm: Infinity, robuustheid: false, terug_start_ms: rust.tot + 3600e3 });
   assert.equal(r2.onderdelen.find(o => o.soort === 'rust').tot, rust.tot + 3600e3);
   assert.ok(Math.abs(r2.zeiltijd_ms - r.zeiltijd_ms) < 15 * 60e3, 'zeiltijd bijna gelijk (alleen de wind op een ander uur)');
+  // eigen tijd per sluis of haven
+  const r3 = K.vaarReis(V, W, P, punten, t0, { max_slag_nm: Infinity, stoptijden: { Naviduct: 60, Hoorn: 5 } });
+  assert.equal(r3.aftrek_ms, 2 * 60 * 60e3 + 2 * 3600e3, 'schutten 60 min in plaats van 45');
+  assert.equal(r3.onderdelen.find(o => o.soort === 'haven').tot - r3.onderdelen.find(o => o.soort === 'haven').van, 5 * 60e3);
   // controle van de editie: sluis zonder tweede lijn, rust zonder rust_min_uur
   const e = { ...JSON.parse(JSON.stringify(G.edities['3-steden_2026'])) };
   e.punten.push({ id: 'S', soort: 'sluis', lijnen: [lijn('naviduct-noord')] });

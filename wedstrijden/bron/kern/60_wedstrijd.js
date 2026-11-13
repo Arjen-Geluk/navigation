@@ -29,7 +29,7 @@ function routePunten(editie, route) {
 // - haven: zeilen tot de havenlijn, dan verblijf_min (telt als zeiltijd), verder vanaf het punt op de lijn;
 // - sluis: zeilen tot de dichtstbijzijnde van de twee lijnen, dan schuttijd_min (telt niet), verder vanaf het midden van de andere lijn;
 // - rust: wachten tot minstens rust_min_uur na aankomst, of later (opties.terug_start_ms); telt niet.
-// Opties: verblijf_min en schuttijd_min overschrijven de waarden uit de editie. Zonder tussenstops = vaarRoute.
+// Opties: stoptijden = { <id van haven of sluis>: minuten } overschrijft de waarden uit de editie. Zonder tussenstops = vaarRoute.
 const midden = l => ({ lat: (l[0].lat + l[1].lat) / 2, lon: (l[0].lon + l[1].lon) / 2 });
 function vaarReis(V, W, P, punten, startMs, opties = {}) {
   if (!punten.some(p => p.soort)) return vaarRoute(V, W, P, punten, startMs, opties);
@@ -63,9 +63,9 @@ function vaarReis(V, W, P, punten, startMs, opties = {}) {
     if (!x.klaar) return res;
     t = x.finish;
     const eind = x.track ? x.track[x.track.length - 1] : (x.rakken[x.rakken.length - 1]?.finish || doel);
-    if (p.soort === 'haven') wacht('haven', p.id, (opties.verblijf_min ?? p.verblijf_min) * 60000, true);
+    if (p.soort === 'haven') wacht('haven', p.id, (opties.stoptijden?.[p.id] ?? p.verblijf_min) * 60000, true);
     if (p.soort === 'sluis') {
-      wacht('sluis', p.id, (opties.schuttijd_min ?? p.schuttijd_min) * 60000, false);
+      wacht('sluis', p.id, (opties.stoptijden?.[p.id] ?? p.schuttijd_min) * 60000, false);
       if (res.track) res.track.push({ t, lat: uit.lat, lon: uit.lon, koers: null, vaart: 0, twa: null, tws: null, stand: null, zwaard: null });
     }
     stuk = [{ id: p.id, ...(uit || { lat: eind.lat, lon: eind.lon }) }];

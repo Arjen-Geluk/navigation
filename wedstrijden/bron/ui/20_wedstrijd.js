@@ -12,11 +12,14 @@
     $('eenheden').value = S.eenheden;
     $('reisvelden').hidden = !isReis(e);
     if (isReis(e)) {
-      const sluis = e.punten.find(p => p.soort === 'sluis'), haven = e.punten.find(p => p.soort === 'haven');
-      $('schuttijd').value = inv.schuttijd ?? ''; $('schuttijd').placeholder = sluis ? sluis.schuttijd_min : '';
-      $('verblijf').value = inv.verblijf ?? ''; $('verblijf').placeholder = haven ? haven.verblijf_min : '';
+      inv.stoptijden ||= {};
+      $('stopvelden').replaceChildren(...e.punten.filter(p => p.soort === 'haven' || p.soort === 'sluis').map(p => {
+        const v = el('input', { type: 'number', min: 0, max: 240, step: 5, value: inv.stoptijden[p.id] ?? '', placeholder: p.soort === 'sluis' ? p.schuttijd_min : p.verblijf_min });
+        v.onchange = () => { inv.stoptijden[p.id] = v.value; gewijzigd(); };
+        return el('label', {}, `${p.soort === 'sluis' ? 'Schutten' : 'Haven'} ${p.id} (min)`, v);
+      }));
       $('terugStart').value = inv.terugStart || '';
-      $('reisuitleg').textContent = `Leeg = de waarde uit de editie. Sluistijd en rust tellen niet als zeiltijd, een haven wel. De terugreis start ${e.rust_min_uur ?? 0} uur na de finish van de heenreis, of later als je hier een tijd invult.`;
+      $('reisuitleg').textContent = `Tijden per haven en sluis; leeg = de waarde uit de editie (grijs). Schutten en rust tellen niet als zeiltijd, een haven wel. De terugreis start ${e.rust_min_uur ?? 0} uur na de finish van de heenreis, of later als je hier een tijd invult.`;
     }
     const st = $('editiestatus');
     st.textContent = e.status.gecontroleerd ? `Editie ${e.jaar} (v${e.versie}), gecontroleerd tegen ${e.status.tegen} (${e.status.datum_bepalingen})`
@@ -34,8 +37,8 @@
   for (const [id, veld] of [['datum', 'datum'], ['start', 'start'], ['limiet', 'limiet'], ['baanWL', 'baanWL']])
     $(id).onchange = () => { if ($(id).value || id === 'baanWL') invoer()[veld] = $(id).value; gewijzigd(); };
   $('eenheden').onchange = () => { S.eenheden = $('eenheden').value; gewijzigd(); };
-  for (const id of ['schuttijd', 'verblijf', 'terugStart']) $(id).onchange = () => { invoer()[id] = $(id).value; gewijzigd(); };
-  $('editieStandaard').onclick = () => { const e = EDITIES[S.editie]; Object.assign(invoer(), { datum: e.datum, start: e.start, limiet: e.finishlimiet, schuttijd: '', verblijf: '', terugStart: '' }); gewijzigd(); };
+  $('terugStart').onchange = () => { invoer().terugStart = $('terugStart').value; gewijzigd(); };
+  $('editieStandaard').onclick = () => { const e = EDITIES[S.editie]; Object.assign(invoer(), { datum: e.datum, start: e.start, limiet: e.finishlimiet, stoptijden: {}, terugStart: '' }); gewijzigd(); };
 
   // Afwijkingen van de schipper (alleen in deze browser; de editie zelf verandert alleen via het beheer in de repo):
   // routes aanpassen (andere RWS-boei of wedstrijdton), wedstrijdtonnen toevoegen, punten verleggen, gebieden aan/uit.

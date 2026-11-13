@@ -1,0 +1,150 @@
+{
+  "formaat": "wedstrijdeditie/1",
+  "wedstrijd": { "id": "beurtveer", "naam": "Beurtveer Workum – Amsterdam – Workum" },
+  "jaar": 2027,
+  "versie": 1,
+  "regeltype": "varianten",
+  "status": {
+    "gecontroleerd": false,
+    "toelichting": "Concept op basis van het Reglement Beurtveer 2026 (aangepast, september 2026). Datum en starttijd zijn voorlopig: de starttijd wordt op de eerste schippersvergadering vastgesteld. Havenlijnen gekozen op de IENC-kaart (12-11-2026).",
+    "bronbestand": "https://zeilvracht.nl/wp-content/uploads/2026/09/Reglement_Beurtveer_2026-aangepast.pdf"
+  },
+  "datum": "2027-10-25",
+  "start": "10:00",
+  "finishlimiet": "12:00",
+  "finishdag": 3,
+  "tijdzone": "Europe/Amsterdam",
+  "rust_min_uur": 10,
+  "punten": [
+    {
+      "id": "Start",
+      "soort": "start",
+      "lijn": [
+        { "id": "H 4", "lat": 52.955383, "lon": 5.394367, "bron": "RWS-betonning (er zijn twee boeien H 4; deze ligt bij Workum)" },
+        { "id": "H 2-W 1", "rws": "H 2-W 1" }
+      ],
+      "toelichting": "Startlijn heenreis tussen de boeien H 4 en H 2-W 1 (2.2.7)"
+    },
+    {
+      "id": "Medemblik",
+      "soort": "haven",
+      "lijn": [
+        { "id": "Medemblik rd", "lat": 52.77436, "lon": 5.11376, "bron": "OpenStreetMap" },
+        { "id": "Medemblik gn", "lat": 52.77462, "lon": 5.11319, "bron": "OpenStreetMap" }
+      ],
+      "verblijf_min": 20,
+      "toelichting": "Havengebied binnen de lijn tussen rood en groen havenlicht (2.9.13); post bezorgen"
+    },
+    {
+      "id": "Lemmer",
+      "soort": "haven",
+      "lijn": [
+        { "id": "hoek jachthaven De Friese Hoek", "lat": 52.837808, "lon": 5.703362, "bron": "gekozen op de IENC-kaart (12-11-2026)" },
+        { "id": "OL KOPDWARSDAM NOORDERMEERDIJK", "rws": "OL KOPDWARSDAM NOORDERMEERDIJK" }
+      ],
+      "verblijf_min": 20,
+      "toelichting": "Havengebied (2.9.11); post bezorgen"
+    },
+    {
+      "id": "Lelystad",
+      "soort": "sluis",
+      "lijnen": [
+        [
+          { "id": "HOUTRIBSLUIZEN KOP N DAM", "rws": "HOUTRIBSLUIZEN KOP N DAM" },
+          { "id": "FR Deko Marine", "lat": 52.533886, "lon": 5.440895, "bron": "IENC" }
+        ],
+        [{ "id": "RODE HL GELEIDEDAM", "rws": "RODE HL GELEIDEDAM" }, { "id": "GROENE HL GELEIDEDAM", "rws": "GROENE HL GELEIDEDAM" }]
+      ],
+      "schuttijd_min": 45,
+      "toelichting": "Houtribsluizen: havengebied en verplicht motorgebied tussen de lijnen noord en zuid; telt niet als zeiltijd (2.9.12, 2.10, 2.13)"
+    },
+    {
+      "id": "Enkhuizen",
+      "soort": "sluis",
+      "lijnen": [
+        [
+          { "id": "groen havenlicht Compagniehaven", "lat": 52.69961, "lon": 5.29376, "bron": "OpenStreetMap" },
+          { "id": "HL N EINDE E LEIDAM PAAL 46", "rws": "HL N EINDE E LEIDAM PAAL 46" }
+        ],
+        [
+          { "id": "SCHEIDINGSLICHT ZZ", "rws": "SCHEIDINGSLICHT ZZ" },
+          { "id": "hoek van de dam", "lat": 52.684418, "lon": 5.281635, "bron": "gekozen op de IENC-kaart (12-11-2026)" }
+        ]
+      ],
+      "schuttijd_min": 45,
+      "toelichting": "Naviduct: havengebied tussen de lijnen noord en zuid; telt niet als zeiltijd (2.9.9, 2.10, 2.13)"
+    },
+    {
+      "id": "Buiten-IJ",
+      "soort": "lijn",
+      "lijn": [
+        { "id": "vuurtoren Buiten-IJ (toren met wit-rood sectorlicht)", "lat": 52.371811, "lon": 5.01402, "bron": "IENC" },
+        { "id": "dam tegenover de vuurtoren", "lat": 52.367966, "lon": 5.014437, "bron": "gekozen op de IENC-kaart (12-11-2026)" }
+      ],
+      "toelichting": "Finish heenreis en start terugreis: vuurtoren Buiten-IJ en de dam daar tegenover (2.2.10, 2.2.12)"
+    },
+    {
+      "id": "Finish",
+      "soort": "finish",
+      "lijn": [
+        { "id": "groene lichtopstand haveningang It Soal", "lat": 52.962678, "lon": 5.414196, "bron": "gekozen op de IENC-kaart (12-11-2026)" },
+        { "id": "dijk", "lat": 52.962318, "lon": 5.414712, "bron": "gekozen op de IENC-kaart (12-11-2026)" }
+      ],
+      "toelichting": "Finish terugreis: groene lichtopstand It Soal en de dijk (2.2.12)"
+    }
+  ],
+  "zones": [
+    {
+      "id": "kreupel",
+      "naam": "De Kreupel, begrensd door de gele boeien NK-OW",
+      "regel": "verboden",
+      "actief": true,
+      "punten": [
+        { "id": "NK-OW 1", "rws": "NK-OW 1" },
+        { "id": "NK-OW 2", "rws": "NK-OW 2" },
+        { "id": "NK-OW 3", "rws": "NK-OW 3" },
+        { "id": "NK-OW 4", "rws": "NK-OW 4" },
+        { "id": "NK-OW 5", "rws": "NK-OW 5" },
+        { "id": "NK-OW 6", "rws": "NK-OW 6" },
+        { "id": "NK-OW 7", "rws": "NK-OW 7" },
+        { "id": "NK-OW 8", "rws": "NK-OW 8" },
+        { "id": "NK-OW 9", "rws": "NK-OW 9" },
+        { "id": "NK-OW 10", "rws": "NK-OW 10" },
+        { "id": "NK-OW 11", "rws": "NK-OW 11" }
+      ],
+      "toelichting": "Verboden gebied en hindernis in de zin van regel 20 RvW (art. 12)"
+    },
+    {
+      "id": "oostvaardersdiep",
+      "naam": "Oostvaardersdiep ten zuidwesten van de Houtribsluizen",
+      "regel": "verboden",
+      "actief": true,
+      "punten": [
+        { "id": "Oostvaardersdiep 1", "lat": 52.50742, "lon": 5.42183 },
+        { "id": "Oostvaardersdiep 2", "lat": 52.50459, "lon": 5.41565 },
+        { "id": "Oostvaardersdiep 3", "lat": 52.50186, "lon": 5.41075 },
+        { "id": "Oostvaardersdiep 4", "lat": 52.49854, "lon": 5.40442 },
+        { "id": "Oostvaardersdiep 5", "lat": 52.49395, "lon": 5.39688 },
+        { "id": "Oostvaardersdiep 6", "lat": 52.49257, "lon": 5.39212 },
+        { "id": "Oostvaardersdiep 7", "lat": 52.49503, "lon": 5.39028 },
+        { "id": "Oostvaardersdiep 8", "lat": 52.49605, "lon": 5.39412 },
+        { "id": "Oostvaardersdiep 9", "lat": 52.5005, "lon": 5.4014 },
+        { "id": "Oostvaardersdiep 10", "lat": 52.50388, "lon": 5.40781 },
+        { "id": "Oostvaardersdiep 11", "lat": 52.50667, "lon": 5.41283 },
+        { "id": "Oostvaardersdiep 12", "lat": 52.50958, "lon": 5.41917 }
+      ],
+      "toelichting": "Verboden in de beurtveer (2.9.12): vaarwegas uit de IENC plus 150 m aan weerszijden, het stuk naar het zuidwesten (keuze 13-11-2026)"
+    }
+  ],
+  "banen": {
+    "R": {
+      "naam": "Routes",
+      "routes": [
+        { "naam": "ME, terug via Lelystad", "volgorde": ["Start", "Medemblik", "Lelystad", "Buiten-IJ", "Rust", "Lelystad", "Lemmer", "Finish"] },
+        { "naam": "ME, terug via Enkhuizen", "volgorde": ["Start", "Medemblik", "Lelystad", "Buiten-IJ", "Rust", "Enkhuizen", "Lemmer", "Finish"] },
+        { "naam": "LE", "volgorde": ["Start", "Lemmer", "Enkhuizen", "Buiten-IJ", "Rust", "Lelystad", "Medemblik", "Finish"] }
+      ]
+    }
+  },
+  "standaard": { "baan": "R", "windmodel": "knmi_seamless", "marge_verboden_gebied_m": 50 }
+}

@@ -94,8 +94,8 @@ const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datu
 const isReis = e => e.punten.some(p => p.soort === 'haven' || p.soort === 'sluis') || Object.values(e.banen).some(b => b.routes.some(r => r.volgorde.includes('Rust')));
 // opties voor vaarReis uit de invoer: lege velden = de waarden uit de editie
 const reisOpties = () => { const i = invoer(), o = {};
-  if (i.schuttijd !== '' && i.schuttijd != null) o.schuttijd_min = +i.schuttijd;
-  if (i.verblijf !== '' && i.verblijf != null) o.verblijf_min = +i.verblijf;
+  const st = Object.entries(i.stoptijden || {}).filter(([, v]) => v !== '' && v != null);
+  if (st.length) o.stoptijden = Object.fromEntries(st.map(([k, v]) => [k, +v]));
   if (i.terugStart) o.terug_start_ms = lokaleTijdNaarMs(i.terugStart.slice(0, 10), i.terugStart.slice(11, 16), EDITIES[S.editie].tijdzone);
   return o; };
 // Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), het gemeten peil van RWS, of een eigen waarde.
