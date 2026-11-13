@@ -770,6 +770,10 @@ table.lat td+td{text-align:right;font-family:var(--f-num)}
     <button class="hoofd" id="bOphalen">Waterstanden ophalen (RWS)</button>
     <span id="stroomStatus" class="uitleg"></span>
     <span id="ophaalStatus" class="uitleg">Gemeten tot nu, daarna RWS-eindverwachting h_6 (± 10 dagen vooruit), daarna astronomisch. Internet nodig.</span>
+    <div class="uitleg" style="margin-top:6px"><b>Weergave</b> (tijdschuif, grafiek, open vensters)</div>
+    <div class="rij" style="flex-wrap:nowrap"><label class="uitleg" for="toonVan" style="width:24px">van</label><input id="toonVan" type="datetime-local"></div>
+    <div class="rij" style="flex-wrap:nowrap"><label class="uitleg" for="toonTot" style="width:24px">tot</label><input id="toonTot" type="datetime-local"></div>
+    <div class="rij"><button class="klein" id="bToon">Toon periode</button><button class="klein" id="bToonAlles">hele opgehaalde periode</button></div>
     <div class="rij"><span class="uitleg">Hoogten in</span>
       <label><input type="radio" name="vlak" value="NAP" checked> NAP</label>
       <label><input type="radio" name="vlak" value="LAT"> LAT</label></div>
@@ -807,7 +811,7 @@ table.lat td+td{text-align:right;font-family:var(--f-num)}
     <label><input type="checkbox" id="mee" checked> meeschuiven met de tijd</label>
     <div id="routeUit" class="vak">Kies van en naar.</div>
     <div class="rij"><button id="bVensters">Open vensters berekenen</button></div>
-    <span class="uitleg">Rekent de hele periode door per 10 min: wanneer staat er tussen van en naar overal minstens de grens? Tussen haakjes hoe lang. Klik = laatste moment dat het nog open is. Vaartijd, stroom en wind tellen niet mee.</span>
+    <span class="uitleg">Rekent de weergaveperiode door per 10 min: wanneer staat er tussen van en naar overal minstens de grens? Tussen haakjes hoe lang. Klik = laatste moment dat het nog open is. Vaartijd, stroom en wind tellen niet mee.</span>
     <span id="voortgang"></span>
     <div id="vensters"></div>
   </section>
@@ -909,7 +913,7 @@ async function ontpak(b64) {
 }
 let NX, NY, CEL, X0, Y1, NZ, bodem, jaar, zidx, zpar, gebruikteZ, LATR;
 let BRON = null, ST = null;
-let T = 0, TMIN = 0, TMAX = 0;
+let T = 0, TMIN = 0, TMAX = 0, DMIN = 0, DMAX = 0;   // TMIN/TMAX = weergave, DMIN/DMAX = opgehaalde reeks
 let HZ;
 let grens = 110, diepgangCm = 110, kielCm = 20, metKiel = false;
 const vlak = () => document.querySelector('input[name=vlak]:checked').value;
@@ -1349,9 +1353,9 @@ function teken() {
   toonVensters(); tekenGrafiek();
 }
 let grafVast = null;
-function grafVenster(W) {   // uitsnede van de grafiek rond T: telefoon 2 dagen, pc 5 dagen
+function grafVenster(W) {   // gekozen weergave: de hele periode; anders uitsnede rond T: telefoon 2 dagen, pc 5 dagen
   if (grafVast) return grafVast;
-  const span = Math.min(TMAX - TMIN, (W < 700 ? 2 : 5) * 86400000);
+  const span = weergaveBeperkt() ? TMAX - TMIN : Math.min(TMAX - TMIN, (W < 700 ? 2 : 5) * 86400000);
   let a = T - span / 2; a = Math.max(TMIN, Math.min(TMAX - span, a)); return [a, a + span];
 }
 function tekenGrafiek() {
@@ -1397,13 +1401,21 @@ function extremenKromme(k0, kdt, h) {
   }
   return out;
 }
-async function haalReeks(code, bron, van, tot, type = 'WT') {
+async function haalReeks(code, bron, van, tot, type = 'WT', poging = 1) {
   const iso = t => new Date(t).toISOString().slice(0, 19) + 'Z';
-  const r = await fetch(`${RWSOS}?locationCode=${encodeURIComponent(code)}&sourceName=${bron}&observationTypeId=${type}&startTime=${iso(van)}&endTime=${iso(tot)}`);
+  // cache: 'no-store': RWS stuurt max-age=600; een eerder afgekapte reactie mag niet blijven hangen
+  const r = await fetch(`${RWSOS}?locationCode=${encodeURIComponent(code)}&sourceName=${bron}&observationTypeId=${type}&startTime=${iso(van)}&endTime=${iso(tot)}`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`${code} ${bron}: HTTP ${r.status}`);
   const j = await r.json(), m = new Map();
   const eenheid = j.results?.[0]?.observationType?.unit;
   for (const e of (j.results?.[0]?.events || [])) if (e.value != null && Math.abs(e.value) < 1000) m.set(Date.parse(e.timeStamp), eenheid === 'm/s' ? e.value * 100 : e.value);
+  // eindverwachting h_6 en astronomisch S_4 moeten tot de gevraagde eindtijd lopen; een kortere reeks is afgekapt: opnieuw vragen (max. 3 keer)
+  let laatste = 0; for (const t of m.keys()) laatste = Math.max(laatste, t);
+  if ((bron === 'h_6' || bron === 'S_4') && laatste < tot - 3600000 && poging < 3) {
+    await new Promise(res => setTimeout(res, 1500 * poging));
+    return haalReeks(code, bron, van, tot, type, poging + 1);
+  }
+  m.laatste = laatste;
   return m;
 }
 async function ophalen() {
@@ -1420,19 +1432,23 @@ async function ophalen() {
       const n = Math.round((t1 - v0) / STAP) + 1, k = new Float64Array(n), soort = new Int8Array(n);
       for (let i = 0; i < n; i++) { const t = v0 + i * STAP;
         if (t <= nu && meting.has(t)) { k[i] = meting.get(t); soort[i] = 2; } else if (h6.has(t)) { k[i] = h6.get(t); soort[i] = t <= nu ? 2 : 1; } else if (astro.has(t)) { k[i] = astro.get(t); soort[i] = 0; } else { k[i] = NaN; soort[i] = -1; } }
-      // gaten lineair vullen
-      for (let i = 0; i < n; i++) if (isNaN(k[i])) { let a = i - 1, b = i + 1; while (b < n && isNaN(k[b])) b++; const va = a >= 0 ? k[a] : k[b], vb = b < n ? k[b] : va; for (let j = i; j < b; j++) { k[j] = a >= 0 && b < n ? va + (vb - va) * (j - a) / (b - a) : (a >= 0 ? va : vb); soort[j] = soort[a >= 0 ? a : b] ?? 0; } i = b; }
-      if (k.some(isNaN)) throw new Error(st.naam + ': geen gegevens');
+      // gaten lineair vullen, maar het einde van de reeks niet doortrekken: een afgekapte reeks blijft afgekapt
+      for (let i = 0; i < n; i++) if (isNaN(k[i])) { let a = i - 1, b = i + 1; while (b < n && isNaN(k[b])) b++; if (b >= n && a >= 0) break; const va = a >= 0 ? k[a] : k[b], vb = k[b]; for (let j = i; j < b; j++) { k[j] = a >= 0 ? va + (vb - va) * (j - a) / (b - a) : vb; soort[j] = soort[a >= 0 ? a : b] ?? 0; } i = b; }
+      const eind = (() => { let e = -1; for (let i = 0; i < n; i++) if (!isNaN(k[i])) e = i; return e; })();
+      if (eind < 0) throw new Error(st.naam + ': geen gegevens');
       const delen = []; let s = -1;
       for (let i = 0; i <= n; i++) { const sk = i < n ? soort[i] : -9; if (s >= 0 && (sk !== soort[s])) { if (soort[s] > 0) delen.push({ van: v0 + s * STAP, tot: v0 + (i - 1) * STAP, opgehaald: opg, soort: soort[s] === 2 ? 'meting' : 'verwachting' }); s = -1; } if (s < 0 && i < n) s = i; }
       const ka = Float64Array.from({ length: n }, (_, i) => astro.get(v0 + i * STAP) ?? NaN);
       for (let i = 0; i < n; i++) if (isNaN(ka[i])) ka[i] = k[i];
-      return { naam: D.grid.stations[si], k0: v0, kdt: STAP, k: Array.from(k, v => Math.round(v * 10) / 10), ext: extremenKromme(v0, STAP, k), exta: extremenKromme(v0, STAP, ka), delen };
+      const eindA = (() => { let e = -1; for (let i = 0; i < n; i++) if (!isNaN(ka[i])) e = i; return e; })();
+      return { naam: D.grid.stations[si], k0: v0, kdt: STAP, k: Array.from(k, v => Math.round(v * 10) / 10), ext: extremenKromme(v0, STAP, k.subarray(0, eind + 1)), exta: extremenKromme(v0, STAP, ka.subarray(0, eindA + 1)), delen, geldigTot: v0 + eind * STAP, kort: eind < n - 1 };
     }));
     const h6tot = Math.max(...stations.flatMap(s => s.delen.filter(d => d.soort === 'verwachting').map(d => d.tot)), 0);
-    const bron = { label: `RWS (RWsOS), opgehaald ${tijd(Date.parse(opg))}: gemeten tot nu, eindverwachting h_6 tot ${h6tot ? tijd(h6tot) : '–'}, daarna astronomisch`, stations };
+    const kort = stations.filter(s => s.kort).map(s => `${s.naam} tot ${tijd(s.geldigTot)}`);
+    const waarschuwing = kort.length ? ` LET OP: RWS leverde voor ${kort.join('; ')} een afgekapte reeks; de kaart loopt daarom niet verder dan dat moment.` : '';
+    const bron = { label: `RWS (RWsOS), opgehaald ${tijd(Date.parse(opg))}: gemeten tot nu, eindverwachting h_6 tot ${h6tot ? tijd(h6tot) : '–'}, daarna astronomisch.${waarschuwing}`, stations };
     opslag.schrijf('getijkaart.waterstand', bron); zetBron(bron, nu);
-    $('ophaalStatus').textContent = `Opgehaald ${tijd(Date.now())}. Bron: RWsOS (meting S_1, eindverwachting h_6, astronomisch S_4).`;
+    $('ophaalStatus').textContent = `Opgehaald ${tijd(Date.now())}. Bron: RWsOS (meting S_1, eindverwachting h_6, astronomisch S_4).${waarschuwing}`;
     haalStroom(v0, t1, opg);
   } catch (err) {
     $('ophaalStatus').textContent = 'Ophalen mislukt: ' + err.message + '. Controleer de internetverbinding en probeer opnieuw.';
@@ -1573,11 +1589,25 @@ function klikInfo(e) {
 // ---------- bronnen ----------
 function zetBron(bron, naarTijd) {
   BRON = bron; ST = maakStations(bron.stations);
-  TMIN = -Infinity; TMAX = Infinity;
-  for (const s of ST) { TMIN = Math.max(TMIN, s.T[1]); TMAX = Math.min(TMAX, s.T[s.T.length - 2]); }
-  TMIN = Math.ceil(TMIN / STAP) * STAP; TMAX = Math.floor(TMAX / STAP) * STAP; $('schuif').max = (TMAX - TMIN) / STAP;
-  $('bronInfo').innerHTML = esc(bron.label) + `<br><span class="uitleg">tijdschuif ${tijd(TMIN)} – ${tijd(TMAX)}</span>`;
-  vensterReset(); zetTijd(naarTijd || T || TMIN);
+  DMIN = -Infinity; DMAX = Infinity;
+  for (const s of ST) { DMIN = Math.max(DMIN, s.T[1]); DMAX = Math.min(DMAX, s.T[s.T.length - 2]); }
+  DMIN = Math.ceil(DMIN / STAP) * STAP; DMAX = Math.floor(DMAX / STAP) * STAP;
+  pasWeergaveToe(naarTijd || T || DMIN);
+}
+// ---------- weergave: deel van de opgehaalde reeks voor tijdschuif, grafiek en open vensters ----------
+function weergaveBeperkt() { return TMIN > DMIN || TMAX < DMAX; }
+function pasWeergaveToe(naarTijd) {
+  if (!BRON) return;
+  TMIN = DMIN; TMAX = DMAX;
+  const w = opslag.lees('getijkaart.weergave', null);
+  if (w) { const a = Math.max(DMIN, Math.ceil(w.van / STAP) * STAP), b = Math.min(DMAX, Math.floor(w.tot / STAP) * STAP);
+    if (b - a >= 3 * 3600000) { TMIN = a; TMAX = b; } }
+  $('schuif').max = (TMAX - TMIN) / STAP;
+  for (const id of ['toonVan', 'toonTot']) { $(id).min = lokaalInvoer(DMIN); $(id).max = lokaalInvoer(DMAX); }
+  $('toonVan').value = lokaalInvoer(TMIN); $('toonTot').value = lokaalInvoer(TMAX);
+  $('bronInfo').innerHTML = esc(BRON.label) + `<br><span class="uitleg">opgehaald ${tijd(DMIN)} – ${tijd(DMAX)}`
+    + (weergaveBeperkt() ? `<br><b>weergave ${tijd(TMIN)} – ${tijd(TMAX)}</b>` : '') + '</span>';
+  vensterReset(); zetTijd(Math.max(TMIN, Math.min(TMAX, naarTijd || TMIN)));
 }
 // ---------- opstarten ----------
 (async function start() {
@@ -1633,7 +1663,7 @@ function zetBron(bron, naarTijd) {
     <p><b>Bodem</b>: RWS bodemhoogte 20 m, ENC-dieptecijfers 2025–2026 gaan voor; per 80 m-cel de diepste 40 m-subcel (${esc(D.pakket)}). Geen marge voor bodemligging; meetjaar in de klikinfo.</p>
     <p><b>Routes</b>: ${esc(D.routesBron)} (${D.routes.length} delen) is open als elke 80 m-cel langs het deel de grens haalt.</p>
     <p><b>Stroom</b>: pijlen uit de stroomatlas van het getijmodel (Matroos DCSM-FM 100 m, per halfuur t.o.v. HW, geschaald met het astronomische getijverschil): astronomisch, zonder wind en opzet; mediaan ~0,5 kn afwijking, te laag op smalle drempels en bij havenmonden. Punten met getal: RWS (RWsOS) dcsm7_harmonie_bf (verwachting met wind, ~2 dagen), daarna dcsm7_astro.</p>
-    <p><b>Open vensters</b>: per 10 min over de hele periode: is er tussen van en naar overal minstens de grens? Aaneengesloten momenten vormen een venster; tussen haakjes de duur (±10 min). "…" = loopt door buiten de periode. Klik = laatste open moment. Vaartijd, stroom en wind tellen niet mee.</p>
+    <p><b>Open vensters</b>: per 10 min over de weergaveperiode: is er tussen van en naar overal minstens de grens? Aaneengesloten momenten vormen een venster; tussen haakjes de duur (±10 min). "…" = loopt door buiten de periode. Klik = laatste open moment. Vaartijd, stroom en wind tellen niet mee.</p>
     <p><b>GPX</b>: routes als &lt;rte&gt;, routedelen en grenslijn als &lt;trk&gt;. OpenCPN: Route- en Waypointbeheer → Importeer GPX.</p>
     <p>Gemaakt ${esc(D.gemaakt)}.</p>`;
   const bewaard = opslag.lees('getijkaart.waterstand', null);
@@ -1644,7 +1674,17 @@ function zetBron(bron, naarTijd) {
 // ---------- bediening ----------
 $('schuif').oninput = e => zetTijd(TMIN + e.target.value * STAP);
 for (const d of [-60, -10, 10, 60]) $('t' + (d > 0 ? '+' : '') + d).onclick = () => zetTijd(T + d * 60000);
-$('tNu').onclick = () => { const nu = Date.now(); if (nu < TMIN || nu > TMAX) melding('Nu valt buiten deze bron; haal de actuele waterstanden op'); zetTijd(nu); };
+$('tNu').onclick = () => { const nu = Date.now();
+  if (nu < DMIN || nu > DMAX) melding('Nu valt buiten deze bron; haal de actuele waterstanden op');
+  else if (nu < TMIN || nu > TMAX) melding('Nu valt buiten de weergave; kies "hele opgehaalde periode" of een andere weergave');
+  zetTijd(nu); };
+$('bToon').onclick = () => { if (!BRON) return;
+  const a = new Date($('toonVan').value).getTime(), b = new Date($('toonTot').value).getTime();
+  if (!(b - a >= 3 * 3600000)) { melding('Kies een weergave van minstens 3 uur'); return; }
+  if (b <= DMIN || a >= DMAX) { melding('Deze periode valt buiten de opgehaalde waterstanden'); return; }
+  if (a < DMIN || b > DMAX) melding('Weergave ingekort tot de opgehaalde periode', 3000);
+  opslag.schrijf('getijkaart.weergave', { van: a, tot: b }); pasWeergaveToe(T); };
+$('bToonAlles').onclick = () => { opslag.schrijf('getijkaart.weergave', null); pasWeergaveToe(T); };
 let speel = null;
 $('tSpeel').onclick = () => { if (speel) { clearInterval(speel); speel = null; $('tSpeel').textContent = '▶'; } else { speel = setInterval(() => { if (T >= TMAX) { $('tSpeel').click(); return; } zetTijd(T + STAP); }, 250); $('tSpeel').textContent = '❚❚'; } };
 document.addEventListener('keydown', e => { if ((e.target.tagName === 'INPUT' && e.target.type !== 'range') || e.target.tagName === 'SELECT') return;
