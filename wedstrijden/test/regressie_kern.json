@@ -1,182 +1,182 @@
 {
  "240/12 K Medemblik – Stavoren": {
-  "s": 11756,
+  "s": 11931,
   "overstag": 0,
   "gijp": 1
  },
  "240/12 K Stavoren – Medemblik": {
-  "s": 12431,
+  "s": 12436,
   "overstag": 17,
   "gijp": 0
  },
  "240/12 K Urk – Stavoren": {
-  "s": 12982,
+  "s": 12957,
   "overstag": 3,
-  "gijp": 3
+  "gijp": 2
  },
  "240/12 K Stavoren – Urk": {
-  "s": 13925,
+  "s": 13918,
   "overstag": 21,
   "gijp": 1
  },
  "240/12 K Urk – Medemblik": {
-  "s": 15025,
+  "s": 15001,
   "overstag": 1,
-  "gijp": 3
+  "gijp": 2
  },
  "240/12 K Medemblik – Urk": {
-  "s": 15493,
+  "s": 15485,
   "overstag": 5,
   "gijp": 1
  },
  "240/12 M Medemblik – Stavoren": {
-  "s": 14868,
-  "overstag": 4,
+  "s": 14828,
+  "overstag": 2,
   "gijp": 3
  },
  "240/12 M Urk – Stavoren": {
-  "s": 15352,
+  "s": 15359,
   "overstag": 1,
   "gijp": 2
  },
  "240/12 M Stavoren – Medemblik": {
-  "s": 16002,
+  "s": 16006,
   "overstag": 35,
   "gijp": 0
  },
  "240/12 M Stavoren – Urk": {
-  "s": 16488,
+  "s": 16486,
   "overstag": 21,
   "gijp": 1
  },
  "240/12 M Urk – Medemblik": {
-  "s": 17683,
+  "s": 17694,
   "overstag": 1,
   "gijp": 2
  },
  "240/12 M Medemblik – Urk": {
-  "s": 18928,
-  "overstag": 24,
-  "gijp": 2
+  "s": 18878,
+  "overstag": 23,
+  "gijp": 1
  },
  "240/12 L Urk – Stavoren": {
-  "s": 18664,
+  "s": 18672,
   "overstag": 1,
   "gijp": 2
  },
  "240/12 L Stavoren – Urk": {
-  "s": 19239,
+  "s": 19237,
   "overstag": 5,
   "gijp": 1
  },
  "240/12 L Medemblik – Stavoren": {
-  "s": 19401,
-  "overstag": 4,
+  "s": 19361,
+  "overstag": 2,
   "gijp": 1
  },
  "240/12 L Urk – Medemblik": {
-  "s": 21082,
+  "s": 21093,
   "overstag": 1,
   "gijp": 2
  },
  "240/12 L Stavoren – Medemblik": {
-  "s": 21455,
+  "s": 21506,
   "overstag": 27,
   "gijp": 0
  },
  "240/12 L Medemblik – Urk": {
-  "s": 21894,
-  "overstag": 8,
-  "gijp": 2
+  "s": 21844,
+  "overstag": 7,
+  "gijp": 1
  },
  "30/8 K Medemblik – Stavoren": {
-  "s": 15941,
-  "overstag": 22,
+  "s": 16365,
+  "overstag": 30,
   "gijp": 0
  },
  "30/8 K Urk – Stavoren": {
   "s": 16846,
   "overstag": 29,
-  "gijp": 1
+  "gijp": 2
  },
  "30/8 K Stavoren – Urk": {
-  "s": 17291,
-  "overstag": 39,
-  "gijp": 2
- },
- "30/8 K Stavoren – Medemblik": {
-  "s": 17303,
+  "s": 17278,
   "overstag": 42,
-  "gijp": 2
- },
- "30/8 K Urk – Medemblik": {
-  "s": 18682,
-  "overstag": 11,
   "gijp": 1
  },
- "30/8 K Medemblik – Urk": {
-  "s": 19472,
-  "overstag": 39,
+ "30/8 K Stavoren – Medemblik": {
+  "s": 17345,
+  "overstag": 30,
+  "gijp": 3
+ },
+ "30/8 K Urk – Medemblik": {
+  "s": 18681,
+  "overstag": 11,
   "gijp": 2
  },
+ "30/8 K Medemblik – Urk": {
+  "s": 19459,
+  "overstag": 42,
+  "gijp": 1
+ },
  "30/8 M Medemblik – Stavoren": {
-  "s": 19222,
-  "overstag": 24,
+  "s": 19223,
+  "overstag": 28,
   "gijp": 0
  },
  "30/8 M Stavoren – Medemblik": {
-  "s": 20146,
-  "overstag": 42,
-  "gijp": 2
+  "s": 20186,
+  "overstag": 30,
+  "gijp": 3
  },
  "30/8 M Urk – Stavoren": {
-  "s": 20483,
+  "s": 20486,
   "overstag": 11,
   "gijp": 1
  },
  "30/8 M Urk – Medemblik": {
   "s": 21161,
   "overstag": 11,
-  "gijp": 1
+  "gijp": 2
  },
  "30/8 M Medemblik – Urk": {
-  "s": 21690,
-  "overstag": 22,
+  "s": 21694,
+  "overstag": 26,
   "gijp": 1
  },
  "30/8 M Stavoren – Urk": {
-  "s": 22829,
-  "overstag": 34,
-  "gijp": 1
+  "s": 22869,
+  "overstag": 45,
+  "gijp": 2
  },
  "30/8 L Urk – Stavoren": {
-  "s": 24376,
+  "s": 24379,
   "overstag": 11,
   "gijp": 1
  },
  "30/8 L Urk – Medemblik": {
-  "s": 25197,
+  "s": 25196,
   "overstag": 11,
-  "gijp": 1
+  "gijp": 2
  },
  "30/8 L Medemblik – Urk": {
-  "s": 25576,
-  "overstag": 22,
-  "gijp": 1
- },
- "30/8 L Stavoren – Urk": {
-  "s": 26637,
-  "overstag": 34,
+  "s": 25579,
+  "overstag": 26,
   "gijp": 1
  },
  "30/8 L Medemblik – Stavoren": {
-  "s": 26650,
-  "overstag": 42,
+  "s": 26651,
+  "overstag": 46,
   "gijp": 1
  },
- "30/8 L Stavoren – Medemblik": {
-  "s": 27275,
-  "overstag": 36,
+ "30/8 L Stavoren – Urk": {
+  "s": 26676,
+  "overstag": 45,
   "gijp": 2
+ },
+ "30/8 L Stavoren – Medemblik": {
+  "s": 27311,
+  "overstag": 56,
+  "gijp": 3
  }
 }

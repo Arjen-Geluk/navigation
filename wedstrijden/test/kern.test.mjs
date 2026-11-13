@@ -189,3 +189,12 @@ test('reis met sluis, haven en rust (beurtveer): sluistijd en rust tellen niet, 
   const f = K.controleerEditie(e).join(' | ');
   assert.match(f, /sluis S: twee lijnen/); assert.match(f, /rust_min_uur/);
 });
+
+test('uitsneden: Workum bereikbaar door de vaargeul, het natuurgebied achter de DW-boeien blijft verboden', () => {
+  assert.ok(!K.inVerbodenVaargebied(B, 52.9601, 5.4050), 'vaargeul langs de noordelijke havendam');
+  assert.ok(K.inVerbodenVaargebied(B, 52.9640, 5.4000), 'natuurgebied achter de DW-boeien');
+  const fin = G.edities['beurtveer_2027'].punten.find(p => p.id === 'Finish');
+  const pad = K.zoekPad(V, { lat: 52.9555, lon: 5.3925 }, { lat: fin.lat, lon: fin.lon });
+  assert.ok(pad, 'een weg van buiten de haven naar de finish bij It Soal');
+  assert.ok(pad.every(p => !K.inVerbodenVaargebied(B, p.lat, p.lon)), 'geen punt van de weg in verboden gebied');
+});

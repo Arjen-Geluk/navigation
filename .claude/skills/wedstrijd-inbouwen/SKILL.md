@@ -89,6 +89,14 @@ wedstrijd is vooral **gegevens**. Deze skill is de werkwijze en de les uit de bo
 - **Kader van een haven:** de uitsnede is een cirkel van 1,5 km rond het midden van elke lijn, maar wordt afgekapt op
   het `kader` in `havens.mjs`. Ligt een lijn bij de rand, maak het kader groter en bekijk de uitsnede als plaatje
   (`beheer/lib/png.mjs`) voordat je goedkeurt.
+- **Een A1-lijn kan een havenmond dichtzetten.** Een havenmond van ±80 m is smaller dan twee cellen van 50 m. Bij Workum sloten de
+  DW- en VF-OW-lijnen de vaargeul af, zodat geen route de finish haalde. Sinds vaargebied v6 tekent `verfijnUitsneden`
+  (`beheer/lib/verboden.mjs`) de A1-lijnen in elke uitsnede opnieuw op 5 m (waarde 3 = verboden). Water in een IENC-vaarwegvlak
+  (FAIRWY) of langs een vaarwegas (wtwaxs, ±15 m) is nooit verboden door A1. Open het A1-gebied niet door een gat in de lijn: dan
+  loopt het natuurgebied erachter leeg. Controleer met een plaatje van de uitsnede (paars = verboden, groen = weer open).
+- **Smalle schuine geulen:** het padzoeken in een uitsnede gaat via `fijneDoorgang` (een weg over het fijne raster als de rechte lijn
+  tussen twee buurcellen net de oever raakt). Komt een route niet ergens in, kijk dan eerst naar het fijne raster.
+- **It Soal ligt aan de Zool in Workum** (IENC "Haven camping It Soal Workum"). Het groene licht op 52,945 N hoort bij Hindeloopen.
 - **Wedstrijdregels horen in de editie, niet in het vaargebied:** een verbod dat maar voor één wedstrijd geldt (het
   Oostvaardersdiep bij de beurtveer) wordt een zone in die editie; `verboden.mjs` is voor alle wedstrijden.
 

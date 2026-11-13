@@ -40,7 +40,7 @@
   "havens": {
     "bestand": "havens_ienc_5m.bin",
     "cel_m": 5,
-    "codering": "1 byte per cel van 5 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land, 2 = buiten de cirkel van 1,5 km rond de havenlichten (geen gegevens; de grove raster geldt)",
+    "codering": "1 byte per cel van 5 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land, 2 = buiten de cirkel van 1,5 km rond de havenlichten (geen gegevens; de grove raster geldt), 3 = verboden (A1-lijn op 5 m opnieuw getekend, of ander verboden gebied)",
     "actief": ["enkhuizen", "workum", "lelystad", "buiten-ij"],
     "uitsneden": [
       { "id": "buiten-ij", "west": 4.96, "noord": 52.4, "dlon": 0.0000741, "dlat": 0.000045, "nx": 1148, "ny": 1001, "cel_m": 5, "offset": 0 },
@@ -55,6 +55,6 @@
       { "id": "volendam", "west": 5.055, "noord": 52.505, "dlon": 0.0000741, "dlat": 0.000045, "nx": 405, "ny": 445, "cel_m": 5, "offset": 4486731 },
       { "id": "blocq", "west": 5.21, "noord": 52.432, "dlon": 0.0000741, "dlat": 0.000045, "nx": 473, "ny": 445, "cel_m": 5, "offset": 4666956 }
     ],
-    "sha256": "dca6df104498b54da8670073abe4b7f528417cc84cc7d1964458169736a89acf"
+    "sha256": "f8f3cef942298d16ed4333304aae95e9524e3971b8b3617c6f902bcf1871fa79"
   }
 }

@@ -1,8 +1,8 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 5,
-  "datum": "2026-11-12",
+  "versie": 6,
+  "datum": "2026-11-13",
   "toelichting": "Bodem en betonning uit het ververs-script (beheer/ververs.mjs); streefpeilen met de hand (versie 3). Havens en doorgangen volgen.",
   "gebied": {
     "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
@@ -43,7 +43,7 @@
     "bestand": "bodem_ijsselmeergebied_50m.bin",
     "opname": 2022,
     "bron": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)",
-    "opgehaald": "2026-11-12",
+    "opgehaald": "2026-11-13",
     "cel_m": 50,
     "west": 4.9,
     "noord": 53.1,
@@ -56,7 +56,7 @@
   },
   "betonning": {
     "bestand": "betonning_ijsselmeergebied.json",
-    "opgehaald": "2026-11-12",
+    "opgehaald": "2026-11-13",
     "aantal": 1674,
     "bron": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"
   },
@@ -323,8 +323,8 @@
   ],
   "doorgangen": [],
   "bronnen": [
-    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-12" },
-    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-12" },
+    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-13" },
+    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-13" },
     {
       "onderdeel": "land en water (IENC van RWS, lokaal)",
       "url": "https://www.vaarweginformatie.nl/frp/page/infra_enc",
@@ -366,7 +366,7 @@
     { "soort": "eiland", "id": "Marker Wadden, deel bij 52.621 N, 5.415 O", "km2": 1.45 },
     {
       "soort": "invaarverbod",
-      "id": "Doorvaartopening (beweegbaar) Noodkering bovenhoof, Sluiskolk Friese sluis Lemmer, Werkhaven Lemmer (52.837 N, 5.713 O)",
+      "id": "Doorvaartopening (beweegbaar) Noodkering bovenhoof, Sluiskolk Friese sluis Lemmer, Lemstervaart (52.837 N, 5.713 O)",
       "km2": 0
     },
     { "soort": "invaarverbod", "id": "KL 11, Prinses Margrietsluis, GROENE HL LEMMER (52.846 N, 5.680 O)", "km2": 0.02 },
@@ -377,16 +377,12 @@
     },
     {
       "soort": "invaarverbod",
-      "id": "Wachtplaats 2 Krabbersgatsluis - Buiten, Sluiskolk Krabbersgatsluis, KRAZ Krabbersgat Zuid (52.692 N, 5.284 O)",
+      "id": "Wachtplaats 2 Krabbersgatsluis - Buiten, Sluiskolk Krabbersgatsluis, Krabbersgat (52.692 N, 5.284 O)",
       "km2": 0.01
     },
     { "soort": "invaarverbod", "id": "Houtribsluizen Lelystad, HOUZ Houtrib Zuid, Wachtplaats 1 Houtribsluis - Binnen (52.526 N, 5.428 O)", "km2": 0 },
     { "soort": "invaarverbod", "id": "Zandwinning (52.505 N, 5.387 O)", "km2": 0.14 },
-    {
-      "soort": "invaarverbod",
-      "id": "Vluchthaven Almere-Buiten, Sluiskolk Zuidersluis Almere, Haven WV De Block van Kuffeler Almere Buiten (52.418 N, 5.224 O)",
-      "km2": 0
-    },
+    { "soort": "invaarverbod", "id": "Vluchthaven Almere-Buiten, Sluiskolk Zuidersluis Almere, Voorhaven Zuidersluis (52.418 N, 5.224 O)", "km2": 0 },
     { "soort": "invaarverbod", "id": "Schellingwoude post, IJTOREN-W, P 11 (52.380 N, 5.015 O)", "km2": 0.35 }
   ],
   "ienc": { "release": "Nederland (excl. Zeeland, Waddenzee)", "cellen": 28, "uitgifte_van": "20260818", "uitgifte_tot": "20261005" }

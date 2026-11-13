@@ -15,7 +15,7 @@ import { fromArrayBuffer } from 'geotiff';
 import { leesJson, schrijfJson } from './lib/json.mjs';
 import { wgsNaarRd, afstandM } from './lib/rd.mjs';
 import { maakPng } from './lib/png.mjs';
-import { haalIenc, verbodenGebieden } from './lib/verboden.mjs';
+import { haalIenc, verbodenGebieden, verfijnUitsneden } from './lib/verboden.mjs';
 import { iencVlakken, telWater } from '../../.claude/skills/ienc/scripts/raster.mjs';
 
 const MAP = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -422,6 +422,7 @@ function schrijfVerslag(v) {
     r.push('| Soort | Gebied | Boeien / turbines / vlakken | Oppervlak | Opmerking |', '|---|---|---|---|---|');
     for (const x of v.verboden.overzicht.filter(x => x.cellen > 0 || x.opmerking)) r.push(`| ${x.soort} | ${x.id}${x.vaarwater ? ' (' + x.vaarwater + ')' : ''} | ${x.boeien ?? x.turbines ?? x.ringen ?? ''} | ${x.km2 ? nl(x.km2, 2) + ' km²' : '–'} | ${x.opmerking || ''} |`);
     r.push('', `Totaal ${nl(v.verboden.cellen)} cellen (${nl(v.verboden.cellen * 0.0025, 1)} km²).`, '');
+    if (v.verboden.fijn) r.push('**Havenuitsneden op 5 m**: de A1-lijnen zijn binnen elke cirkel opnieuw getekend met de doortrekking naar het fijne land. Weer open (grof verboden door A1, op 5 m bereikbaar) / verboden: ' + v.verboden.fijn.map(x => `${x.id} ${nl(x.open)} / ${nl(x.dicht)} cellen van 5 m`).join('; ') + '.', '');
     if (v.verboden.smal?.length) {
       const s = v.verboden.smal;
       r.push(`**Niet verwerkt: ${s.length} andere stukken IENC-land op plekken die in het raster water zijn** (dammen, kribben, oevers; samen ${nl(s.reduce((t, x) => t + x.cellen, 0))} watercellen). `
@@ -544,6 +545,19 @@ if (esHoofdprogramma) {
     const uitgifte = ienc.cellen.map(c => c.uitgifte).sort();
     vg.ienc = { release: 'Nederland (excl. Zeeland, Waddenzee)', cellen: ienc.cellen.length, uitgifte_van: uitgifte[0], uitgifte_tot: uitgifte[uitgifte.length - 1] };
     log(`  ${verboden.cellen} cellen verboden in ${vg.verboden.length} gebieden`);
+    // verboden gebied ook op 5 m in de havenuitsneden (havenmonden smaller dan het grove raster)
+    {
+      const metaPad = join(MAP, 'gegevens', 'water_ienc.json'), meta = leesJson(metaPad), h = meta.havens;
+      const alles = new Uint8Array(gunzipSync(readFileSync(join(MAP, 'gegevens', h.bestand))));
+      const fijn = verfijnUitsneden(r, h.uitsneden.map(u => ({ ...u, water: alles.subarray(u.offset, u.offset + u.nx * u.ny) })), verboden.a1, { vaarwegen: ienc.features.filter(x => x.properties.klasse === 'FAIRWY' || x.properties.klasse === 'wtwaxs') });
+      const gzh = gzipSync(alles, { level: 9 }); gzh[4] = gzh[5] = gzh[6] = gzh[7] = 0;
+      writeFileSync(join(MAP, 'gegevens', h.bestand), gzh);
+      h.codering = '1 byte per cel van 5 m, per uitsnede rij voor rij van noord naar zuid: 1 = water volgens de IENC (alle 2 × 2 monsterpunten water, randen van land altijd land), 0 = land, 2 = buiten de cirkel van 1,5 km rond de havenlichten (geen gegevens; de grove raster geldt), 3 = verboden (A1-lijn op 5 m opnieuw getekend, of ander verboden gebied)';
+      h.sha256 = createHash('sha256').update(alles).digest('hex');
+      schrijfJson(metaPad, meta);
+      verboden.fijn = fijn; delete verboden.a1;
+      log('  verboden op 5 m: ' + fijn.map(x => `${x.id} ${x.open} open`).join(', '));
+    }
   
     const bestand = `bodem_ijsselmeergebied_${celM}m.bin`;
     const binPad = join(MAP, 'gegevens', bestand);
