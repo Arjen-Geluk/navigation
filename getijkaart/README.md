@@ -7,6 +7,7 @@ Momentopname als GPX-route voor OpenCPN en als PNG.
 Online: https://arjen-geluk.github.io/navigation/getijkaart/
 
 - Waterstanden: bij openen opgehaald bij RWS (RWsOS): gemeten tot nu, daarna RWS-eindverwachting h_6, daarna astronomisch.
+- Weergave: tijdschuif, grafiek en open vensters tonen een zelf gekozen periode binnen de opgehaalde reeks (minstens 3 uur); de keuze wordt in de browser onthouden. Blijft een RWS-reeks afgekapt, dan staat er een waarschuwing en stopt de kaart daar.
 - Waterstand per plek: getijmodel per cel (kromme van het hoofdstation per getij verschoven en geschaald).
 - Stroom: stroomatlas uit het getijmodel (astronomisch) en RWS-stroompunten (verwachting met wind, daarna astronomisch).
 - Bodem: RWS bodemhoogte 20 m en ENC-dieptecijfers 2025–2026 (NAP); LAT volgens NLLAT2018.
