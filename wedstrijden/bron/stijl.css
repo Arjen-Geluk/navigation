@@ -67,6 +67,7 @@ nav.tabs button{border:0;background:none;color:var(--navy-muted);font:inherit;fo
 nav.tabs button[aria-selected="true"]{color:var(--navy-ink);border-bottom-color:var(--navy-ink)}
 .bol{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:rgba(255,255,255,.18);vertical-align:1px}
 .bol.klaar{background:#3ccf82}.bol.let{background:#f2b45a}
+[hidden]{display:none !important}   /* hidden wint altijd, ook van .velden label{display:flex} */
 section.tab[hidden]{display:none}
 h3{font-size:15px;margin:14px 0 6px}
 h4{font-size:13px;margin:10px 0 4px;color:var(--muted)}

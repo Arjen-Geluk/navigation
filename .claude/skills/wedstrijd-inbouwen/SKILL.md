@@ -76,6 +76,7 @@ wedstrijd is vooral **gegevens**. Deze skill is de werkwijze en de les uit de bo
   (13 plaatsen, van Workum tot Durgerdam); voeg er een toe als een wedstrijd buiten dat gebied komt.
 - **Slaglengte:** "auto" probeert eerst onbeperkt en dan kortere slagen onder de langste rak; vergelijk niet met één vaste waarde.
 - **Bekende restpunten:** een raakpunt bij de kop van de leidam (Enkhuizen) en langs De Kreupel; niet als nieuwe fout melden.
+- **hidden en CSS:** `.velden label{display:flex}` won van het `hidden`-attribuut, zodat verborgen velden toch zichtbaar waren (0.32). Sinds 0.33 staat `[hidden]{display:none !important}` in `stijl.css`. Controleer zichtbaarheid met `getComputedStyle(el).display`, niet met `el.hidden`.
 - **Browsercontrole:** schermafdrukken blijven hangen onder viewport-emulatie — terug naar de desktopinstelling.
 
 ## Valkuilen bij havenlijnen (uit de beurtveer, november 2026)
