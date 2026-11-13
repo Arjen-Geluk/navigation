@@ -127,7 +127,7 @@
       tabel(['Baan', 'Snelste route', 'Zeiltijd', 'Finish', 'Voorsprong op nr. 2', 'Robuust'], Object.values(UITKOMST.banen).map(b => {
         const s = b.snelste, twee = b.routes[1];
         return el('tr', {}, el('td', {}, b.naam), el('td', {}, s ? el('b', {}, s.naam) : '–'), el('td', {}, s ? duur(s.res.zeiltijd_ms) : '–'),
-          el('td', {}, s ? kloktijd(s.res.finish) + (s.res.finish > UITKOMST.limiet ? ' (na limiet)' : '') : '–'),
+          el('td', {}, s ? finishTijd(s.res) + (s.res.finish > UITKOMST.limiet ? ' (na limiet)' : '') : '–'),
           el('td', {}, s && twee?.res.klaar ? `${duur(twee.res.zeiltijd_ms - s.res.zeiltijd_ms)} op ${twee.naam}` : '–'), el('td', {}, s ? `snelst in ${s.snelst_in} van 6` : ''));
       })),
       el('p', { class: 'db-klein' }, 'Robuust: hoe vaak de route ook het snelst is als de wind 15° links- of rechtsom draait, 20% meer of minder waait, of de windverandering een uur eerder of later komt. Alleen voor de voorbereiding; de kaart, de betonning en de wedstrijdleiding gaan voor.')));
@@ -138,7 +138,7 @@
       const b = UITKOMST.banen[bk], best = b.routes[0].res.zeiltijd_ms;
       bladen.push(el('section', { class: 'db-blad' }, kop(`${b.naam} baan: alle routes`),
         tabel(['#', 'Route', 'Zeiltijd', 'Finish', 'Verschil', 'Zeilweg', 'Overstag/gijp', 'Robuust'], b.routes.map((r, i) => el('tr', {},
-          el('td', {}, i + 1), el('td', {}, r.naam), el('td', {}, r.res.klaar ? duur(r.res.zeiltijd_ms) : 'niet gehaald'), el('td', {}, r.res.klaar ? kloktijd(r.res.finish) : '–'),
+          el('td', {}, i + 1), el('td', {}, r.naam), el('td', {}, r.res.klaar ? duur(r.res.zeiltijd_ms) : 'niet gehaald'), el('td', {}, r.res.klaar ? finishTijd(r.res) : '–'),
           el('td', {}, i && r.res.klaar ? '+ ' + duur(r.res.zeiltijd_ms - best) : ''), el('td', {}, afstand(r.res.zeilweg_m)), el('td', {}, `${r.res.overstag}/${r.res.gijp}`), el('td', {}, `${r.snelst_in}/6`))))));
       for (const r of b.routes) {
         if (!r.res.klaar) continue;
@@ -151,11 +151,12 @@
           return x.join('; ');
         };
         bladen.push(el('section', { class: 'db-blad' }, kop(`${b.naam} baan · ${r.naam}`),
-          el('p', {}, el('b', {}, `Zeiltijd ${duur(r.res.zeiltijd_ms)} · finish ${kloktijd(r.res.finish)}`), ` · zeilweg ${afstand(r.res.zeilweg_m)} (rechte lijnen ${afstand(r.res.afstand_m)}) · ${r.res.overstag} keer overstag, ${r.res.gijp} keer gijpen`),
+          el('p', {}, el('b', {}, `Zeiltijd ${duur(r.res.zeiltijd_ms)} · finish ${finishTijd(r.res)}`), ` · zeilweg ${afstand(r.res.zeilweg_m)} (rechte lijnen ${afstand(r.res.afstand_m)}) · ${r.res.overstag} keer overstag, ${r.res.gijp} keer gijpen`),
           tabel(['Rak', 'Ware koers', 'Afstand', 'Zeilstand', 'Zwaard', 'Ronding', 'Wind (Bft)', 'Slagen', 'Let op'], r.res.rakken.map(k => el('tr', {},
             el('td', {}, `${k.van} → ${k.naar}${pt[k.naar]?.zijde ? ' ' + pt[k.naar].zijde : ''}`), el('td', {}, koersTekst(koersNaar(pt[k.van], pt[k.naar]))),
             el('td', {}, afstand(k.afstand_m)), el('td', {}, hoofd(k.stand_s)), el('td', {}, hoofd(k.zwaard_s)), el('td', {}, el('b', {}, kloktijd(k.eind))),
             el('td', {}, windTekst(k.wind)), el('td', {}, k.overstag ? String(k.overstag + 1) : '1'), el('td', { class: 'db-klein' }, opm(k)))), 'rakken'),
+          r.res.onderdelen ? el('ol', { class: 'db-klein' }, onderdelenTekst(r.res).map(t => el('li', {}, t))) : '',
           r.res.waarschuwingen.length ? el('ul', { class: 'db-klein' }, r.res.waarschuwingen.map(w => el('li', {}, w))) : '',
           metKaart && B ? [el('img', { class: 'db-kaart', src: routeKaart(r, P, B), alt: `Kaart ${r.naam}` }),
             el('p', { class: 'db-klein' }, 'Kaart: zwarte lijn = berekende route met kruisslagen; grijs = land; stippels = te ondiep voor zwaard neer; dichte arcering = romp loopt vast; kruisarcering of streeplijn = verboden gebied. Tijden = verwachte rondingstijd.')] : ''));

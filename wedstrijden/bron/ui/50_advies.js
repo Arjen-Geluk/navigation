@@ -32,7 +32,7 @@ function gekozenRoute() {
     for (let i = 0; i < volgorde.length; i++) {
       balk.firstChild.style.width = `${Math.round(100 * i / volgorde.length)}%`;
       await new Promise(r => setTimeout(r, 30));
-      banen[volgorde[i]] = rekenBaan(VAARWATER, W, P, E, volgorde[i], { ...o, startMs: startMs() });
+      banen[volgorde[i]] = rekenBaan(VAARWATER, W, P, E, volgorde[i], { ...o, ...reisOpties(), startMs: startMs() });
     }
     balk.firstChild.style.width = '100%';
     setTimeout(() => { balk.hidden = true; }, 300);
@@ -76,7 +76,7 @@ function gekozenRoute() {
         return el('button', { type: 'button', class: 'baankaart' + (k === S.selectie.baan ? ' gekozen' : ''), onclick: () => { S.selectie.baan = k; S.selectie.route = s?.naam; bewaar(); toon(); meld('selectie'); } },
           el('div', { class: 'sub' }, b.naam + ' baan', k === wl ? el('span', { class: 'chip klein' }, 'wedstrijdleiding') : ''),
           s ? [el('div', { class: 'groot' }, s.naam),
-            el('div', {}, `Zeiltijd ${duur(s.res.zeiltijd_ms)} · finish `, el('b', { class: tijdRood(s.res.finish) ? 'rood' : null }, kloktijd(s.res.finish))),
+            el('div', {}, `Zeiltijd ${duur(s.res.zeiltijd_ms)} · finish `, el('b', { class: tijdRood(s.res.finish) ? 'rood' : null }, finishTijd(s.res))),
             el('div', { class: 'sub' }, twee?.res.klaar ? `${duur(twee.res.zeiltijd_ms - s.res.zeiltijd_ms)} sneller dan ${twee.naam}` : ''),
             el('div', { class: 'sub' }, `Snelst in ${s.snelst_in} van de 6 windafwijkingen`)]
             : el('div', {}, 'Geen route haalt de finish.'));
@@ -114,7 +114,9 @@ function gekozenRoute() {
     $('rakkenPaneel').hidden = false;
     $('rakkenTitel').textContent = `Rakken: ${r.naam}`;
     $('kopRoute').hidden = false;
-    $('kopRoute').textContent = `${r.naam} · ${duur(x.zeiltijd_ms)} · finish ${kloktijd(x.finish)}`;
+    $('kopRoute').textContent = `${r.naam} · ${duur(x.zeiltijd_ms)} · finish ${finishTijd(x)}`;
+    $('reisonderdelen').hidden = !x.onderdelen;
+    if (x.onderdelen) $('reisonderdelen').replaceChildren(el('b', {}, 'Reis'), el('ol', {}, onderdelenTekst(x).map(t => el('li', {}, t))));
     const pt = Object.fromEntries(r.punten.map(p => [p.id, p]));
     $('rakkentabel').replaceChildren(
       el('thead', {}, el('tr', {}, ['Rak', 'Koers', 'Afstand', 'Zeilweg', 'Zeilstand', 'Zwaard', 'Ronding', 'Wind', 'Overstag', 'Opmerking'].map(t => el('th', {}, t)))),

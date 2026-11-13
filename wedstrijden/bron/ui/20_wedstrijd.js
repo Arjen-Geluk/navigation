@@ -10,6 +10,14 @@
     $('baanWL').replaceChildren(el('option', { value: '' }, 'nog onbekend'), ...Object.entries(e.banen).map(([k, b]) => el('option', { value: k }, b.naam)));
     $('baanWL').value = inv.baanWL;
     $('eenheden').value = S.eenheden;
+    $('reisvelden').hidden = !isReis(e);
+    if (isReis(e)) {
+      const sluis = e.punten.find(p => p.soort === 'sluis'), haven = e.punten.find(p => p.soort === 'haven');
+      $('schuttijd').value = inv.schuttijd ?? ''; $('schuttijd').placeholder = sluis ? sluis.schuttijd_min : '';
+      $('verblijf').value = inv.verblijf ?? ''; $('verblijf').placeholder = haven ? haven.verblijf_min : '';
+      $('terugStart').value = inv.terugStart || '';
+      $('reisuitleg').textContent = `Leeg = de waarde uit de editie. Sluistijd en rust tellen niet als zeiltijd, een haven wel. De terugreis start ${e.rust_min_uur ?? 0} uur na de finish van de heenreis, of later als je hier een tijd invult.`;
+    }
     const st = $('editiestatus');
     st.textContent = e.status.gecontroleerd ? `Editie ${e.jaar} (v${e.versie}), gecontroleerd tegen ${e.status.tegen} (${e.status.datum_bepalingen})`
       : `Editie ${e.jaar} (v${e.versie}), nog niet gecontroleerd tegen de wedstrijdbepalingen`;
@@ -26,7 +34,8 @@
   for (const [id, veld] of [['datum', 'datum'], ['start', 'start'], ['limiet', 'limiet'], ['baanWL', 'baanWL']])
     $(id).onchange = () => { if ($(id).value || id === 'baanWL') invoer()[veld] = $(id).value; gewijzigd(); };
   $('eenheden').onchange = () => { S.eenheden = $('eenheden').value; gewijzigd(); };
-  $('editieStandaard').onclick = () => { const e = EDITIES[S.editie]; Object.assign(invoer(), { datum: e.datum, start: e.start, limiet: e.finishlimiet }); gewijzigd(); };
+  for (const id of ['schuttijd', 'verblijf', 'terugStart']) $(id).onchange = () => { invoer()[id] = $(id).value; gewijzigd(); };
+  $('editieStandaard').onclick = () => { const e = EDITIES[S.editie]; Object.assign(invoer(), { datum: e.datum, start: e.start, limiet: e.finishlimiet, schuttijd: '', verblijf: '', terugStart: '' }); gewijzigd(); };
 
   // Afwijkingen van de schipper (alleen in deze browser; de editie zelf verandert alleen via het beheer in de repo):
   // routes aanpassen (andere RWS-boei of wedstrijdton), wedstrijdtonnen toevoegen, punten verleggen, gebieden aan/uit.
@@ -47,7 +56,9 @@
           const stappen = veld.value.split(',').map(x => x.trim()).filter(Boolean);
           const bekend = new Set(e.punten.map(p => p.id)), slecht = [];
           for (const s of stappen.map(leesStap)) {
-            if (!s.zijde) slecht.push(`${s.punt}: rondingszijde (bb of sb) ontbreekt`);
+            const stop = s.punt === 'Rust' || ['haven', 'sluis'].includes(e.punten.find(p => p.id === s.punt)?.soort);
+            if (!s.zijde && !stop) slecht.push(`${s.punt}: rondingszijde (bb of sb) ontbreekt`);
+            else if (stop) continue;
             else if (!bekend.has(s.punt)) { const z = zoekBoei(BETONNING, s.punt); if (z.fout) slecht.push(z.fout); }
           }
           if (slecht.length) { fout.textContent = slecht.join('; '); return; }

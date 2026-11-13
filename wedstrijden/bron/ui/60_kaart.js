@@ -314,7 +314,7 @@
     const r = gekozenRoute();
     $('kaartRouteInfo').textContent = kaartRoute && r
       ? `${r.naam}: zeiltijd ${duur(kaartRoute.res.zeiltijd_ms)}, finish ${kloktijd(kaartRoute.res.finish)} (advies: ${duur(r.res.zeiltijd_ms)}). Klik op Bereken voor een nieuw advies met alle routes.`
-      : r ? `${r.naam}: zeiltijd ${duur(r.res.zeiltijd_ms)}, finish ${kloktijd(r.res.finish)}.` : '';
+      : r ? `${r.naam}: zeiltijd ${duur(r.res.zeiltijd_ms)}, finish ${finishTijd(r.res)}.` : '';
   }
 
   // ---- klik: bodem, diepte en bevaarbaarheid ----
