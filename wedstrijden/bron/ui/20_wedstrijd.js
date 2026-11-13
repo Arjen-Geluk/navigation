@@ -9,6 +9,7 @@
     $('datum').value = inv.datum; $('start').value = inv.start; $('limiet').value = inv.limiet;
     $('baanWL').replaceChildren(el('option', { value: '' }, 'nog onbekend'), ...Object.entries(e.banen).map(([k, b]) => el('option', { value: k }, b.naam)));
     $('baanWL').value = inv.baanWL;
+    $('baanWLveld').hidden = Object.keys(e.banen).length < 2;   // één baan (beurtveer): de wedstrijdleiding kiest geen baan, de schipper kiest de route
     $('eenheden').value = S.eenheden;
     $('reisvelden').hidden = !isReis(e);
     if (isReis(e)) {

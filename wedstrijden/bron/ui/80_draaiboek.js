@@ -136,7 +136,7 @@
     const B = BODEM, metKaart = $('dbKaarten').checked;
     for (const bk of banen) {
       const b = UITKOMST.banen[bk], best = b.routes[0].res.zeiltijd_ms;
-      bladen.push(el('section', { class: 'db-blad' }, kop(`${b.naam} baan: alle routes`),
+      bladen.push(el('section', { class: 'db-blad' }, kop(Object.keys(UITKOMST.banen).length > 1 ? `${b.naam} baan: alle routes` : 'Alle routes'),
         tabel(['#', 'Route', 'Zeiltijd', 'Finish', 'Verschil', 'Zeilweg', 'Overstag/gijp', 'Robuust'], b.routes.map((r, i) => el('tr', {},
           el('td', {}, i + 1), el('td', {}, r.naam), el('td', {}, r.res.klaar ? duur(r.res.zeiltijd_ms) : 'niet gehaald'), el('td', {}, r.res.klaar ? finishTijd(r.res) : '–'),
           el('td', {}, i && r.res.klaar ? '+ ' + duur(r.res.zeiltijd_ms - best) : ''), el('td', {}, afstand(r.res.zeilweg_m)), el('td', {}, `${r.res.overstag}/${r.res.gijp}`), el('td', {}, `${r.snelst_in}/6`))))));
@@ -150,7 +150,7 @@
           for (const [z, s] of Object.entries(k.ondiep || {})) x.push(`${Math.round(s / 60)} min ondiep voor zwaard ${z}`);
           return x.join('; ');
         };
-        bladen.push(el('section', { class: 'db-blad' }, kop(`${b.naam} baan · ${r.naam}`),
+        bladen.push(el('section', { class: 'db-blad' }, kop(Object.keys(UITKOMST.banen).length > 1 ? `${b.naam} baan · ${r.naam}` : r.naam),
           el('p', {}, el('b', {}, `Zeiltijd ${duur(r.res.zeiltijd_ms)} · finish ${finishTijd(r.res)}`), ` · zeilweg ${afstand(r.res.zeilweg_m)} (rechte lijnen ${afstand(r.res.afstand_m)}) · ${r.res.overstag} keer overstag, ${r.res.gijp} keer gijpen`),
           tabel(['Rak', 'Ware koers', 'Afstand', 'Zeilstand', 'Zwaard', 'Ronding', 'Wind (Bft)', 'Slagen', 'Let op'], r.res.rakken.map(k => el('tr', {},
             el('td', {}, `${k.van} → ${k.naar}${pt[k.naar]?.zijde ? ' ' + pt[k.naar].zijde : ''}`), el('td', {}, koersTekst(koersNaar(pt[k.van], pt[k.naar]))),
