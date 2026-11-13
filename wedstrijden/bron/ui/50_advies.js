@@ -74,7 +74,7 @@ function gekozenRoute() {
       ...Object.entries(UITKOMST.banen).map(([k, b]) => {
         const s = b.snelste, twee = b.routes[1];
         return el('button', { type: 'button', class: 'baankaart' + (k === S.selectie.baan ? ' gekozen' : ''), onclick: () => { S.selectie.baan = k; S.selectie.route = s?.naam; bewaar(); toon(); meld('selectie'); } },
-          el('div', { class: 'sub' }, b.naam + ' baan', k === wl ? el('span', { class: 'chip klein' }, 'wedstrijdleiding') : ''),
+          el('div', { class: 'sub' }, Object.keys(UITKOMST.banen).length > 1 ? b.naam + ' baan' : 'Snelste route', k === wl ? el('span', { class: 'chip klein' }, 'wedstrijdleiding') : ''),
           s ? [el('div', { class: 'groot' }, s.naam),
             el('div', {}, `Zeiltijd ${duur(s.res.zeiltijd_ms)} · finish `, el('b', { class: tijdRood(s.res.finish) ? 'rood' : null }, finishTijd(s.res))),
             el('div', { class: 'sub' }, twee?.res.klaar ? `${duur(twee.res.zeiltijd_ms - s.res.zeiltijd_ms)} sneller dan ${twee.naam}` : ''),
