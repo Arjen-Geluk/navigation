@@ -20,6 +20,11 @@ function el(tag, attr, ...kids) {
 const getal = (x, d = 1) => x == null || !Number.isFinite(x) ? '–' : x.toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
 const kloktijd = ms => ms == null ? '–' : new Date(ms).toLocaleTimeString('nl-NL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 const dagEnTijd = ms => new Date(ms).toLocaleString('nl-NL', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const finishTijd = res => res.onderdelen ? dagtijd(res.finish) : kloktijd(res.finish);
+const dagtijd = ms => ms == null ? '–' : new Date(ms).toLocaleString('nl-NL', { timeZone: TZ, weekday: 'short', hour: '2-digit', minute: '2-digit' });
+// reis met tussenstops: de onderdelen als korte tekst (zeilen, haven, sluis, rust) met dag en tijd
+const SOORT_TEKST = { zeilen: 'zeilen', haven: 'haven', sluis: 'sluis (telt niet)', rust: 'rust (telt niet)' };
+const onderdelenTekst = res => (res.onderdelen || []).map(o => [dagtijd(o.van), SOORT_TEKST[o.soort], o.soort === 'rust' ? '' : o.id].filter(Boolean).join(' ') + ` (${duur(o.tot - o.van)})`);
 const duur = ms => { if (ms == null) return '–'; const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} u ${String(m % 60).padStart(2, '0')}`; };
 const afstand = m => S.eenheden === 'km' ? `${getal(m / 1000)} km` : `${getal(m / 1852)} NM`;
 const koersTekst = k => k == null ? '–' : String(Math.round(k) % 360).padStart(3, '0') + '°';
@@ -84,7 +89,15 @@ function huidigeEditie() {
 }
 const heeftAfwijkingen = () => { const a = invoer().afwijkingen; return Object.keys(a.punten).length + Object.keys(a.zones).length + Object.keys(a.routes).length + a.tonnen.length > 0; };
 const startMs = () => lokaleTijdNaarMs(invoer().datum, invoer().start, EDITIES[S.editie].tijdzone);
-const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone); return l > s ? l : l + 864e5; };
+const limietMs = () => { const s = startMs(), l = lokaleTijdNaarMs(invoer().datum, invoer().limiet, EDITIES[S.editie].tijdzone) + (EDITIES[S.editie].finishdag || 0) * 864e5; return l > s ? l : l + 864e5; };
+// reis met tussenstops (beurtveer): heeft de editie havens, sluizen of een rust?
+const isReis = e => e.punten.some(p => p.soort === 'haven' || p.soort === 'sluis') || Object.values(e.banen).some(b => b.routes.some(r => r.volgorde.includes('Rust')));
+// opties voor vaarReis uit de invoer: lege velden = de waarden uit de editie
+const reisOpties = () => { const i = invoer(), o = {};
+  const st = Object.entries(i.stoptijden || {}).filter(([, v]) => v !== '' && v != null);
+  if (st.length) o.stoptijden = Object.fromEntries(st.map(([k, v]) => [k, +v]));
+  if (i.terugStart) o.terug_start_ms = lokaleTijdNaarMs(i.terugStart.slice(0, 10), i.terugStart.slice(11, 16), EDITIES[S.editie].tijdzone);
+  return o; };
 // Peil: streefpeil zomer of winter (standaard volgens de wedstrijddatum), het gemeten peil van RWS, of een eigen waarde.
 // Gemeten peil zonder meting: terug naar het streefpeil van het seizoen.
 const PEIL = G.vaargebied.peil;

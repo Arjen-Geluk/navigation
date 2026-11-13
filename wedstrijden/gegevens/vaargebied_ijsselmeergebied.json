@@ -1,8 +1,8 @@
 {
   "formaat": "vaargebied/1",
   "naam": "IJsselmeergebied",
-  "versie": 4,
-  "datum": "2026-11-10",
+  "versie": 6,
+  "datum": "2026-11-13",
   "toelichting": "Bodem en betonning uit het ververs-script (beheer/ververs.mjs); streefpeilen met de hand (versie 3). Havens en doorgangen volgen.",
   "gebied": {
     "omschrijving": "IJsselmeer en Markermeer tot de lijn Buiten-IJ",
@@ -43,7 +43,7 @@
     "bestand": "bodem_ijsselmeergebied_50m.bin",
     "opname": 2022,
     "bron": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows (laag bodemhoogte_ijsselmeergebied:bodemhoogte_ijg_2022)",
-    "opgehaald": "2026-11-10",
+    "opgehaald": "2026-11-13",
     "cel_m": 50,
     "west": 4.9,
     "noord": 53.1,
@@ -56,7 +56,7 @@
   },
   "betonning": {
     "bestand": "betonning_ijsselmeergebied.json",
-    "opgehaald": "2026-11-10",
+    "opgehaald": "2026-11-13",
     "aantal": 1674,
     "bron": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0"
   },
@@ -65,18 +65,18 @@
       "id": "buiten-ij",
       "naam": "Buiten-IJ (Amsterdam, Durgerdam)",
       "soort": "lijn",
-      "kader": { "zuid": 52.362, "west": 4.96, "noord": 52.4, "oost": 5.03 },
+      "kader": { "zuid": 52.355, "west": 4.96, "noord": 52.4, "oost": 5.045 },
       "reglement": "beurtveer 2.2.7, 2.9.7-8; strontrace 2.8.1",
       "lijnen": [
         {
           "id": "buiten-ij",
           "rol": "finish heenreis / start terugreis / havengebied Amsterdam",
-          "status": "kandidaat",
+          "status": "bevestigd",
           "punten": [
-            { "naam": "vuurtoren Buiten-IJ (toren met wit-rood sectorlicht)", "lat": 52.371814, "lon": 5.014017, "bron": "IENC" },
-            { "naam": "rood licht Iso 6s op de dam", "lat": 52.369694, "lon": 5.015644, "bron": "IENC" }
+            { "naam": "vuurtoren Buiten-IJ (toren met wit-rood sectorlicht)", "lat": 52.371811, "lon": 5.01402, "bron": "IENC" },
+            { "naam": "dam tegenover de vuurtoren", "lat": 52.367966, "lon": 5.014437, "bron": "gebruiker (kaart)" }
           ],
-          "toelichting": "uit de IENC: toren met lichtfunctie en het rode licht ten zuiden ervan; graag nakijken"
+          "toelichting": "reglement: \"de vuurtoren van het buiten-IJ en het rode havenlicht op de dam daar tegenover\"; dat licht staat niet in de IENC, punt op de dam gekozen door de gebruiker (2026-11-12)"
         }
       ]
     },
@@ -108,9 +108,12 @@
         {
           "id": "workum-finish",
           "rol": "finish terugreis beurtveer (groene lichtopstand It Soal – dijk)",
-          "status": "open",
-          "punten": [],
-          "toelichting": "groene lichtopstand van de jachthaven It Soal niet gevonden"
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "groene lichtopstand haveningang It Soal", "lat": 52.962678, "lon": 5.414196, "bron": "gebruiker (kaart)" },
+            { "naam": "dijk", "lat": 52.962318, "lon": 5.414712, "bron": "gebruiker (kaart)" }
+          ],
+          "toelichting": "reglement 2.2.12; punten gekozen door de gebruiker op de IENC-kaart (2026-11-12)"
         }
       ]
     },
@@ -133,39 +136,58 @@
         {
           "id": "enkhuizen-zuid",
           "rol": "havengebied zuid (groen licht quick op de punt van de dam – hoek van de dam)",
-          "status": "kandidaat",
-          "punten": [{ "naam": "SCHEIDINGSLICHT ZZ (groen Q)", "lat": 52.684212, "lon": 5.275907, "bron": "RWS" }],
-          "toelichting": "tweede punt (hoek van de dam) nog vast te stellen"
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "SCHEIDINGSLICHT ZZ", "lat": 52.684211, "lon": 5.275908, "bron": "RWS" },
+            { "naam": "hoek van de dam", "lat": 52.684418, "lon": 5.281635, "bron": "gebruiker (kaart)" }
+          ]
         },
-        { "id": "naviduct-motor", "rol": "verplicht motorgebied (remmingwerk noord – ND_5 en 3e rode staak zuid)", "status": "open", "punten": [] }
+        {
+          "id": "naviduct-noord",
+          "rol": "verplicht motorgebied noord (dwars van de eerste losse palen van het remmingswerk)",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "remmingwerk noord, west", "lat": 52.693144, "lon": 5.295144, "bron": "gebruiker (kaart)" },
+            { "naam": "remmingwerk noord, oost", "lat": 52.693202, "lon": 5.296899, "bron": "gebruiker (kaart)" }
+          ]
+        },
+        {
+          "id": "naviduct-zuid",
+          "rol": "verplicht motorgebied zuid (ND_5 – 3e rode staak op de dam)",
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "KG 21", "lat": 52.686616, "lon": 5.287843, "bron": "RWS" },
+            { "naam": "3e rode staak op de dam", "lat": 52.684669, "lon": 5.290457, "bron": "gebruiker (kaart)" }
+          ],
+          "toelichting": "ND 5 staat niet in de RWS-betonning of de IENC; de gebruiker koos KG 21 (2026-11-12)"
+        }
       ]
     },
     {
       "id": "lelystad",
       "naam": "Lelystad, Houtribsluizen",
       "soort": "sluis",
-      "kader": { "zuid": 52.51, "west": 5.405, "noord": 52.55, "oost": 5.455 },
+      "kader": { "zuid": 52.495, "west": 5.4, "noord": 52.55, "oost": 5.455 },
       "reglement": "beurtveer 2.9.12; strontrace 2.8",
       "lijnen": [
         {
           "id": "lelystad-noord",
           "rol": "havengebied / motorgebied noord",
-          "status": "kandidaat",
+          "status": "bevestigd",
           "punten": [
-            { "naam": "HOUTRIBSLUIZEN KOP N DAM (groen ISO 4)", "lat": 52.53768, "lon": 5.436747, "bron": "RWS" },
-            { "naam": "rood havenlicht Houtribhaven", "lat": 52.533886, "lon": 5.440894, "bron": "IENC" }
-          ],
-          "toelichting": "rode licht uit de IENC, tegenover de groene ISO 4; graag nakijken"
+            { "naam": "HOUTRIBSLUIZEN KOP N DAM", "lat": 52.537685, "lon": 5.43674, "bron": "RWS" },
+            { "naam": "FR Deko Marine", "lat": 52.533886, "lon": 5.440895, "bron": "IENC" }
+          ]
         },
         {
           "id": "lelystad-zuid",
-          "rol": "havengebied zuid (groene en rode vaste havenlichten)",
-          "status": "kandidaat",
+          "rol": "havengebied / motorgebied zuid (groene en rode vaste havenlichten)",
+          "status": "bevestigd",
           "punten": [
-            { "naam": "Bataviahaven gn", "lat": 52.51579, "lon": 5.43866, "bron": "OpenStreetMap" },
-            { "naam": "Bataviahaven rd", "lat": 52.51608, "lon": 5.43793, "bron": "OpenStreetMap" }
+            { "naam": "RODE HL GELEIDEDAM", "lat": 52.511712, "lon": 5.41715, "bron": "RWS" },
+            { "naam": "GROENE HL GELEIDEDAM", "lat": 52.509676, "lon": 5.418215, "bron": "RWS" }
           ],
-          "toelichting": "zijn dit de bedoelde lichten?"
+          "toelichting": "keuze van de gebruiker (2026-11-12): de havenlichten van de geleidedam, niet die van de Bataviahaven"
         }
       ]
     },
@@ -198,9 +220,12 @@
         {
           "id": "lemmer",
           "rol": "havengebied (groen havenlicht – eerste hoek jachthaven De Friese Hoek)",
-          "status": "kandidaat",
-          "punten": [{ "naam": "groen havenlicht", "lat": 52.838591, "lon": 5.708971, "bron": "IENC" }],
-          "toelichting": "groen licht van de haveningang uit de IENC (rood ertegenover op 52,8366 N, 5,7086 O); hoek van De Friese Hoek nog vast te stellen"
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "hoek jachthaven De Friese Hoek", "lat": 52.837808, "lon": 5.703362, "bron": "gebruiker (kaart)" },
+            { "naam": "OL KOPDWARSDAM NOORDERMEERDIJK", "lat": 52.835975, "lon": 5.703392, "bron": "RWS" }
+          ],
+          "toelichting": "keuze van de gebruiker (2026-11-12): het groene licht op de kopdwarsdam, westelijker dan de buitenhaven"
         }
       ]
     },
@@ -214,10 +239,10 @@
         {
           "id": "stavoren",
           "rol": "haveningang",
-          "status": "kandidaat",
+          "status": "bevestigd",
           "punten": [
-            { "naam": "Stavoren rd", "lat": 52.88638, "lon": 5.35247, "bron": "OpenStreetMap" },
-            { "naam": "Stavoren gn", "lat": 52.88598, "lon": 5.35383, "bron": "OpenStreetMap" }
+            { "naam": "FR Buitenhaven kop W", "lat": 52.886397, "lon": 5.352469, "bron": "IENC" },
+            { "naam": "FG Buitenhaven kop E", "lat": 52.885993, "lon": 5.353846, "bron": "IENC" }
           ]
         }
       ]
@@ -232,9 +257,11 @@
         {
           "id": "urk",
           "rol": "havengebied (rood havenlicht – tank op de Zuidermeerdijk)",
-          "status": "kandidaat",
-          "punten": [{ "naam": "rood havenlicht", "lat": 52.65651, "lon": 5.59786, "bron": "OpenStreetMap" }],
-          "toelichting": "positie van de tank nog vast te stellen"
+          "status": "bevestigd",
+          "punten": [
+            { "naam": "FR Urk kop W havenhoofd", "lat": 52.6565, "lon": 5.597858, "bron": "IENC" },
+            { "naam": "tank op de Zuidermeerdijk", "lat": 52.657021, "lon": 5.601484, "bron": "gebruiker (kaart)" }
+          ]
         }
       ]
     },
@@ -248,12 +275,12 @@
         {
           "id": "hoorn",
           "rol": "havengebied (havenlichten van de Buitenhaven)",
-          "status": "kandidaat",
+          "status": "bevestigd",
           "punten": [
-            { "naam": "Hoorn red", "lat": 52.63275, "lon": 5.06406, "bron": "OpenStreetMap" },
-            { "naam": "Hoorn green", "lat": 52.63319, "lon": 5.065, "bron": "OpenStreetMap" }
+            { "naam": "FR havenhoofd Hoorn", "lat": 52.632745, "lon": 5.06416, "bron": "IENC" },
+            { "naam": "FG havendam Hoorn", "lat": 52.63319, "lon": 5.064993, "bron": "IENC" }
           ],
-          "toelichting": "reglement spreekt van de havenlichten van de beide haveningangen"
+          "toelichting": "reglement spreekt van de havenlichten van de beide haveningangen; de IENC heeft één paar"
         }
       ]
     },
@@ -296,8 +323,8 @@
   ],
   "doorgangen": [],
   "bronnen": [
-    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-10" },
-    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-10" },
+    { "onderdeel": "bodem", "url": "https://geo.rijkswaterstaat.nl/services/ogc/gdr/bodemhoogte_ijsselmeergebied/ows", "opgehaald": "2026-11-13" },
+    { "onderdeel": "betonning", "url": "https://service.pdok.nl/rws/vaarwegmarkeringen-nederland/wfs/v1_0", "opgehaald": "2026-11-13" },
     {
       "onderdeel": "land en water (IENC van RWS, lokaal)",
       "url": "https://www.vaarweginformatie.nl/frp/page/infra_enc",
@@ -339,7 +366,7 @@
     { "soort": "eiland", "id": "Marker Wadden, deel bij 52.621 N, 5.415 O", "km2": 1.45 },
     {
       "soort": "invaarverbod",
-      "id": "Doorvaartopening (beweegbaar) Noodkering bovenhoof, Sluiskolk Friese sluis Lemmer, Werkhaven Lemmer (52.837 N, 5.713 O)",
+      "id": "Doorvaartopening (beweegbaar) Noodkering bovenhoof, Sluiskolk Friese sluis Lemmer, Lemstervaart (52.837 N, 5.713 O)",
       "km2": 0
     },
     { "soort": "invaarverbod", "id": "KL 11, Prinses Margrietsluis, GROENE HL LEMMER (52.846 N, 5.680 O)", "km2": 0.02 },
@@ -350,16 +377,12 @@
     },
     {
       "soort": "invaarverbod",
-      "id": "Wachtplaats 2 Krabbersgatsluis - Buiten, Sluiskolk Krabbersgatsluis, KRAZ Krabbersgat Zuid (52.692 N, 5.284 O)",
+      "id": "Wachtplaats 2 Krabbersgatsluis - Buiten, Sluiskolk Krabbersgatsluis, Krabbersgat (52.692 N, 5.284 O)",
       "km2": 0.01
     },
     { "soort": "invaarverbod", "id": "Houtribsluizen Lelystad, HOUZ Houtrib Zuid, Wachtplaats 1 Houtribsluis - Binnen (52.526 N, 5.428 O)", "km2": 0 },
     { "soort": "invaarverbod", "id": "Zandwinning (52.505 N, 5.387 O)", "km2": 0.14 },
-    {
-      "soort": "invaarverbod",
-      "id": "Vluchthaven Almere-Buiten, Sluiskolk Zuidersluis Almere, Haven WV De Block van Kuffeler Almere Buiten (52.418 N, 5.224 O)",
-      "km2": 0
-    },
+    { "soort": "invaarverbod", "id": "Vluchthaven Almere-Buiten, Sluiskolk Zuidersluis Almere, Voorhaven Zuidersluis (52.418 N, 5.224 O)", "km2": 0 },
     { "soort": "invaarverbod", "id": "Schellingwoude post, IJTOREN-W, P 11 (52.380 N, 5.015 O)", "km2": 0.35 }
   ],
   "ienc": { "release": "Nederland (excl. Zeeland, Waddenzee)", "cellen": 28, "uitgifte_van": "20260818", "uitgifte_tot": "20261005" }

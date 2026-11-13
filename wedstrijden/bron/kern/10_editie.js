@@ -34,6 +34,11 @@ function metPosities(e, index) {
   };
   // een lijn (finish- of startlijn): beide uiteinden invullen; het punt zelf komt in het midden
   const vul = p => {
+    if (p.lijnen) {   // sluis: twee lijnen; het punt zelf komt in het midden van alle vier de uiteinden
+      const lijnen = p.lijnen.map(l => l.map(vulPunt)), q = lijnen.flat();
+      if (q.some(x => x.lat == null)) return { ...p, lijnen, positie: 'onbekend' };
+      return { ...p, lijnen, lat: q.reduce((s, x) => s + x.lat, 0) / 4, lon: q.reduce((s, x) => s + x.lon, 0) / 4, positie: q.some(x => x.positie === 'RWS') ? 'RWS' : 'editie' };
+    }
     if (!p.lijn) return vulPunt(p);
     const lijn = p.lijn.map(vulPunt);
     if (lijn.some(q => q.lat == null)) return { ...p, lijn, positie: 'onbekend' };
@@ -55,7 +60,11 @@ function controleerEditie(e) {
   for (const p of e.punten || []) {
     if (ids.has(p.id)) fout.push(`punt ${p.id} staat dubbel`);
     ids.add(p.id);
-    if (p.lijn) {
+    if (p.soort === 'haven' && !p.lijn) fout.push(`haven ${p.id} heeft geen havenlijn`);
+    if (p.soort === 'sluis') {
+      if (!Array.isArray(p.lijnen) || p.lijnen.length !== 2 || p.lijnen.some(l => !Array.isArray(l) || l.length !== 2)) fout.push(`sluis ${p.id}: twee lijnen met elk twee uiteinden`);
+      else p.lijnen.flat().forEach((q, i) => { if (!positieOk(q)) fout.push(`sluis ${p.id}, uiteinde ${i + 1}: geen RWS-naam en geen positie`); });
+    } else if (p.lijn) {
       if (!Array.isArray(p.lijn) || p.lijn.length !== 2) fout.push(`punt ${p.id}: een lijn heeft precies twee uiteinden`);
       else p.lijn.forEach((q, i) => { if (!positieOk(q)) fout.push(`punt ${p.id}, uiteinde ${i + 1}: geen RWS-naam en geen positie`); });
     } else if (!positieOk(p)) fout.push(`punt ${p.id} heeft geen RWS-naam en geen positie in het IJsselmeergebied`);
@@ -66,7 +75,8 @@ function controleerEditie(e) {
   }
   for (const [b, baan] of Object.entries(e.banen || {})) for (const r of baan.routes || []) {
     const st = r.volgorde.map(leesStap);
-    st.forEach(s => { if (!ids.has(s.punt)) fout.push(`baan ${b}, ${r.naam}: punt "${s.punt}" bestaat niet`); });
+    st.forEach(s => { if (s.punt !== 'Rust' && !ids.has(s.punt)) fout.push(`baan ${b}, ${r.naam}: punt "${s.punt}" bestaat niet`); });
+    if (st.some(s => s.punt === 'Rust') && e.rust_min_uur == null) fout.push(`baan ${b}, ${r.naam}: een rust vraagt rust_min_uur in de editie`);
     if (st[0]?.punt !== 'Start') fout.push(`baan ${b}, ${r.naam}: begint niet bij de start`);
     if (st[st.length - 1]?.punt !== 'Finish') fout.push(`baan ${b}, ${r.naam}: eindigt niet bij de finish`);
   }

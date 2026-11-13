@@ -156,3 +156,45 @@ test('uitsneden: haven Enkhuizen op 5 m', () => {
   assert.ok(fijnWater > 10, `${fijnWater} fijne watercellen waar het grove raster land is`);
   assert.equal(K.bodemOp(B, 52.705, 5.25), null, 'Enkhuizen (land) blijft land');
 });
+
+test('reis met sluis, haven en rust (beurtveer): sluistijd en rust tellen niet, haventijd wel', () => {
+  const lijn = id => G.vaargebied.havens.flatMap(h => h.lijnen).find(l => l.id === id).punten.map(q => ({ lat: q.lat, lon: q.lon }));
+  const sluis = { id: 'Naviduct', soort: 'sluis', lijnen: [lijn('naviduct-noord'), lijn('naviduct-zuid')], schuttijd_min: 45 };
+  const noord = { id: 'IJsselmeer', lat: 52.74, lon: 5.27 };
+  const punten = [noord, sluis, { id: 'Hoorn', soort: 'haven', lijn: lijn('hoorn'), verblijf_min: 20 }, { id: 'Rust', soort: 'rust', rust_min_uur: 2 }, sluis, { ...noord, id: 'Finish' }];
+  const W = vasteWind(K, 240, 12, t0, 48);
+  const r = K.vaarReis(V, W, P, punten, t0, { max_slag_nm: Infinity, robuustheid: false });
+  assert.ok(r.klaar, r.waarschuwingen.join('; '));
+  assert.deepEqual(Array.from(r.onderdelen, o => o.soort), ['zeilen', 'sluis', 'zeilen', 'haven', 'rust', 'zeilen', 'sluis', 'zeilen']);
+  const rust = r.onderdelen.find(o => o.soort === 'rust');
+  assert.equal(rust.tot - rust.van, 2 * 3600e3, 'rust precies 2 uur');
+  assert.equal(r.aftrek_ms, 2 * 45 * 60e3 + 2 * 3600e3, 'twee keer schutten en de rust tellen niet');
+  assert.equal(r.zeiltijd_ms, r.klok_ms - r.aftrek_ms);
+  // heen naar binnen bij de noordlijn, terug bij de zuidlijn
+  const m = l => ({ lat: (l[0].lat + l[1].lat) / 2, lon: (l[0].lon + l[1].lon) / 2 });
+  const naSluis = r.track.filter(p => p.vaart === 0 && p.koers === null).slice(1);
+  assert.ok(K.afstandM(naSluis[0], m(sluis.lijnen[1])) < 1 && K.afstandM(naSluis[1], m(sluis.lijnen[0])) < 1, 'uit aan de andere kant van de sluis');
+  // een latere terugstart schuift de rust op, niet de zeiltijd
+  const r2 = K.vaarReis(V, W, P, punten, t0, { max_slag_nm: Infinity, robuustheid: false, terug_start_ms: rust.tot + 3600e3 });
+  assert.equal(r2.onderdelen.find(o => o.soort === 'rust').tot, rust.tot + 3600e3);
+  assert.ok(Math.abs(r2.zeiltijd_ms - r.zeiltijd_ms) < 15 * 60e3, 'zeiltijd bijna gelijk (alleen de wind op een ander uur)');
+  // eigen tijd per sluis of haven
+  const r3 = K.vaarReis(V, W, P, punten, t0, { max_slag_nm: Infinity, stoptijden: { Naviduct: 60, Hoorn: 5 } });
+  assert.equal(r3.aftrek_ms, 2 * 60 * 60e3 + 2 * 3600e3, 'schutten 60 min in plaats van 45');
+  assert.equal(r3.onderdelen.find(o => o.soort === 'haven').tot - r3.onderdelen.find(o => o.soort === 'haven').van, 5 * 60e3);
+  // controle van de editie: sluis zonder tweede lijn, rust zonder rust_min_uur
+  const e = { ...JSON.parse(JSON.stringify(G.edities['3-steden_2026'])) };
+  e.punten.push({ id: 'S', soort: 'sluis', lijnen: [lijn('naviduct-noord')] });
+  e.banen.K.routes[0].volgorde.splice(1, 0, 'Rust');
+  const f = K.controleerEditie(e).join(' | ');
+  assert.match(f, /sluis S: twee lijnen/); assert.match(f, /rust_min_uur/);
+});
+
+test('uitsneden: Workum bereikbaar door de vaargeul, het natuurgebied achter de DW-boeien blijft verboden', () => {
+  assert.ok(!K.inVerbodenVaargebied(B, 52.9601, 5.4050), 'vaargeul langs de noordelijke havendam');
+  assert.ok(K.inVerbodenVaargebied(B, 52.9640, 5.4000), 'natuurgebied achter de DW-boeien');
+  const fin = G.edities['beurtveer_2027'].punten.find(p => p.id === 'Finish');
+  const pad = K.zoekPad(V, { lat: 52.9555, lon: 5.3925 }, { lat: fin.lat, lon: fin.lon });
+  assert.ok(pad, 'een weg van buiten de haven naar de finish bij It Soal');
+  assert.ok(pad.every(p => !K.inVerbodenVaargebied(B, p.lat, p.lon)), 'geen punt van de weg in verboden gebied');
+});

@@ -105,7 +105,7 @@
   }
   // de kustlijn van de havenuitsneden (10 m), op dezelfde manier boven de diepte en bevaarbaarheid
   function uitsnedeKust(u) {
-    return L.imageOverlay(kustUrl(u.nx, u.ny, (i, j) => { const v = u.water[j * u.nx + i]; return v === 2 ? null : v === 1; }), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { pane: 'kust', interactive: false });
+    return L.imageOverlay(kustUrl(u.nx, u.ny, (i, j) => { const v = u.water[j * u.nx + i]; return v === 2 ? null : v === 1 || v === 3; }), [[u.noord - u.ny * u.dlat, u.west], [u.noord, u.west + u.nx * u.dlon]], { pane: 'kust', interactive: false });
   }
   function vastRaster() {
     if (!top10) return rasterLaag(c => c === 255 ? LAND : c === 254 ? [226, 190, 214] : WATER);   // terugval: bodemraster
@@ -314,7 +314,7 @@
     const r = gekozenRoute();
     $('kaartRouteInfo').textContent = kaartRoute && r
       ? `${r.naam}: zeiltijd ${duur(kaartRoute.res.zeiltijd_ms)}, finish ${kloktijd(kaartRoute.res.finish)} (advies: ${duur(r.res.zeiltijd_ms)}). Klik op Bereken voor een nieuw advies met alle routes.`
-      : r ? `${r.naam}: zeiltijd ${duur(r.res.zeiltijd_ms)}, finish ${kloktijd(r.res.finish)}.` : '';
+      : r ? `${r.naam}: zeiltijd ${duur(r.res.zeiltijd_ms)}, finish ${finishTijd(r.res)}.` : '';
   }
 
   // ---- klik: bodem, diepte en bevaarbaarheid ----

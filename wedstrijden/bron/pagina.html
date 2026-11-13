@@ -52,6 +52,11 @@
         <label>Baan volgens de wedstrijdleiding <select id="baanWL"><option value="">nog onbekend</option></select></label>
         <label>Afstanden in <select id="eenheden"><option value="nm">zeemijl (NM)</option><option value="km">kilometer</option></select></label>
       </div>
+      <div class="velden" id="reisvelden" hidden>
+        <span class="velden" id="stopvelden"></span>
+        <label>Start terugreis <input type="datetime-local" id="terugStart"></label>
+        <span class="sub" id="reisuitleg"></span>
+      </div>
       <p><span class="chip" id="editiestatus"></span> <button type="button" class="knop stil klein" id="editieStandaard">Datum en tijden terug naar de editie</button></p>
       <div class="melding let" id="jaarmelding" hidden></div>
       <div class="melding let" id="afwijkmelding" hidden></div>
@@ -130,6 +135,7 @@
       <div class="tabelvak"><table class="tabel klik" id="routetabel"></table></div>
     </div>
     <div class="paneel" id="rakkenPaneel" hidden>
+      <div class="sub" id="reisonderdelen" hidden></div>
       <h2 id="rakkenTitel">Rakken</h2>
       <div class="tabelvak"><table class="tabel" id="rakkentabel"></table></div>
       <div id="routewaarschuwingen"></div>

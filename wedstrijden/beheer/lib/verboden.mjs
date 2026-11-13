@@ -18,7 +18,7 @@ export const GEEN_WATER = 255, VERBODEN = 254;
 const MARKER_WADDEN = { zuid: 52.565, west: 5.33, noord: 52.645, oost: 5.46 };
 
 // IENC-objecten voor de verboden gebieden, plus benoemde objecten om naamloze vlakken te beschrijven
-const IENC_KLASSEN = ['LNDMRK', 'CTNARE', 'LNDARE', 'resare', 'RESARE', 'MIPARE'];
+const IENC_KLASSEN = ['LNDMRK', 'CTNARE', 'LNDARE', 'resare', 'RESARE', 'MIPARE', 'FAIRWY', 'wtwaxs'];   // FAIRWY en wtwaxs: vaarwegen voor verfijnUitsneden
 const IENC_NAMEN = ['lokbsn', 'BOYLAT', 'boylat', 'BOYCAR', 'BOYSPP', 'BCNLAT', 'bcnlat', 'BCNSPP', 'wtwgag', 'comare', 'hrbare', 'bridge', 'BRIDGE', 'gatcon'];
 export function haalIenc(encRoot, gebied) {
   const bbox = [gebied.west, gebied.zuid, gebied.oost, gebied.noord];
@@ -135,6 +135,8 @@ const groepVan = naam => ((String(naam).toUpperCase().match(/^([A-Z]+(?:-OW)?)/)
 export function verbodenGebieden(r, betonning, ienc, gebied, { uitsluiten = [], gat_m = 1200, land_m = 2000 } = {}) {
   const R = raster(r), celKm2 = (r.dlat * M_LAT) * (r.dlon * M_LON) / 1e6, overzicht = [];
   const zaden = gebied.zaden || [];
+  // voor verfijnUitsneden: de A1-lijnen (met hun doortrekking naar het land) en de cellen die door A1 verboden werden
+  const a1Info = { lijnen: [], cel: new Uint8Array(r.codes.length) };
 
   // 1. A1-boeien
   const a1 = betonning.filter(m => m.kleur === 'Geel' && /rood.?wit.?rood/i.test(m.topteken || ''));
@@ -157,6 +159,7 @@ export function verbodenGebieden(r, betonning, ienc, gebied, { uitsluiten = [], 
       if (a) lijn.unshift(a); else open++;
       if (b) lijn.push(b); else open++;
       lijnen++;
+      a1Info.lijnen.push({ groep: g, punten: lijn, land: [!!a, !!b] });
       for (let i = 1; i < lijn.length; i++) {
         const p = lijn[i - 1], q = lijn[i], n = Math.max(1, Math.ceil(afstandM(p, q) / 10));
         for (let t = 0; t <= n; t++) {
@@ -167,7 +170,7 @@ export function verbodenGebieden(r, betonning, ienc, gebied, { uitsluiten = [], 
     }
     const bereik = bereikbaar(r, R, zaden, barriere);
     let n = 0;
-    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] < VERBODEN && (!bereik[k] || barriere[k])) { r.codes[k] = VERBODEN; n++; }
+    for (let k = 0; k < r.codes.length; k++) if (r.codes[k] < VERBODEN && (!bereik[k] || barriere[k])) { r.codes[k] = VERBODEN; a1Info.cel[k] = 1; n++; }
     overzicht.push({ soort: 'A1-boeien', id: g, boeien: boeien.length, vaarwater: [...new Set(boeien.map(m => m.vaarwater))].join(', '), lijnen, open, cellen: n, km2: n * celKm2,
       opmerking: !n ? 'geen gebied' : open ? `${open} uiteinde(n) niet aan land gekoppeld (binnen ${land_m} m geen land)` : '' });
   }
@@ -231,5 +234,100 @@ export function verbodenGebieden(r, betonning, ienc, gebied, { uitsluiten = [], 
       opmerking: `IENC ${x.properties.klasse} restrn 7${n ? '' : ': kleiner dan een cel of op land'}` });
   }
 
-  return { overzicht, smal, naamloos, cellen: r.codes.reduce((n, c) => n + (c === VERBODEN), 0) };
+  return { overzicht, smal, naamloos, cellen: r.codes.reduce((n, c) => n + (c === VERBODEN), 0), a1: a1Info };
+}
+
+// Verboden gebied in de havenuitsneden van 5 m. Een havenmond is vaak smaller dan twee cellen van 50 m, zodat een A1-lijn
+// die naar het land wordt doorgetrokken in het grove raster de haven afsluit (Workum, DW-boeien). Binnen elke cirkel wordt de
+// A1-lijn daarom opnieuw getekend op 5 m, met de doortrekking naar het dichtstbijzijnde fijne land (binnen fijnLand_m), en
+// wordt het open water opnieuw bepaald vanaf de rand van de cirkel. Alleen cellen die het grove raster door A1 verbood,
+// kunnen zo weer open worden; ander verboden gebied (windpark, natuur, invaarverbod) blijft verboden.
+// Schrijft in u.water: 1 = water, 0 = land, 2 = buiten de cirkel, 3 = verboden. Geeft per uitsnede het aantal cellen.
+// Water binnen een vaarwegvlak (IENC FAIRWY) wordt nooit door een A1-lijn verboden: bij Workum lopen de A1-lijnen van de
+// natuurgebieden aan weerszijden tot aan de vaargeul, en op 5 m sluiten ze die anders samen af. De A1-lijn zelf blijft dicht
+// (geen gat voor de vulling), zodat het natuurgebied erachter verboden blijft.
+// Ook een vaarwegas (IENC wtwaxs, bijv. de Zool naar Workum) telt als vaarweg, met as_m aan weerszijden.
+export function verfijnUitsneden(r, uitsneden, a1, { fijnLand_m = 300, vaarwegen = [], as_m = 15 } = {}) {
+  const R = raster(r), uit = [];
+  const vw = vaarwegen.flatMap(x => x.geometry.type === 'Polygon' ? [x.geometry.coordinates] : x.geometry.type === 'MultiPolygon' ? x.geometry.coordinates : [])
+    .map(rings => { const p = rings[0]; return { ring: p.map(([lon, lat]) => ({ x: lon, y: lat })), w: Math.min(...p.map(q => q[0])), o: Math.max(...p.map(q => q[0])), z: Math.min(...p.map(q => q[1])), n: Math.max(...p.map(q => q[1])) }; });
+  for (const u of uitsneden) {
+    const W = u.water, nx = u.nx, ny = u.ny, n = nx * ny;
+    const cel = (lat, lon) => { const i = Math.floor((lon - u.west) / u.dlon), j = Math.floor((u.noord - lat) / u.dlat); return i < 0 || j < 0 || i >= nx || j >= ny ? -1 : j * nx + i; };
+    const midden = k => ({ lat: u.noord - (Math.floor(k / nx) + 0.5) * u.dlat, lon: u.west + (k % nx + 0.5) * u.dlon });
+    const grof = new Int32Array(n);
+    for (let k = 0; k < n; k++) { const m = midden(k); grof[k] = R.cel(m.lat, m.lon); }
+    // fijn land dichtbij een eindboei (alleen als de boei in de uitsnede ligt)
+    const fijnLand = p => {
+      const k0 = cel(p.lat, p.lon); if (k0 < 0 || W[k0] === 2) return null;
+      const i0 = k0 % nx, j0 = Math.floor(k0 / nx), s = Math.ceil(fijnLand_m / 5);
+      let best = null, bd = Infinity;
+      for (let j = Math.max(0, j0 - s); j <= Math.min(ny - 1, j0 + s); j++) for (let i = Math.max(0, i0 - s); i <= Math.min(nx - 1, i0 + s); i++) {
+        const k = j * nx + i; if (W[k] !== 0) continue;
+        const d = afstandM(p, midden(k)); if (d < bd) { bd = d; best = midden(k); }
+      }
+      return bd <= fijnLand_m ? best : null;
+    };
+    const vaarweg = new Uint8Array(n);
+    for (const v of vw) {
+      if (v.o < u.west || v.w > u.west + nx * u.dlon || v.n < u.noord - ny * u.dlat || v.z > u.noord) continue;
+      const i0 = Math.max(0, Math.floor((v.w - u.west) / u.dlon)), i1 = Math.min(nx - 1, Math.ceil((v.o - u.west) / u.dlon));
+      const j0 = Math.max(0, Math.floor((u.noord - v.n) / u.dlat)), j1 = Math.min(ny - 1, Math.ceil((u.noord - v.z) / u.dlat));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * nx + i, m = midden(k); if (W[k] === 1 && inRing({ x: m.lon, y: m.lat }, v.ring)) vaarweg[k] = 1; }
+    }
+    const sa = Math.ceil(as_m / 5);
+    for (const x of vaarwegen.filter(x => x.geometry.type === 'LineString')) {
+      const c = x.geometry.coordinates;
+      for (let q = 1; q < c.length; q++) {
+        const a = { lat: c[q - 1][1], lon: c[q - 1][0] }, b = { lat: c[q][1], lon: c[q][0] }, m = Math.max(1, Math.ceil(afstandM(a, b) / 2));
+        for (let t = 0; t <= m; t++) {
+          const p = { lat: a.lat + (b.lat - a.lat) * t / m, lon: a.lon + (b.lon - a.lon) * t / m }, k0 = cel(p.lat, p.lon); if (k0 < 0) continue;
+          const i0 = k0 % nx, j0 = Math.floor(k0 / nx);
+          for (let j = Math.max(0, j0 - sa); j <= Math.min(ny - 1, j0 + sa); j++) for (let i = Math.max(0, i0 - sa); i <= Math.min(nx - 1, i0 + sa); i++) {
+            const k = j * nx + i; if (W[k] === 1 && afstandM(p, midden(k)) <= as_m) vaarweg[k] = 1;
+          }
+        }
+      }
+    }
+    const barriere = new Uint8Array(n);
+    for (const l of a1.lijnen) {
+      const p = l.punten.slice();
+      const eerste = l.land[0] ? 1 : 0, laatste = p.length - 1 - (l.land[1] ? 1 : 0);
+      const a = fijnLand(p[eerste]), b = fijnLand(p[laatste]);
+      if (a) { if (l.land[0]) p[0] = a; else p.unshift(a); }
+      if (b) { if (l.land[1]) p[p.length - 1] = b; else p.push(b); }
+      for (let s = 1; s < p.length; s++) {
+        const q0 = p[s - 1], q1 = p[s], m = Math.max(1, Math.ceil(afstandM(q0, q1) / 2));
+        for (let t = 0; t <= m; t++) {
+          const k = cel(q0.lat + (q1.lat - q0.lat) * t / m, q0.lon + (q1.lon - q0.lon) * t / m); if (k < 0) continue;
+          barriere[k] = 1;   // een 8-verbonden lijn houdt de 4-verbonden vulling tegen; geen verdikking, want havenmonden zijn smal
+        }
+      }
+    }
+    // open water: vanaf de rand van de cirkel, waar het grove raster bevaarbaar water zonder verbod geeft
+    const ander = k => grof[k] >= 0 && r.codes[grof[k]] === VERBODEN && !a1.cel[grof[k]];   // verboden, maar niet door A1
+    const bereik = new Uint8Array(n), rij = [];
+    for (let k = 0; k < n; k++) {
+      if (W[k] !== 1 || barriere[k] || grof[k] < 0 || r.codes[grof[k]] >= VERBODEN) continue;
+      const i = k % nx, rand = i === 0 || i === nx - 1 || k < nx || k >= n - nx || W[k - 1] === 2 || W[k + 1] === 2 || W[k - nx] === 2 || W[k + nx] === 2;
+      if (rand) { bereik[k] = 1; rij.push(k); }
+    }
+    while (rij.length) {
+      const k = rij.pop(), i = k % nx;
+      for (const m of [i > 0 ? k - 1 : -1, i < nx - 1 ? k + 1 : -1, k - nx, k + nx]) {
+        if (m < 0 || m >= n || bereik[m] || W[m] !== 1 || barriere[m] || ander(m)) continue;
+        bereik[m] = 1; rij.push(m);
+      }
+    }
+    let open = 0, dicht = 0;
+    for (let k = 0; k < n; k++) {
+      if (W[k] !== 1 || grof[k] < 0) continue;
+      const c = r.codes[grof[k]];
+      if (vaarweg[k] && a1.cel[grof[k]]) open++;                        // vaargeul: nooit verboden door A1
+      else if (barriere[k] && a1.cel[grof[k]]) { W[k] = 3; dicht++; }
+      else if (c === VERBODEN) { if (a1.cel[grof[k]] && bereik[k]) open++; else { W[k] = 3; dicht++; } }
+    }
+    uit.push({ id: u.id, open, dicht });
+  }
+  return uit;
 }

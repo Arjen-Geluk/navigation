@@ -15,7 +15,7 @@ const hoekVerschil = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180
 
 // ---- bodem ----
 // meta = vaargebied.bodem (west, noord, dlon, dlat, nx, ny), codes = Uint8Array (zie vaargebied.bodem.codering)
-// uitsneden (optioneel): fijne rasters van 10 m rond havens en sluizen, 1 = water volgens de IENC
+// uitsneden (optioneel): fijne rasters van 5 m rond havens en sluizen, 1 = water volgens de IENC, 0 = land, 2 = buiten de cirkel, 3 = verboden
 //   [{ id, west, noord, dlon, dlat, nx, ny, water: Uint8Array }]
 // Binnen een uitsnede bepaalt de uitsnede wat water is; de diepte komt uit het grove raster, of is (zonder RWS-meting)
 // de aangenomen havenbodem.
@@ -37,7 +37,8 @@ const celVan = (B, lat, lon) => {
 };
 // verboden gebied van het vaargebied (gele A1-boeien, windparken, Marker Wadden): code 254 in het raster
 const VERBODEN_CODE = 254;
-const inVerbodenVaargebied = (B, lat, lon) => { const k = celVan(B, lat, lon); return k >= 0 && B.codes[k] === VERBODEN_CODE; };
+// In een havenuitsnede beslist de uitsnede (3 = verboden op 5 m), anders het grove raster.
+const inVerbodenVaargebied = (B, lat, lon) => { const f = uitsnedeOp(B, lat, lon); if (f) return f.u.water[f.k] === 3; const k = celVan(B, lat, lon); return k >= 0 && B.codes[k] === VERBODEN_CODE; };
 const celMidden = (B, k) => ({ lat: B.noord - (Math.floor(k / B.nx) + 0.5) * B.dlat, lon: B.west + (k % B.nx + 0.5) * B.dlon });
 // bodemhoogte in m NAP, of null (land, dijk of buiten het vaargebied)
 function bodemOp(B, lat, lon) {
@@ -46,7 +47,7 @@ function bodemOp(B, lat, lon) {
   const c = B.codes[k];
   const f = uitsnedeOp(B, lat, lon);
   if (f) {
-    if (!f.u.water[f.k] || c === 254) return null;                       // land volgens de IENC, of verboden gebied
+    if (f.u.water[f.k] !== 1) return null;                               // land volgens de IENC (0), of verboden gebied op 5 m (3)
     return c < 250 ? c / 10 - 25 : HAVENBODEM_AANNAME;                   // RWS-diepte, of de aanname in de haven
   }
   return c > 250 ? null : c / 10 - 25;      // 254 = verboden gebied, 255 = geen water
@@ -84,7 +85,7 @@ function maakZone(z, marge) {
 function maakVaarwater(B, P, instellingen) {
   const s = instellingen;
   const zones = (s.zones || []).filter(z => z.actief && z.regel === 'verboden').map(z => maakZone(z, s.marge_verboden_m ?? 50));
-  const V = { B, P, peil: s.peil, kielspeling: s.kielspeling, zones, maskers: {}, paden: new Map() };
+  const V = { B, P, peil: s.peil, kielspeling: s.kielspeling, zones, maskers: {}, paden: new Map(), doorgangen: new Map() };
   V.romp = diepgangBij(P, 'op');
   V.grens = s.peil - V.romp - s.kielspeling;          // bodem moet dieper liggen dan dit (romp, zwaard op)
   V.masker = maakMasker(V, V.romp);           // harde grens: de romp (zwaard op) en de verboden gebieden
@@ -171,6 +172,41 @@ function naasteOpen(V, p, maxM = 1500) {
   return best;
 }
 // A* over het raster (8 buren), daarna de bocht eruit trekken (zichtlijnen). Geeft [a, …tussenpunten, b] of null.
+// Doorgang tussen twee buurcellen in een uitsnede: [] bij vrij zicht tussen hun waterpunten, anders tussenpunten over het
+// fijne raster (smalle, schuine geulen: de rechte lijn raakt net de oever of een verboden cel), of null als er geen is.
+function fijneDoorgang(V, k, n) {
+  const sleutel = k < n ? k + '|' + n : n + '|' + k;
+  if (V.doorgangen.has(sleutel)) { const d = V.doorgangen.get(sleutel); return d && k > n ? d.slice().reverse() : d; }
+  const a = celPunt(V, k), b = celPunt(V, n);
+  let uit = null;
+  if (vrijZicht(V, a, b)) uit = [];
+  else {
+    const fa = uitsnedeOp(V.B, a.lat, a.lon), fb = uitsnedeOp(V.B, b.lat, b.lon);
+    if (fa && fb && fa.u === fb.u) {
+      const u = fa.u, nx = u.nx, ia = fa.k % nx, ja = Math.floor(fa.k / nx), ib = fb.k % nx, jb = Math.floor(fb.k / nx), marge = 4;
+      const i0 = Math.max(0, Math.min(ia, ib) - marge), i1 = Math.min(nx - 1, Math.max(ia, ib) + marge), j0 = Math.max(0, Math.min(ja, jb) - marge), j1 = Math.min(u.ny - 1, Math.max(ja, jb) + marge);
+      const mid = q => ({ lat: u.noord - (Math.floor(q / nx) + 0.5) * u.dlat, lon: u.west + (q % nx + 0.5) * u.dlon });
+      const ok = q => { if (u.water[q] !== 1) return false; const p = mid(q), bo = bodemOp(V.B, p.lat, p.lon); return bo != null && bo <= V.grens + 1e-9 && !inVerbodenZone(V, p.lat, p.lon); };
+      const vorig = new Map([[fa.k, -1]]), rij = [fa.k];
+      for (let x = 0; x < rij.length && !vorig.has(fb.k); x++) {
+        const q = rij[x], i = q % nx, j = Math.floor(q / nx);
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const ii = i + di, jj = j + dj; if (ii < i0 || ii > i1 || jj < j0 || jj > j1) continue;
+          const m = jj * nx + ii; if (vorig.has(m) || !ok(m)) continue;
+          vorig.set(m, q); rij.push(m);
+        }
+      }
+      if (vorig.has(fb.k)) {
+        const keten = []; for (let q = fb.k; q >= 0; q = vorig.get(q)) keten.push(mid(q));
+        keten.reverse(); keten[0] = a; keten[keten.length - 1] = b;
+        uit = []; let i = 0;   // vereenvoudigen: steeds het verste punt met vrij zicht
+        while (i < keten.length - 1) { let j = keten.length - 1; while (j > i + 1 && !vrijZicht(V, keten[i], keten[j])) j--; if (j < keten.length - 1) uit.push(keten[j]); i = j; }
+      }
+    }
+  }
+  V.doorgangen.set(sleutel, k < n ? uit : uit && uit.slice().reverse());
+  return uit;
+}
 function zoekPad(V, a, b) {
   const sleutel = `${a.lat.toFixed(6)},${a.lon.toFixed(6)}>${b.lat.toFixed(6)},${b.lon.toFixed(6)}`;
   if (V.paden.has(sleutel)) return V.paden.get(sleutel);
@@ -181,7 +217,9 @@ function zoekPad(V, a, b) {
     if (start >= 0 && doel >= 0) {
       const cel = rasterAster(V, start, doel);
       if (cel) {
-        const punten = [a, ...cel.map(k => celPunt(V, k)), b];
+        const punten = [a];
+        cel.forEach((k, i) => { if (i && V.masker.punt && (V.masker.punt.has(cel[i - 1]) || V.masker.punt.has(k))) punten.push(...(fijneDoorgang(V, cel[i - 1], k) || [])); punten.push(celPunt(V, k)); });
+        punten.push(b);
         pad = [a];
         let i = 0;
         while (i < punten.length - 1) {
@@ -216,8 +254,9 @@ function rasterAster(V, start, doel) {
       if (ii < 0 || jj < 0 || ii >= nx || jj >= B.ny) continue;
       const n = jj * nx + ii;
       if (!m[n] || klaar[n]) continue;
-      if (ddi && ddj && (!m[j * nx + ii] || !m[jj * nx + i])) continue;   // niet schuin langs een hoek
-      if (m.punt && (m.punt.has(k) || m.punt.has(n)) && !vrijZicht(V, celPunt(V, k), celPunt(V, n))) continue;   // dammen in de uitsnede
+      const fijn = m.punt && (m.punt.has(k) || m.punt.has(n));
+      if (ddi && ddj && !fijn && (!m[j * nx + ii] || !m[jj * nx + i])) continue;   // niet schuin langs een hoek (in een uitsnede beslist de fijne doorgang)
+      if (fijn && !fijneDoorgang(V, k, n)) continue;   // dammen in de uitsnede: alleen over fijn water
       const gn = g[k] + c;
       if (gn < g[n]) { g[n] = gn; vorige[n] = k; duw(n, gn + h(n)); }
     }
